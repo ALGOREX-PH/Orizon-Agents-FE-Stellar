@@ -26,7 +26,7 @@ export function Hero() {
                 System online · v0.1
               </Badge>
               <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-muted">
-                // ORIZON AGENTS
+                {"// ORIZON AGENTS"}
               </span>
             </motion.div>
 
