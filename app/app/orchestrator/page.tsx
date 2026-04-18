@@ -93,9 +93,22 @@ export default function OrchestratorPage() {
       const signedXdr = await wallet.signXdr(xdr);
 
       setStep("broadcast");
-      const broadcast = await submitSigned(signedXdr);
+      const broadcast = (await submitSigned(signedXdr)) as {
+        status: string;
+        hash: string;
+        return_value: unknown;
+        diagnostic?: string;
+        explorer?: string;
+      };
       if (broadcast.status !== "SUCCESS") {
-        throw new Error(`authorize tx ${broadcast.status}`);
+        const bits = [
+          `authorize tx ${broadcast.status}`,
+          broadcast.diagnostic,
+          broadcast.explorer,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        throw new Error(bits);
       }
       const authHex = bytesToHex(broadcast.return_value);
       if (!authHex) throw new Error("failed to read auth_id from tx result");

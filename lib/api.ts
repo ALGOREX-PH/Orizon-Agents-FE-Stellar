@@ -74,7 +74,13 @@ export const buildAuthorize = (body: {
 
 export const submitSigned = (signedXdr: string) =>
   post<
-    { hash: string; status: string; return_value: unknown },
+    {
+      hash: string;
+      status: string;
+      return_value: unknown;
+      diagnostic?: string;
+      explorer?: string;
+    },
     { signed_xdr: string }
   >("/stellar/submit", { signed_xdr: signedXdr });
 
