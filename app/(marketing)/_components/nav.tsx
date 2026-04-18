@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/ui/logo";
 import { ButtonLink } from "@/components/ui/button";
+import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -44,12 +45,7 @@ export function Nav() {
           ))}
         </nav>
         <div className="flex items-center gap-3">
-          <Link
-            href="https://github.com"
-            className="hidden font-mono text-[11px] uppercase tracking-[0.22em] text-muted hover:text-text md:inline"
-          >
-            GitHub
-          </Link>
+          <ConnectWallet size="sm" className="hidden md:flex" />
           <ButtonLink href="/app" size="sm" variant="primary">
             Launch App ▸
           </ButtonLink>

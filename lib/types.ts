@@ -38,8 +38,35 @@ export type DecomposeResponse = {
   total_eta: number;
 };
 
-export type TraceLevel = "input" | "exec" | "proof" | "cost" | "out" | "error";
+export type TraceLevel =
+  | "input"
+  | "exec"
+  | "proof"
+  | "cost"
+  | "out"
+  | "error"
+  | "artifact";
 export type TraceLine = { t: string; level: TraceLevel; msg: string };
+
+export type ArtifactFile = {
+  path: string;
+  language: string;
+  content: string;
+};
+
+export type CodeArtifact = {
+  title: string;
+  summary: string;
+  files: ArtifactFile[];
+  entry: string;
+  preview_html: string;
+};
+
+export type ArtifactResponse = {
+  artifact: CodeArtifact | null;
+  charge_tx?: string | null;
+  proof_tx?: string | null;
+};
 
 export type FlowNode = { id: string; label: string; sub: string; x: number; y: number };
 export type Flow = { nodes: FlowNode[]; edges: [string, string][] };
