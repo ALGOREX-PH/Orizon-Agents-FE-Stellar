@@ -50,6 +50,9 @@ const config: Config = {
         grid: "48px 48px",
       },
       keyframes: {
+        shimmer: {
+          "100%": { transform: "translateX(100%)" },
+        },
         scan: {
           "0%": { transform: "translateY(-100%)" },
           "100%": { transform: "translateY(100vh)" },

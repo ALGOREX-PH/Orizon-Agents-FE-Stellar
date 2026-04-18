@@ -1,42 +1,70 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { traceLines } from "@/lib/mock-data";
+import { openTraceStream } from "@/lib/api";
+import { traceLines as demoTrace } from "@/lib/mock-data";
+import type { TraceLine } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const levelColor = {
+const levelColor: Record<TraceLine["level"], string> = {
   input: "text-cyan",
   exec: "text-violet",
   proof: "text-magenta",
   cost: "text-emerald-300",
   out: "text-text",
-} as const;
+  error: "text-magenta",
+};
 
-export default function TracePage() {
-  const [cursor, setCursor] = useState(0);
-  const [playing, setPlaying] = useState(true);
+function TracePageInner() {
+  const params = useSearchParams();
+  const taskId = params.get("task");
+  const [lines, setLines] = useState<TraceLine[]>([]);
+  const [done, setDone] = useState(false);
+  const [demoCursor, setDemoCursor] = useState(0);
+  const [demoPlaying, setDemoPlaying] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Live mode: subscribe to SSE for the given task_id.
   useEffect(() => {
-    if (!playing) return;
-    if (cursor >= traceLines.length) return;
-    const id = setTimeout(() => setCursor((c) => c + 1), 550);
+    if (!taskId) return;
+    setLines([]);
+    setDone(false);
+    const close = openTraceStream(
+      taskId,
+      (line) => setLines((prev) => [...prev, line]),
+      () => setDone(true),
+    );
+    return close;
+  }, [taskId]);
+
+  // Demo mode: no task id → replay local mock data so the page still looks alive.
+  useEffect(() => {
+    if (taskId) return;
+    if (!demoPlaying) return;
+    if (demoCursor >= demoTrace.length) return;
+    const id = setTimeout(() => setDemoCursor((c) => c + 1), 550);
     return () => clearTimeout(id);
-  }, [cursor, playing]);
+  }, [taskId, demoCursor, demoPlaying]);
 
   useEffect(() => {
     containerRef.current?.scrollTo({
       top: containerRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [cursor]);
+  }, [lines.length, demoCursor]);
 
-  const restart = () => {
-    setCursor(0);
-    setPlaying(true);
-  };
+  const visible: TraceLine[] = taskId ? lines : (demoTrace.slice(0, demoCursor) as TraceLine[]);
+  const total = taskId ? lines.length : demoTrace.length;
+
+  const spent = visible
+    .filter((l) => l.level === "cost")
+    .reduce((acc, l) => {
+      const m = l.msg.match(/([0-9]+\.[0-9]+)\s+USDC/);
+      return acc + (m ? parseFloat(m[1]) : 0);
+    }, 0);
 
   return (
     <div className="space-y-6">
@@ -44,39 +72,54 @@ export default function TracePage() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Trace</h1>
           <p className="mt-1 text-sm text-muted">
-            Every step attributed, recorded, and verifiable.
+            {taskId
+              ? "Every step attributed, recorded, and verifiable."
+              : "Replaying a demo trace — run an intent in the Orchestrator to see a live one."}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setPlaying((p) => !p)}>
-            {playing ? "⏸ Pause" : "▸ Play"}
-          </Button>
-          <Button variant="outline" size="sm" onClick={restart}>
-            ↻ Restart
-          </Button>
-        </div>
+        {!taskId && (
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDemoPlaying((p) => !p)}
+            >
+              {demoPlaying ? "⏸ Pause" : "▸ Play"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setDemoCursor(0);
+                setDemoPlaying(true);
+              }}
+            >
+              ↻ Restart
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
         <Card className="!p-0 overflow-hidden">
           <div className="flex items-center justify-between border-b border-border bg-surface/80 px-4 py-2.5">
             <div className="flex items-center gap-3">
-              <Badge tone="violet" dot>
-                tsk_4812
+              <Badge tone={done ? "cyan" : "violet"} dot={!done}>
+                {taskId ?? "demo"}
               </Badge>
               <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-                build a landing page for pulse ai
+                {taskId ? (done ? "sealed" : "streaming") : "demo replay"}
               </span>
             </div>
             <span className="font-mono text-[10px] text-muted">
-              {cursor} / {traceLines.length} steps
+              {visible.length} / {total} steps
             </span>
           </div>
           <div
             ref={containerRef}
             className="font-mono text-xs p-5 h-[540px] overflow-y-auto space-y-1.5 bg-[#060010]"
           >
-            {traceLines.slice(0, cursor).map((line, i) => (
+            {visible.map((line, i) => (
               <div key={i} className="flex gap-3">
                 <span className="w-16 text-muted">{line.t}</span>
                 <span
@@ -90,7 +133,7 @@ export default function TracePage() {
                 <span className="flex-1 text-text/90 leading-5">{line.msg}</span>
               </div>
             ))}
-            {cursor < traceLines.length && (
+            {taskId && !done && (
               <div className="flex gap-3 animate-pulse">
                 <span className="w-16 text-muted">…</span>
                 <span className="w-14 text-violet uppercase tracking-widest text-[10px]">
@@ -109,17 +152,19 @@ export default function TracePage() {
             </div>
             <dl className="space-y-3 text-sm">
               {[
-                ["Agents", "5"],
-                ["Calls", "5"],
-                ["Spent", "0.166 USDC"],
-                ["Duration", "3.93s"],
-                ["Proof", "ERC-8004 ✓"],
+                ["Task", taskId ?? "demo"],
+                ["Lines", String(visible.length)],
+                ["Spent", `${spent.toFixed(3)} USDC`],
+                ["State", taskId ? (done ? "sealed ✓" : "streaming…") : "demo"],
               ].map(([k, v]) => (
-                <div key={k} className="flex items-center justify-between border-b border-border/40 pb-2">
+                <div
+                  key={k}
+                  className="flex items-center justify-between border-b border-border/40 pb-2"
+                >
                   <dt className="text-muted font-mono text-[11px] uppercase tracking-widest">
                     {k}
                   </dt>
-                  <dd className="font-mono">{v}</dd>
+                  <dd className="font-mono truncate max-w-[160px] text-right">{v}</dd>
                 </div>
               ))}
             </dl>
@@ -129,18 +174,20 @@ export default function TracePage() {
               Attestation
             </div>
             <div className="font-mono text-xs text-muted break-all leading-5">
-              0x7fa2c9d11e8c4b42a1
-              <br />
-              9e3a6c88f2d10b91d...
-            </div>
-            <div className="mt-4 flex gap-2">
-              <Button size="sm" variant="outline">
-                View on-chain
-              </Button>
+              {visible.find((l) => l.level === "proof")?.msg ??
+                "awaiting ERC-8004 attestation…"}
             </div>
           </Card>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TracePage() {
+  return (
+    <Suspense fallback={<div className="font-mono text-sm text-muted">loading…</div>}>
+      <TracePageInner />
+    </Suspense>
   );
 }

@@ -1,10 +1,12 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { agents } from "@/lib/mock-data";
+import { Skeleton } from "@/components/ui/skeleton";
+import { listAgents } from "@/lib/api";
+import type { Agent } from "@/lib/types";
 
 const statusTone = {
   online: "cyan" as const,
@@ -13,16 +15,26 @@ const statusTone = {
 };
 
 export default function AgentsPage() {
+  const [agents, setAgents] = useState<Agent[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "online" | "idle" | "offline">("all");
 
+  useEffect(() => {
+    listAgents()
+      .then((a) => setAgents(a))
+      .catch((e) => setError(e instanceof Error ? e.message : "fetch failed"));
+  }, []);
+
   const rows = useMemo(() => {
+    if (!agents) return [];
     return agents.filter((a) => {
-      const matchesQ = !q || a.name.includes(q.toLowerCase()) || a.skills.some((s) => s.includes(q.toLowerCase()));
+      const ql = q.toLowerCase();
+      const matchesQ = !ql || a.name.toLowerCase().includes(ql) || a.skills.some((s) => s.toLowerCase().includes(ql));
       const matchesStatus = filter === "all" || a.status === filter;
       return matchesQ && matchesStatus;
     });
-  }, [q, filter]);
+  }, [agents, q, filter]);
 
   return (
     <div className="space-y-6">
@@ -72,6 +84,12 @@ export default function AgentsPage() {
           </div>
         </div>
 
+        {error && (
+          <div className="mb-4 clip-cyber-sm border border-magenta/40 bg-magenta/5 px-4 py-3 font-mono text-xs text-magenta">
+            backend offline — {error}
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -87,6 +105,15 @@ export default function AgentsPage() {
               </tr>
             </thead>
             <tbody>
+              {!agents &&
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={i} className="border-b border-border/50">
+                    <td colSpan={8} className="py-3">
+                      <Skeleton className="h-5 w-full" />
+                    </td>
+                  </tr>
+                ))}
+
               {rows.map((a, i) => (
                 <motion.tr
                   key={a.id}
@@ -96,7 +123,12 @@ export default function AgentsPage() {
                   className="border-b border-border/50 last:border-0 hover:bg-violet/5 transition"
                 >
                   <td className="py-3 font-mono text-xs text-muted">{a.id}</td>
-                  <td className="py-3 font-mono">{a.name}</td>
+                  <td className="py-3 font-mono">
+                    <div className="flex items-center gap-2">
+                      {a.name}
+                      {a.real && <Badge tone="cyan">LIVE</Badge>}
+                    </div>
+                  </td>
                   <td className="py-3">
                     <div className="flex flex-wrap gap-1.5">
                       {a.skills.map((s) => (
@@ -125,7 +157,7 @@ export default function AgentsPage() {
                   </td>
                 </motion.tr>
               ))}
-              {rows.length === 0 && (
+              {agents && rows.length === 0 && (
                 <tr>
                   <td colSpan={8} className="py-10 text-center text-muted font-mono text-xs">
                     no agents match your filters.

@@ -124,7 +124,7 @@ export function Sidebar() {
             ◆
           </div>
           <div className="flex-1">
-            <div className="text-xs">debbie.meer</div>
+            <div className="text-xs">danielle.meer</div>
             <div className="font-mono text-[10px] text-muted">ops·free</div>
           </div>
         </div>

@@ -1,71 +1,48 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
-type Step = {
-  agent: string;
-  skill: string;
-  price: number;
-  eta: string;
-  rationale: string;
-};
-
-const plan: Step[] = [
-  {
-    agent: "seo.brief",
-    skill: "research",
-    price: 0.009,
-    eta: "0.4s",
-    rationale: "cheapest agent with audience-clustering capability",
-  },
-  {
-    agent: "copywrite.v3",
-    skill: "content",
-    price: 0.012,
-    eta: "0.5s",
-    rationale: "highest reputation (4.92) for en-US marketing copy",
-  },
-  {
-    agent: "design.figma",
-    skill: "ui",
-    price: 0.048,
-    eta: "1.1s",
-    rationale: "only agent returning exportable figma layers",
-  },
-  {
-    agent: "code.next",
-    skill: "frontend",
-    price: 0.066,
-    eta: "0.9s",
-    rationale: "best match for next.js + tailwind target stack",
-  },
-  {
-    agent: "deploy.v0",
-    skill: "deploy",
-    price: 0.031,
-    eta: "0.4s",
-    rationale: "lowest cost deployment agent with vercel adapter",
-  },
-];
+import { decompose, execute } from "@/lib/api";
+import type { DecomposeResponse } from "@/lib/types";
 
 export default function OrchestratorPage() {
+  const router = useRouter();
   const [intent, setIntent] = useState("");
-  const [running, setRunning] = useState(false);
-  const [revealed, setRevealed] = useState(0);
+  const [plan, setPlan] = useState<DecomposeResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [executing, setExecuting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const run = () => {
+  const run = async () => {
     if (!intent.trim()) return;
-    setRunning(true);
-    setRevealed(0);
-    plan.forEach((_, i) => {
-      setTimeout(() => setRevealed(i + 1), 400 + i * 500);
-    });
+    setLoading(true);
+    setError(null);
+    setPlan(null);
+    try {
+      const p = await decompose(intent.trim());
+      setPlan(p);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const total = plan.reduce((s, p) => s + p.price, 0);
+  const go = async () => {
+    if (!plan) return;
+    setExecuting(true);
+    setError(null);
+    try {
+      const { task_id } = await execute(plan.plan_id);
+      router.push(`/app/trace?task=${task_id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "failed");
+      setExecuting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -104,14 +81,20 @@ export default function OrchestratorPage() {
               </button>
             ))}
           </div>
-          <Button onClick={run} disabled={!intent.trim() || running}>
-            {running ? "◉ Running…" : "Decompose ▸"}
+          <Button onClick={run} disabled={!intent.trim() || loading}>
+            {loading ? "◉ Decomposing…" : "Decompose ▸"}
           </Button>
         </div>
+
+        {error && (
+          <div className="mt-4 clip-cyber-sm border border-magenta/40 bg-magenta/5 px-4 py-3 font-mono text-xs text-magenta">
+            {error}
+          </div>
+        )}
       </Card>
 
       <AnimatePresence>
-        {revealed > 0 && (
+        {plan && (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -122,7 +105,7 @@ export default function OrchestratorPage() {
                 <div>
                   <h2 className="text-lg font-semibold">Execution plan</h2>
                   <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-                    {revealed} / {plan.length} steps matched
+                    plan {plan.plan_id} · {plan.steps.length} steps
                   </p>
                 </div>
                 <div className="flex items-center gap-6 font-mono text-xs">
@@ -131,58 +114,60 @@ export default function OrchestratorPage() {
                       total est.
                     </div>
                     <div className="text-cyan text-lg">
-                      {total.toFixed(3)} USDC
+                      {plan.total_usdc.toFixed(3)} USDC
                     </div>
                   </div>
                   <div>
                     <div className="text-muted uppercase tracking-widest text-[10px]">
                       eta
                     </div>
-                    <div className="text-violet text-lg">3.3s</div>
+                    <div className="text-violet text-lg">
+                      {plan.total_eta.toFixed(1)}s
+                    </div>
                   </div>
                 </div>
               </div>
 
               <ol className="space-y-3">
-                {plan.slice(0, revealed).map((s, i) => (
+                {plan.steps.map((s, i) => (
                   <motion.li
-                    key={s.agent}
+                    key={`${s.agent_id}-${i}`}
                     initial={{ opacity: 0, x: -12 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.35 }}
-                    className="relative clip-cyber-sm border border-border bg-bg/60 p-4 flex items-center gap-4"
+                    transition={{ duration: 0.35, delay: i * 0.06 }}
+                    className="clip-cyber-sm border border-border bg-bg/60 p-4 flex items-center gap-4"
                   >
                     <div className="font-mono text-xs text-muted w-8">
                       {String(i + 1).padStart(2, "0")}
                     </div>
-                    <Badge tone="violet">{s.agent}</Badge>
+                    <Badge tone="violet">{s.agent_name ?? s.agent_id}</Badge>
                     <span className="text-sm text-muted">→</span>
                     <div className="flex-1 text-sm">{s.rationale}</div>
                     <div className="font-mono text-xs text-cyan">
-                      {s.price.toFixed(3)} · {s.eta}
+                      {s.est_price_usdc.toFixed(3)} · {s.est_eta_seconds.toFixed(1)}s
                     </div>
                   </motion.li>
                 ))}
               </ol>
 
-              {revealed === plan.length && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="mt-6 flex items-center justify-between clip-cyber-sm border border-cyan/40 bg-cyan/5 p-4"
-                >
-                  <div>
-                    <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan mb-1">
-                      ▸ ready to execute
-                    </div>
-                    <div className="text-sm">
-                      Plan sealed. Click execute to charge and run.
-                    </div>
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="mt-6 flex items-center justify-between clip-cyber-sm border border-cyan/40 bg-cyan/5 p-4 flex-wrap gap-3"
+              >
+                <div>
+                  <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan mb-1">
+                    ▸ ready to execute
                   </div>
-                  <Button variant="cyan">Execute ▸</Button>
-                </motion.div>
-              )}
+                  <div className="text-sm">
+                    Click execute to charge agents via x402 and stream the trace.
+                  </div>
+                </div>
+                <Button variant="cyan" onClick={go} disabled={executing}>
+                  {executing ? "◉ Launching…" : "Execute ▸"}
+                </Button>
+              </motion.div>
             </Card>
           </motion.div>
         )}
