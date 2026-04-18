@@ -52,6 +52,17 @@ const items = [
     ),
   },
   {
+    href: "/app/wallet",
+    label: "Wallet",
+    icon: (
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+        <rect x="2" y="5" width="16" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M2 8h16" stroke="currentColor" strokeWidth="1.5" />
+        <circle cx="14" cy="12" r="1.2" fill="currentColor" />
+      </svg>
+    ),
+  },
+  {
     href: "/app/flow",
     label: "Flow",
     icon: (
