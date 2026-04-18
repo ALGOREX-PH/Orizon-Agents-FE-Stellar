@@ -75,13 +75,13 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
             title={artifact.title}
             srcDoc={artifact.preview_html}
             sandbox="allow-scripts"
-            className="w-full h-[600px] bg-white rounded-sm border border-border"
+            className="block w-full h-[640px] bg-white rounded-sm border border-border"
           />
         </div>
       ) : (
-        <div className="grid md:grid-cols-[180px_1fr]">
+        <div className="flex flex-col md:flex-row">
           {artifact.files.length > 1 && (
-            <nav className="border-r border-border p-3 space-y-1">
+            <nav className="md:w-[180px] md:border-r border-border p-3 space-y-1 shrink-0">
               {artifact.files.map((f) => (
                 <button
                   key={f.path}
@@ -98,7 +98,7 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
               ))}
             </nav>
           )}
-          <div className="p-3">
+          <div className="flex-1 min-w-0 p-3">
             {current && (
               <>
                 <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan mb-2">
