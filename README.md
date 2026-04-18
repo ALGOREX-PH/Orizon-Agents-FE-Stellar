@@ -7,6 +7,14 @@ orchestration platform where AI agents autonomously hire, pay, and verify each
 other (ERC-8004 registry, x402 payments, Orizon Trace proofs, Orizon Flow
 workflow engine). See `PRD.md` for the full product brief.
 
+## Repositories
+
+| layer | repo |
+| --- | --- |
+| Frontend (this repo) | https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar |
+| Backend — FastAPI + Agno | https://github.com/ALGOREX-PH/Orizon-Agents-BE-Stellar |
+| Smart Contracts — Soroban / Rust | https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar |
+
 ## Stack
 
 - Next.js 14 (App Router) + TypeScript
