@@ -22,7 +22,20 @@ async function post<T, B>(path: string, body: B): Promise<T> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`POST ${path} → ${res.status}`);
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const j = await res.json();
+      detail = j?.detail ? ` — ${j.detail}` : ` — ${JSON.stringify(j).slice(0, 300)}`;
+    } catch {
+      try {
+        detail = ` — ${(await res.text()).slice(0, 300)}`;
+      } catch {
+        /* ignore */
+      }
+    }
+    throw new Error(`POST ${path} → ${res.status}${detail}`);
+  }
   return res.json();
 }
 
