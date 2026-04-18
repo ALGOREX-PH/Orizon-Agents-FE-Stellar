@@ -1,5 +1,6 @@
 import type {
   Agent,
+  ArtifactResponse,
   DecomposeResponse,
   Flow,
   Overview,
@@ -34,8 +35,35 @@ export const getTrace = (taskId: string) => get<TraceLine[]>(`/trace/${taskId}`)
 export const decompose = (intent: string) =>
   post<DecomposeResponse, { intent: string }>("/orchestrator/decompose", { intent });
 
-export const execute = (planId: string) =>
-  post<{ task_id: string }, { plan_id: string }>("/orchestrator/execute", { plan_id: planId });
+export const execute = (
+  planId: string,
+  opts?: { auth_id_hex?: string; payer?: string },
+) =>
+  post<{ task_id: string }, { plan_id: string; auth_id_hex?: string; payer?: string }>(
+    "/orchestrator/execute",
+    { plan_id: planId, ...opts },
+  );
+
+export const getArtifact = (taskId: string) =>
+  get<ArtifactResponse>(`/tasks/${taskId}/artifact`);
+
+// ── Stellar / x402 ──────────────────────────────────────────
+export const buildAuthorize = (body: {
+  payer: string;
+  agent_id: string;
+  max_amount_usdc: number;
+  ttl_seconds?: number;
+}) =>
+  post<{ xdr: string; expires_at: number }, typeof body>(
+    "/stellar/build/authorize",
+    body,
+  );
+
+export const submitSigned = (signedXdr: string) =>
+  post<
+    { hash: string; status: string; return_value: unknown },
+    { signed_xdr: string }
+  >("/stellar/submit", { signed_xdr: signedXdr });
 
 /**
  * Subscribe to a live SSE trace stream.
