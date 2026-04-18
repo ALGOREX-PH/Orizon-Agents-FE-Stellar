@@ -1,5 +1,6 @@
 import type {
   Agent,
+  ArtifactResponse,
   DecomposeResponse,
   Flow,
   Overview,
@@ -21,7 +22,20 @@ async function post<T, B>(path: string, body: B): Promise<T> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`POST ${path} → ${res.status}`);
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const j = await res.json();
+      detail = j?.detail ? ` — ${j.detail}` : ` — ${JSON.stringify(j).slice(0, 300)}`;
+    } catch {
+      try {
+        detail = ` — ${(await res.text()).slice(0, 300)}`;
+      } catch {
+        /* ignore */
+      }
+    }
+    throw new Error(`POST ${path} → ${res.status}${detail}`);
+  }
   return res.json();
 }
 
@@ -34,8 +48,41 @@ export const getTrace = (taskId: string) => get<TraceLine[]>(`/trace/${taskId}`)
 export const decompose = (intent: string) =>
   post<DecomposeResponse, { intent: string }>("/orchestrator/decompose", { intent });
 
-export const execute = (planId: string) =>
-  post<{ task_id: string }, { plan_id: string }>("/orchestrator/execute", { plan_id: planId });
+export const execute = (
+  planId: string,
+  opts?: { auth_id_hex?: string; payer?: string },
+) =>
+  post<{ task_id: string }, { plan_id: string; auth_id_hex?: string; payer?: string }>(
+    "/orchestrator/execute",
+    { plan_id: planId, ...opts },
+  );
+
+export const getArtifact = (taskId: string) =>
+  get<ArtifactResponse>(`/tasks/${taskId}/artifact`);
+
+// ── Stellar / x402 ──────────────────────────────────────────
+export const buildAuthorize = (body: {
+  payer: string;
+  agent_id: string;
+  max_amount_usdc: number;
+  ttl_seconds?: number;
+}) =>
+  post<{ xdr: string; expires_at: number }, typeof body>(
+    "/stellar/build/authorize",
+    body,
+  );
+
+export const submitSigned = (signedXdr: string) =>
+  post<
+    {
+      hash: string;
+      status: string;
+      return_value: unknown;
+      diagnostic?: string;
+      explorer?: string;
+    },
+    { signed_xdr: string }
+  >("/stellar/submit", { signed_xdr: signedXdr });
 
 /**
  * Subscribe to a live SSE trace stream.
