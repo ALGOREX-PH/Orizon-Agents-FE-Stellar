@@ -46,7 +46,7 @@ export function Footer() {
   return (
     <footer className="relative border-t border-border bg-surface/40">
       <div className="mx-auto max-w-7xl px-6 py-16">
-        <div className="grid gap-10 md:grid-cols-[1.2fr_1fr_1fr_1fr]">
+        <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr]">
           <div>
             <Logo />
             <p className="mt-5 max-w-xs text-sm text-muted leading-relaxed">
