@@ -62,16 +62,21 @@ export function Footer() {
                 {c.h}
               </div>
               <ul className="space-y-3">
-                {c.l.map(([label, href]) => (
-                  <li key={label}>
-                    <Link
-                      href={href}
-                      className="text-sm text-muted hover:text-text transition-colors"
-                    >
-                      {label}
-                    </Link>
-                  </li>
-                ))}
+                {c.l.map(([label, href]) => {
+                  const external = href.startsWith("http");
+                  return (
+                    <li key={label}>
+                      <Link
+                        href={href}
+                        target={external ? "_blank" : undefined}
+                        rel={external ? "noreferrer" : undefined}
+                        className="text-sm text-muted hover:text-text transition-colors"
+                      >
+                        {label}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
