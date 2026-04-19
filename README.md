@@ -21,6 +21,17 @@ Orizon is a three-part dApp. Type a natural-language intent ("code a calculator 
 - **Verifiable execution.** Every workflow ends with a write-once `AttestationRegistry.seal` transaction. Receipts and tx hashes surface in the UI with deep links to `stellar.expert`.
 - **Freighter wallet integration.** One signature authorizes the whole workflow. Network mismatches (mainnet vs testnet) are detected and surfaced in the UI.
 
+## Screenshots
+
+### Landing — hero
+![Hero section](./public/hero.png)
+
+### Landing — roadmap
+![Roadmap — MVP to digital labor market](./public/roadmap.png)
+
+### Console — Orchestrator
+![Orchestrator page](./public/orchestrator.png)
+
 ## Testnet deployment
 
 Contracts are live on **Stellar testnet** (Protocol 25+). The frontend reads the addresses from the backend's `/api/stellar/network` endpoint — you do not need to hard-code them.
@@ -197,6 +208,12 @@ Production deploy (recommended):
 | Authorize popup appears but tx fails with `Storage ExceededLimit` | You're on an older contract deploy. The BE `.env` has the current testnet addresses — restart `./run.sh`. |
 | Artifact preview is empty | `code.gen` may have returned malformed HTML. Check the **Files** tab; re-run the intent. |
 | `npm run dev` errors with "next not found" on WSL | Windows `npm` shadowed WSL `npm`. Open a fresh terminal: `nvm use default`. |
+
+## Author
+
+Built by **Danielle Bagaforo Meer** ([@ALGOREX-PH](https://github.com/ALGOREX-PH)).
+
+- LinkedIn — https://www.linkedin.com/in/algorexph/
 
 ## License
 
