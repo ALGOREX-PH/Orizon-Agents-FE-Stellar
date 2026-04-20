@@ -1,52 +1,133 @@
-# Orizon Agents — Frontend
+# Orizon Agents
 
-> **The orchestration layer for autonomous digital labor.**
-> A decentralized network where AI agents autonomously hire, pay, and verify each other to execute complex work — on-chain, per call, via x402 on Stellar.
+> **Type what you want. A team of AI agents builds it, pays each other on Stellar, and hands you the result — in seconds.**
 
-Orizon is a three-part dApp. Type a natural-language intent ("code a calculator web app"), one LLM orchestrator decomposes it into a plan, specialized Agno agents execute each step, a **Freighter-signed payment authorizes the workflow on Stellar testnet**, the backend charges via our `PaymentEscrow` Soroban contract, seals an immutable receipt in `AttestationRegistry`, and streams the trace + the live code artifact back to the user — all in under a few seconds.
+Orizon is a decentralized marketplace for AI agents. You describe a job in plain English ("code a calculator web app"), and the platform:
 
-## Repositories
+1. picks the right specialist agents for the job,
+2. pays them automatically using your crypto wallet,
+3. runs them in the right order,
+4. shows you the finished result — and a receipt anyone can verify on-chain.
 
-| layer | repo |
+No API keys. No subscriptions. No "trust me bro" — every step is recorded on the Stellar testnet.
+
+## Live demo
+
+- **Frontend:** https://orizon-agents-fe-stellar.vercel.app
+- **Backend:** https://orizon-agents-be-stellar.onrender.com
+- **Wallet needed:** [Freighter](https://freighter.app) — set to **Test Net**.
+- **Testnet XLM:** free from any Stellar [friendbot](https://friendbot.stellar.org/?addr=YOUR_G_ADDRESS).
+
+## Try it in 3 clicks
+
+1. Open the app → click **Launch Console ▸**
+2. Click **Connect Wallet** → approve in Freighter (make sure it's on **Test Net**)
+3. Go to **Orchestrator** → type `code a calculator web app` → click **Decompose ▸** → **Authorize & Execute ▸**
+
+That's it. You'll land on the Trace page and watch the workflow run. When it finishes, a new **▣ artifact** tab appears with the live, interactive calculator inside a safe sandbox.
+
+## What you'll see
+
+- **A plan.** The orchestrator (an LLM) splits your intent into steps and picks an agent for each.
+- **One wallet popup.** Freighter asks you to authorize a tiny testnet payment (free — it's test XLM).
+- **A live log.** Every agent call, payment, and receipt streams in as it happens.
+- **A finished artifact.** Real code you can preview, browse file-by-file, and download.
+- **On-chain receipts.** Transaction hashes link straight to [stellar.expert](https://stellar.expert/explorer/testnet) so anyone can audit the run.
+
+![Orchestrator page](./public/orchestrator.png)
+
+## Glossary (plain English)
+
+| term | what it means here |
 | --- | --- |
-| Frontend (this repo) | https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar |
-| Backend — FastAPI + Agno | https://github.com/ALGOREX-PH/Orizon-Agents-BE-Stellar |
-| Smart Contracts — Soroban / Rust | https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar |
+| **Agent** | A specialized AI worker (e.g. `code.gen` writes web apps, `seo.brief` does research). Each has a price per call and a reputation score. |
+| **Orchestrator** | The "manager" AI that reads your intent and chooses which agents to hire. Uses OpenAI `gpt-5.3-codex`. |
+| **Freighter** | A browser extension wallet (like MetaMask, but for Stellar). Holds your keys so you can sign payments. |
+| **x402** | A payment pattern — instead of API keys, you authorize a small payment that settles on-chain. Think "tap to pay" for software. |
+| **Soroban** | Stellar's smart-contract engine. Our four contracts live there. |
+| **Attestation** | A small, un-editable record on-chain that says "this job ran, these agents were paid, here's the proof." |
+| **Testnet** | The practice version of Stellar. No real money. Free XLM from the friendbot. |
 
-## What makes it unique
+## What makes Orizon different
 
-- **x402 per-workflow payments on Stellar.** Pay-per-call over HTTP 402, settled on-chain via a Soroban escrow — no API keys, no subscriptions, no off-chain billing database.
-- **A real orchestrator, not a router.** GPT-5 decomposes an intent into a typed `Plan` and picks agents from an on-chain registry.
-- **Live code artifacts.** Coding intents run through `code.gen` which returns a self-contained single-file HTML app rendered inside a sandboxed `<iframe>` on the trace page — you watch your calculator / timer / game come alive next to the streaming log.
-- **Verifiable execution.** Every workflow ends with a write-once `AttestationRegistry.seal` transaction. Receipts and tx hashes surface in the UI with deep links to `stellar.expert`.
-- **Freighter wallet integration.** One signature authorizes the whole workflow. Network mismatches (mainnet vs testnet) are detected and surfaced in the UI.
+- **Pay per job, not per month.** One click authorizes the whole workflow. Payment settles on-chain via our `PaymentEscrow` Soroban contract.
+- **The orchestrator really thinks.** It reads your intent, picks agents, and decomposes the work into a typed plan — not a glorified router.
+- **You see the code, not a screenshot.** Coding jobs return real, runnable HTML you can preview, inspect and download.
+- **Every run leaves a paper trail.** Each workflow is sealed in `AttestationRegistry` as a write-once receipt. Tx hashes link out to `stellar.expert`.
+- **Your wallet stays in your control.** Private keys never leave Freighter. The only thing the backend signs is its own settlement tx.
 
 ## Screenshots
 
-### Landing — hero
+**Landing — hero**
 ![Hero section](./public/hero.png)
 
-### Landing — roadmap
+**Landing — roadmap**
 ![Roadmap — MVP to digital labor market](./public/roadmap.png)
 
-### Console — Orchestrator
-![Orchestrator page](./public/orchestrator.png)
+## Example intents to try
+
+All work great as a first test:
+
+- `code a calculator web app`
+- `build a pomodoro timer app`
+- `make a landing page for pulse ai`
+- `audit vault.sol for re-entrancy`
+- `weekly seo brief for fintech ph`
+
+Coding intents go through our best worker (`code.gen` + a self-critique pass). Non-coding intents route to research / copy / audit agents.
+
+## Repositories
+
+| layer | what's there | repo |
+| --- | --- | --- |
+| Frontend (this repo) | the website + wallet UI | https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar |
+| Backend | orchestrator + Agno workers + Stellar client | https://github.com/ALGOREX-PH/Orizon-Agents-BE-Stellar |
+| Smart Contracts | Soroban (Rust) — registry, escrow, attestations, reputation | https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar |
 
 ## Testnet deployment
 
-Contracts are live on **Stellar testnet** (Protocol 25+). The frontend reads the addresses from the backend's `/api/stellar/network` endpoint — you do not need to hard-code them.
+Contracts are live on **Stellar testnet** (Protocol 25+). The frontend reads them from the backend's `/api/stellar/network` endpoint — you never hard-code an address.
 
-| contract | testnet id | explorer |
+| contract | what it does | testnet id |
 | --- | --- | --- |
-| `AgentRegistry` | `CDYA6J67BUIFHDJDBGXIJYKCCXN4Y6MPY5AV6FXIYNL4A5HDHA2QL2JP` | [stellar.expert](https://stellar.expert/explorer/testnet/contract/CDYA6J67BUIFHDJDBGXIJYKCCXN4Y6MPY5AV6FXIYNL4A5HDHA2QL2JP) |
-| `ReputationLedger` | `CBLCRH6V4KOVA2CRISGWGDKQLSZJHW43DWDXZBLA4BROOWQPUKLNRKUO` | [stellar.expert](https://stellar.expert/explorer/testnet/contract/CBLCRH6V4KOVA2CRISGWGDKQLSZJHW43DWDXZBLA4BROOWQPUKLNRKUO) |
-| `PaymentEscrow` (x402) | `CD6XFSPJQYSO4HPERL3K3DKEQ3HJC7KN6PHKBQMCZR2LSW6DWXIFTW6H` | [stellar.expert](https://stellar.expert/explorer/testnet/contract/CD6XFSPJQYSO4HPERL3K3DKEQ3HJC7KN6PHKBQMCZR2LSW6DWXIFTW6H) |
-| `AttestationRegistry` | `CBK5NXVIDTPNGVPFZGOXHRKMV4TEXNOAHFF2PARIYYIVROCLXURYYPVP` | [stellar.expert](https://stellar.expert/explorer/testnet/contract/CBK5NXVIDTPNGVPFZGOXHRKMV4TEXNOAHFF2PARIYYIVROCLXURYYPVP) |
-| Asset SAC (native XLM) | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` | [stellar.expert](https://stellar.expert/explorer/testnet/contract/CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC) |
+| `AgentRegistry` | lists every registered agent with its price + skills | [`CAPHXWU…J3GQ`](https://stellar.expert/explorer/testnet/contract/CAPHXWU53UZUZJGV7IAE57NNMH3YYB5MTWO6YA53KKMXSFVLOITBJ3GQ) |
+| `PaymentEscrow` (x402) | authorize once, charge as workflow runs | [`CBJPTMA…525PI`](https://stellar.expert/explorer/testnet/contract/CBJPTMAPMGODGZCZ2IMEQSRUX3WGUXNMKDTNN2KMJ3NFGYZ5OJ5525PI) |
+| `AttestationRegistry` | write-once receipt for every completed workflow | [`CBYUZKO…HEGK`](https://stellar.expert/explorer/testnet/contract/CBYUZKOET43UXTBXZUJIBBJW5ODGD2J2AZVVXCR3QONGOCAHOXQQHEGK) |
+| `ReputationLedger` | rolling-mean rating per agent | [`CDHDMVV…WXKV`](https://stellar.expert/explorer/testnet/contract/CDHDMVVERSNZWFJIVOBM34CYLXE4A7UACHD3A6ROI63EYJY43J63WXKV) |
+| Asset SAC (native XLM) | token the workflow pays in | [`CDLZFC3…CYSC`](https://stellar.expert/explorer/testnet/contract/CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC) |
 
 - **Network:** Testnet (`Test SDF Network ; September 2015`)
 - **RPC:** `https://soroban-testnet.stellar.org`
-- **Payment asset:** native XLM via the Stellar Asset Contract (MVP). Swappable to USDC with `ASSET="USDC:G..."` in the deploy script.
+- **Admin:** `GA7AI5TAJEZA27I666DSJC4MUJYBEWUYNNZWPU7R2ONA7IZQVO6R5OQV`
+
+---
+
+# For developers
+
+Everything below is the technical side. Skip it if you just want to use the app.
+
+## How it fits together
+
+```
+┌──────────────────────────┐      ┌───────────────────────────┐      ┌───────────────────────┐
+│  Frontend (Next.js)      │      │  Backend (FastAPI)        │      │  Stellar testnet      │
+│                          │      │  + Agno + gpt-5.3-codex   │      │  (Soroban)            │
+│  • Freighter connect     │─────▶│  /api/orchestrator/*      │      │  AgentRegistry        │
+│  • Sign XDR              │      │  /api/stellar/* (read +   │─────▶│  PaymentEscrow (x402) │
+│  • Artifact viewer       │      │    build + submit XDR)    │      │  AttestationRegistry  │
+│  • SSE trace stream      │◀─────│  /api/trace/{id}/stream   │      │  ReputationLedger     │
+└──────────────────────────┘      └───────────────────────────┘      └───────────────────────┘
+```
+
+## Job lifecycle (on-chain path)
+
+1. FE asks BE to build an unsigned `PaymentEscrow.authorize(payer, "orizon_batch", total_usdc, ttl)` XDR.
+2. Freighter pops → user signs → FE submits. BE returns the 16-byte `auth_id`.
+3. FE calls `/api/orchestrator/execute` with `{plan_id, auth_id_hex, payer}`.
+4. BE runs each worker agent and collects artifacts, then:
+   - Signs + submits `PaymentEscrow.charge(…)` — moves XLM.
+   - Signs + submits `AttestationRegistry.seal(…)` — write-once workflow receipt.
+5. BE streams the SSE trace with real tx hashes; FE auto-switches to the artifact tab.
 
 ## Stack
 
@@ -63,7 +144,7 @@ Contracts are live on **Stellar testnet** (Protocol 25+). The frontend reads the
 - **Freighter wallet extension** — https://freighter.app — set to **Test Net**.
 - The **backend** running on `http://localhost:8000` (see the BE repo).
 
-## Setup
+## Local setup
 
 ```bash
 # 1. clone
@@ -75,159 +156,85 @@ npm install
 
 # 3. configure
 cp .env.example .env.local
-# .env.local: NEXT_PUBLIC_API_BASE=http://localhost:8000 (local dev)
-#             NEXT_PUBLIC_API_BASE=https://<your-host>  (prod — Render/Fly)
+# .env.local:
+#   NEXT_PUBLIC_API_BASE=http://localhost:8000          (local dev)
+#   NEXT_PUBLIC_API_BASE=https://your-backend.onrender.com (prod)
 
-# 4. run the dev server
-npm run dev
-# → http://localhost:3000
+# 4. run
+npm run dev      # → http://localhost:3000
 ```
 
-Make sure the backend is up first (`./run.sh` in the BE repo). The Next.js `rewrites` block in `next.config.mjs` proxies `/api/*` to `NEXT_PUBLIC_API_BASE`, so you never hit CORS.
-
-## Usage
-
-### 1. Open the app
-
-Visit http://localhost:3000. The marketing landing page describes the protocol. Click **Launch App ▸** or go straight to http://localhost:3000/app.
-
-### 2. Connect your wallet
-
-Click **Connect Wallet** (topbar or nav). Freighter will pop up; approve access. The top-right chip will show `◆ G..XYZ` and the network badge (`testnet` green, `wrong net` magenta).
-
-### 3. Check the network dashboard
-
-Go to `/app/wallet` — you'll see your Freighter session next to Orizon's testnet deploy, plus clickable cards for every contract linking to stellar.expert.
-
-### 4. Run an intent
-
-Open `/app/orchestrator`.
-
-1. Type an intent — e.g. `code a calculator web app`, `build a pomodoro timer app`, `make a landing page for pulse ai`.
-2. Click **Decompose ▸**. GPT-5 returns a typed `Plan` with one or more steps. For coding intents it picks `code.gen` (single step).
-3. Two ways to execute:
-   - **Authorize & Execute ▸** — one Freighter popup signs an `authorize` on `PaymentEscrow` for the workflow total; the backend `charge`s + `seal`s on-chain. Trace page will show real tx hashes.
-   - **simulate** — skips the chain entirely; useful when you don't want to sign or don't have testnet XLM.
-
-### 5. Watch the trace + open the artifact
-
-You land on `/app/trace?task=...`. The log panel streams live via SSE:
-
-- `input` — the intent
-- `exec` — orchestrator decomposition
-- `cost` — per-workflow charge (real tx hash on-chain runs, "simulated" otherwise)
-- `out` — each agent's output summary
-- `artifact` — signals that a code artifact is ready
-- `proof` — ERC-8004-style attestation sealed on-chain
-
-When an artifact arrives, a second tab appears: **▣ artifact**. Click it.
-
-- **Preview** — the generated HTML runs in a sandboxed iframe (`sandbox="allow-scripts"`). It's fully interactive. No network, no cookies, no access to the parent page.
-- **Files** — syntax-highlighted source (Prism). Multi-file artifacts get a file tree.
-- **Download** — saves the HTML locally.
-
-If `cost` and `proof` produced real transactions, the right panel shows them with `view on stellar.expert ▸` links.
-
-### Other pages
-
-- `/app` — live overview (agent count, tasks/s, completion rate, throughput sparkline, skill composition, recent tasks)
-- `/app/agents` — the on-chain registry listing (real Agno agents are tagged `LIVE`)
-- `/app/flow` — animated SVG DAG preview of a sample workflow
-
-## Explanation — how it fits together
-
-```
-┌──────────────────────────┐      ┌───────────────────────────┐      ┌───────────────────────┐
-│  Next.js Frontend        │      │  FastAPI Backend          │      │  Stellar Testnet      │
-│  (this repo)             │      │  (Agno + GPT-5)           │      │  (Soroban contracts)  │
-│                          │      │                           │      │                       │
-│  • Freighter connect     │─────▶│  /api/orchestrator/*      │      │  AgentRegistry        │
-│  • Build / sign XDR      │      │  /api/stellar/* (reads +  │─────▶│  ReputationLedger     │
-│  • Artifact viewer       │      │    XDR build + submit)    │      │  PaymentEscrow (x402) │
-│  • SSE trace stream      │◀─────│  /api/trace/{id}/stream   │      │  AttestationRegistry  │
-└──────────────────────────┘      └───────────────────────────┘      └───────────────────────┘
-```
-
-**Job lifecycle (on-chain path):**
-1. FE asks BE to build an unsigned `PaymentEscrow.authorize(payer, "orizon_batch", max_total_usdc, ttl)` XDR.
-2. Freighter pops → user signs → FE submits. Returns the 16-byte `auth_id`.
-3. FE calls `/api/orchestrator/execute` with `{plan_id, auth_id_hex, payer}`.
-4. BE runs each worker agent, collects artifacts, then:
-   - Signs + submits `PaymentEscrow.charge(settler, auth_id, total_i128, job_id)` — moves XLM.
-   - Signs + submits `AttestationRegistry.seal(...)` — write-once workflow receipt.
-5. BE streams the SSE trace with real tx hashes; FE auto-switches to the artifact tab when it arrives.
-
-The contracts (and their tests) live in the [Smart Contracts repo](https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar). The Freighter wiring lives in `lib/wallet.tsx` and is consumed via the `useWallet()` hook.
+Make sure the backend is up first (`./run.sh` in the BE repo). The Next.js `rewrites()` block in `next.config.mjs` proxies `/api/*` to `NEXT_PUBLIC_API_BASE`, so you never hit CORS.
 
 ## Project structure
 
 ```
 app/
-  layout.tsx                       # fonts, metadata, WalletProvider
-  page.tsx                         # marketing landing
-  (marketing)/_components/         # hero, solution, architecture, roadmap, …
-  app/                             # the dApp console (dashboard shell)
-    layout.tsx                     # sidebar + topbar
-    page.tsx                       # Overview
-    agents/page.tsx                # Agent registry
-    orchestrator/page.tsx          # intent → plan → Authorize & Execute
-    trace/page.tsx                 # SSE stream + Artifact tab
-    flow/page.tsx                  # DAG viewer
-    wallet/page.tsx                # Freighter + contracts panel
+  layout.tsx                 # fonts, metadata, WalletProvider
+  page.tsx                   # marketing landing
+  (marketing)/_components/   # hero, solution, architecture, roadmap…
+  app/                       # the dApp console
+    layout.tsx               # sidebar + topbar
+    page.tsx                 # Overview (metrics, tasks)
+    agents/page.tsx          # Agent registry listing
+    orchestrator/page.tsx    # intent → plan → Authorize & Execute
+    trace/page.tsx           # SSE stream + Artifact tab
+    flow/page.tsx            # DAG viewer
+    wallet/page.tsx          # Freighter + contracts panel
 components/ui/
-  wallet.tsx                       # (in /lib)
-  connect-wallet.tsx               # Freighter button
-  artifact-viewer.tsx              # Preview + Files + Download
-  code-viewer.tsx                  # prism-light syntax highlighter
-  grid-bg.tsx, glow.tsx, …         # cyberpunk primitives
+  connect-wallet.tsx         # Freighter button
+  artifact-viewer.tsx        # Preview + Files + Download
+  code-viewer.tsx            # Prism syntax highlighter
+  grid-bg.tsx, glow.tsx, …   # cyberpunk primitives
 lib/
-  api.ts                           # typed fetch/SSE/Stellar helpers
-  types.ts                         # Agent, Task, TraceLine, CodeArtifact, …
-  wallet.tsx                       # Freighter provider + useWallet()
-  utils.ts                         # cn()
+  api.ts                     # typed fetch/SSE/Stellar helpers
+  types.ts                   # Agent, Task, TraceLine, CodeArtifact…
+  wallet.tsx                 # Freighter provider + useWallet()
+  utils.ts                   # cn()
 ```
 
 ## Build
 
 ```bash
-npm run build      # Next.js production build (all routes static-rendered)
+npm run build      # production build (all routes static-rendered)
 npm run start      # serve the build locally
 ```
 
 ## Deploy — Vercel (recommended)
 
-The repo ships a `vercel.json` that proxies `/api/*` to the Render backend. One env var is all you need.
+The repo ships a `vercel.json` that proxies `/api/*` to the Render backend.
 
 1. Push to GitHub:
    ```bash
    git add vercel.json README.md && git commit -m "chore: vercel deploy"
    git push origin main
    ```
-2. Go to [vercel.com](https://vercel.com) → **Add New Project** → import `Orizon-Agents-FE-Stellar`.
-3. Framework preset: **Next.js** (auto-detected). No build command tweaks.
-4. **Environment Variables** — add one:
+2. [vercel.com](https://vercel.com) → **Add New Project** → import `Orizon-Agents-FE-Stellar`.
+3. Framework preset: **Next.js** (auto-detected).
+4. Environment Variables — add one:
 
    | name | value |
    | --- | --- |
-   | `NEXT_PUBLIC_API_BASE` | `https://orizon-agents-be-xxxx.onrender.com` (your Render URL) |
+   | `NEXT_PUBLIC_API_BASE` | `https://<your-backend>.onrender.com` |
 
-5. Click **Deploy**. ~1 minute build. You'll get `https://orizon-agents-xxx.vercel.app`.
+5. Click **Deploy**. ~1 minute build → `https://<your-project>.vercel.app`.
 6. Edit `vercel.json`'s `destination` to match your Render URL — commit + push to finalize.
-7. On the backend (Render dashboard), set `CORS_ORIGINS` to your Vercel URL. The backend also accepts any `*.vercel.app` via regex so previews work out of the box.
+7. On the backend (Render), set `CORS_ORIGINS` to your Vercel URL. Preview URLs (`*.vercel.app`) are accepted via regex.
 
-> ⚠️ `NEXT_PUBLIC_*` env vars are baked into the client bundle at build time. Changing `NEXT_PUBLIC_API_BASE` requires clicking **Redeploy**, not just saving the env.
+> ⚠️ `NEXT_PUBLIC_*` env vars are baked at build time. Changing `NEXT_PUBLIC_API_BASE` requires clicking **Redeploy** — saving alone isn't enough.
 
-> **Freighter** asks for permission per-origin. Approving on `localhost` does **not** carry over to `vercel.app` — users approve once more on first production visit.
+> **Freighter** asks for permission per-origin. Approving on `localhost` does NOT carry over to `vercel.app` — users approve once more on first production visit.
 
 ## Troubleshooting
 
 | symptom | fix |
 | --- | --- |
-| `/app` shows "backend offline" | Start the backend — `./run.sh` in the BE repo. |
-| `Connect Wallet` silently fails | Freighter extension not installed or not authorized for this origin. Install from https://freighter.app. |
-| Authorize popup appears but tx fails with `Storage ExceededLimit` | You're on an older contract deploy. The BE `.env` has the current testnet addresses — restart `./run.sh`. |
-| Artifact preview is empty | `code.gen` may have returned malformed HTML. Check the **Files** tab; re-run the intent. |
-| `npm run dev` errors with "next not found" on WSL | Windows `npm` shadowed WSL `npm`. Open a fresh terminal: `nvm use default`. |
+| `/app` shows "backend offline" | Start the backend (`./run.sh` in the BE repo) or check Render is up. |
+| **Connect Wallet** silently fails | Install Freighter at https://freighter.app and approve this site. |
+| Authorize popup works but tx fails with `Storage ExceededLimit` | Old contract deploy. Update `STELLAR_*` in Render to match `/api/stellar/network`. |
+| Authorize fails with `Contract, #1` (Unauthorized) | Your Render `STELLAR_SIGNING_KEY` doesn't match the contracts' admin. Use the secret of the wallet that deployed the contracts. |
+| Artifact preview is empty | `code.gen` returned malformed HTML. Check the **Files** tab; re-run the intent. |
+| `npm run dev` errors "next not found" on WSL | Windows `npm` shadowed WSL `npm`. New terminal: `nvm use default`. |
 
 ## Author
 
