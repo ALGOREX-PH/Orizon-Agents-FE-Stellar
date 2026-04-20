@@ -187,17 +187,37 @@ lib/
   utils.ts                         # cn()
 ```
 
-## Build + deploy
+## Build
 
 ```bash
 npm run build      # Next.js production build (all routes static-rendered)
 npm run start      # serve the build locally
 ```
 
-Production deploy (recommended):
+## Deploy — Vercel (recommended)
 
-- **Vercel** — zero-config. Set `NEXT_PUBLIC_API_BASE` to your Render/Fly backend URL.
-- **Netlify / Cloudflare Pages** — also fine, same env var.
+The repo ships a `vercel.json` that proxies `/api/*` to the Render backend. One env var is all you need.
+
+1. Push to GitHub:
+   ```bash
+   git add vercel.json README.md && git commit -m "chore: vercel deploy"
+   git push origin main
+   ```
+2. Go to [vercel.com](https://vercel.com) → **Add New Project** → import `Orizon-Agents-FE-Stellar`.
+3. Framework preset: **Next.js** (auto-detected). No build command tweaks.
+4. **Environment Variables** — add one:
+
+   | name | value |
+   | --- | --- |
+   | `NEXT_PUBLIC_API_BASE` | `https://orizon-agents-be-xxxx.onrender.com` (your Render URL) |
+
+5. Click **Deploy**. ~1 minute build. You'll get `https://orizon-agents-xxx.vercel.app`.
+6. Edit `vercel.json`'s `destination` to match your Render URL — commit + push to finalize.
+7. On the backend (Render dashboard), set `CORS_ORIGINS` to your Vercel URL. The backend also accepts any `*.vercel.app` via regex so previews work out of the box.
+
+> ⚠️ `NEXT_PUBLIC_*` env vars are baked into the client bundle at build time. Changing `NEXT_PUBLIC_API_BASE` requires clicking **Redeploy**, not just saving the env.
+
+> **Freighter** asks for permission per-origin. Approving on `localhost` does **not** carry over to `vercel.app` — users approve once more on first production visit.
 
 ## Troubleshooting
 
