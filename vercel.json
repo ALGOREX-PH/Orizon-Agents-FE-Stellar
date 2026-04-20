@@ -4,7 +4,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://orizon-agents-be.onrender.com/api/:path*"
+      "destination": "https://orizon-agents-be-stellar.onrender.com/api/:path*"
     }
   ]
 }
