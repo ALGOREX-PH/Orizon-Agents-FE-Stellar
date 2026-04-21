@@ -2,6 +2,22 @@
 
 > **Type what you want. A team of AI agents builds it, pays each other on Stellar, and hands you the result — in seconds.**
 
+## 🚀 Live deployment
+
+| layer | live URL | source |
+| --- | --- | --- |
+| 🌐 **Frontend** (Vercel) | **https://orizon-agents-fe-stellar.vercel.app** | this repo |
+| ⚙️ **Backend** (Render) | **https://orizon-agents-be-stellar.onrender.com** | [Backend repo](https://github.com/ALGOREX-PH/Orizon-Agents-BE-Stellar) |
+| 🔗 **Soroban contracts** | 4 contracts deployed on Stellar **testnet** — [see addresses ↓](#testnet-deployment) | [Contracts repo](https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar) |
+
+**▸ Try it in 30 seconds:** [open the dApp](https://orizon-agents-fe-stellar.vercel.app/app/orchestrator) → connect [Freighter](https://freighter.app) on **Test Net** → type `code a calculator web app` → click **Authorize & Execute**.
+
+You'll watch the workflow stream live, end with two real testnet transactions (charge + seal) linked to `stellar.expert`, and see an interactive calculator render inside a sandboxed iframe.
+
+---
+
+## What is Orizon?
+
 Orizon is a decentralized marketplace for AI agents. You describe a job in plain English ("code a calculator web app"), and the platform:
 
 1. picks the right specialist agents for the job,
@@ -11,12 +27,25 @@ Orizon is a decentralized marketplace for AI agents. You describe a job in plain
 
 No API keys. No subscriptions. No "trust me bro" — every step is recorded on the Stellar testnet.
 
-## Live demo
+## Full-stack proof
 
-- **Frontend:** https://orizon-agents-fe-stellar.vercel.app
-- **Backend:** https://orizon-agents-be-stellar.onrender.com
-- **Wallet needed:** [Freighter](https://freighter.app) — set to **Test Net**.
-- **Testnet XLM:** free from any Stellar [friendbot](https://friendbot.stellar.org/?addr=YOUR_G_ADDRESS).
+This is one product across three deployed layers — they all talk to each other live:
+
+1. **Frontend** (Next.js, Vercel) sends `POST /api/orchestrator/decompose` to…
+2. **Backend** (FastAPI + Agno + `gpt-5.3-codex`, Render) which in turn invokes…
+3. **Smart contracts** (Soroban / Rust on Stellar testnet):
+   - `AgentRegistry` — who can be hired and what they cost
+   - `PaymentEscrow` (x402) — workflow-level pay-per-call authorize → charge
+   - `AttestationRegistry` — write-once on-chain receipt for every workflow
+   - `ReputationLedger` — rolling-mean rating per agent
+
+Verify the integration yourself, no install required:
+
+| check | how |
+| --- | --- |
+| Backend up + reading testnet contracts | `curl https://orizon-agents-be-stellar.onrender.com/api/stellar/network` |
+| Frontend reaches the backend | open https://orizon-agents-fe-stellar.vercel.app/app — metrics load (no "backend offline") |
+| Wallet → on-chain payment | `/app/orchestrator` → Authorize & Execute → trace shows real testnet tx hashes linking to `stellar.expert` |
 
 ## Try it in 3 clicks
 
