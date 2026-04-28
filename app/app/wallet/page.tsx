@@ -16,7 +16,8 @@ type StellarInfo = {
 };
 
 export default function WalletPage() {
-  const { connected, address, network } = useWallet();
+  const { connected, address, network, xlmBalance, balanceLoading, refreshBalance } =
+    useWallet();
   const [info, setInfo] = useState<StellarInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +33,9 @@ export default function WalletPage() {
 
   const networkMismatch =
     connected && info && network?.networkPassphrase !== info.network_passphrase;
+
+  const balanceFmt =
+    xlmBalance === null ? "—" : parseFloat(xlmBalance).toFixed(7);
 
   return (
     <div className="space-y-6">
@@ -50,6 +54,58 @@ export default function WalletPage() {
           ⚠ your wallet is on <b>{network?.network}</b> but Orizon deployed to{" "}
           <b>{info?.network}</b>. Switch networks in the Freighter extension.
         </div>
+      )}
+
+      {connected && (
+        <Card glow>
+          <div className="flex items-end justify-between flex-wrap gap-4">
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan mb-2">
+                ▸ native XLM balance
+              </div>
+              <div className="flex items-baseline gap-3">
+                <span className="text-5xl font-semibold tracking-tight tabular-nums">
+                  {balanceLoading && xlmBalance === null ? "…" : balanceFmt}
+                </span>
+                <span className="font-mono text-sm uppercase tracking-[0.2em] text-cyan">
+                  XLM
+                </span>
+              </div>
+              <div className="mt-2 font-mono text-[11px] text-muted">
+                {address ? `${address.slice(0, 6)}…${address.slice(-6)}` : ""} ·{" "}
+                {network?.network ?? "testnet"}
+              </div>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <a
+                href="https://friendbot.stellar.org"
+                target="_blank"
+                rel="noreferrer"
+                className="clip-cyber-sm border border-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted hover:text-text hover:border-cyan/60 transition"
+                title="Fund this account with testnet XLM via Friendbot"
+              >
+                ▸ fund testnet
+              </a>
+              {address && (
+                <a
+                  href={`https://stellar.expert/explorer/testnet/account/${address}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="clip-cyber-sm border border-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted hover:text-text hover:border-violet/60 transition"
+                >
+                  view on stellar.expert ▸
+                </a>
+              )}
+              <button
+                onClick={() => refreshBalance()}
+                disabled={balanceLoading}
+                className="clip-cyber-sm border border-cyan/60 bg-cyan/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-cyan hover:bg-cyan/20 disabled:opacity-50 transition"
+              >
+                {balanceLoading ? "◉ refreshing…" : "↻ refresh"}
+              </button>
+            </div>
+          </div>
+        </Card>
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
