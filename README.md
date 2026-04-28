@@ -47,6 +47,33 @@ Verify the integration yourself, no install required:
 | Frontend reaches the backend | open https://orizon-agents-fe-stellar.vercel.app/app — metrics load (no "backend offline") |
 | Wallet → on-chain payment | `/app/orchestrator` → Authorize & Execute → trace shows real testnet tx hashes linking to `stellar.expert` |
 
+## White Belt — Stellar fundamentals
+
+Beyond the agent platform, the dApp also implements every Level 1 (White Belt) Stellar checklist item — Freighter connect / disconnect, native XLM balance display, a plain `Payment` operation on testnet, and a transaction-result panel with a `stellar.expert` link.
+
+| White Belt requirement | Where it lives in the dApp |
+| --- | --- |
+| Freighter wallet — connect | topbar **Connect Wallet** button → Freighter popup |
+| Freighter wallet — disconnect | click your address chip in the topbar |
+| Stellar **testnet** | enforced — wrong network shows a red `wrong net` warning |
+| **Fetch + display XLM balance** | live in the topbar; full card on `/app/wallet` with `↻ refresh` |
+| **Send XLM on testnet** | dedicated page at [`/app/send`](https://orizon-agents-fe-stellar.vercel.app/app/send) — destination, amount, optional memo, real `Operation.payment` |
+| **Tx feedback (success / failure / hash)** | inline success card with the tx hash + a `stellar.expert/explorer/testnet/tx/<hash>` deep link, or a red error card with the Horizon `result_code` |
+
+**▸ Try the White-Belt flow:** [open the dApp](https://orizon-agents-fe-stellar.vercel.app/app/send) → connect Freighter on **Test Net** → if you're unfunded, click **▸ fund testnet** to hit Friendbot → enter any G-address (e.g. a second testnet wallet you own), `1` XLM, memo `White Belt` → **Send XLM ▸**. The success card shows the tx hash, and the topbar balance refreshes automatically.
+
+**Wallet connected**
+![Wallet connected — topbar shows the address chip](./public/wallet-connected.png)
+
+**XLM balance**
+![Balance card on /app/wallet](./public/balance.png)
+
+**Successful testnet payment**
+![Send XLM success card with tx hash](./public/send-success.png)
+
+**Transaction on stellar.expert**
+![stellar.expert tx page](./public/stellar-expert.png)
+
 ## Try it in 3 clicks
 
 1. Open the app → click **Launch Console ▸**
@@ -208,8 +235,9 @@ app/
     agents/page.tsx          # Agent registry listing
     orchestrator/page.tsx    # intent → plan → Authorize & Execute
     trace/page.tsx           # SSE stream + Artifact tab
+    send/page.tsx            # plain XLM payment (White Belt)
     flow/page.tsx            # DAG viewer
-    wallet/page.tsx          # Freighter + contracts panel
+    wallet/page.tsx          # Freighter + balance + contracts panel
 components/ui/
   connect-wallet.tsx         # Freighter button
   artifact-viewer.tsx        # Preview + Files + Download
