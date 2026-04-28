@@ -52,6 +52,15 @@ const items = [
     ),
   },
   {
+    href: "/app/send",
+    label: "Send XLM",
+    icon: (
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+        <path d="M3 10l14-7-5 17-3-7-6-3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/app/wallet",
     label: "Wallet",
     icon: (
