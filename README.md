@@ -235,8 +235,9 @@ app/
     agents/page.tsx          # Agent registry listing
     orchestrator/page.tsx    # intent → plan → Authorize & Execute
     trace/page.tsx           # SSE stream + Artifact tab
+    send/page.tsx            # plain XLM payment (White Belt)
     flow/page.tsx            # DAG viewer
-    wallet/page.tsx          # Freighter + contracts panel
+    wallet/page.tsx          # Freighter + balance + contracts panel
 components/ui/
   connect-wallet.tsx         # Freighter button
   artifact-viewer.tsx        # Preview + Files + Download
