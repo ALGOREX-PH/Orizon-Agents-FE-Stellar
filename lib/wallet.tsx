@@ -59,6 +59,47 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [network, setNetwork] = useState<NetworkDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [xlmBalance, setXlmBalance] = useState<string | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+
+  const fetchBalance = useCallback(async (g: string) => {
+    setBalanceLoading(true);
+    try {
+      const r = await fetch(`${HORIZON_TESTNET}/accounts/${g}`);
+      if (r.status === 404) {
+        // Unfunded account — use friendbot to get testnet XLM.
+        setXlmBalance("0");
+        return;
+      }
+      if (!r.ok) {
+        setXlmBalance(null);
+        return;
+      }
+      const j = await r.json();
+      const native = j.balances?.find(
+        (b: { asset_type: string; balance: string }) => b.asset_type === "native",
+      );
+      setXlmBalance(native?.balance ?? "0");
+    } catch {
+      setXlmBalance(null);
+    } finally {
+      setBalanceLoading(false);
+    }
+  }, []);
+
+  const refreshBalance = useCallback(async () => {
+    if (!address) return;
+    await fetchBalance(address);
+  }, [address, fetchBalance]);
+
+  // Re-fetch balance whenever the address changes.
+  useEffect(() => {
+    if (address) {
+      fetchBalance(address);
+    } else {
+      setXlmBalance(null);
+    }
+  }, [address, fetchBalance]);
 
   /** Pulls latest address + network from Freighter, if allowed. */
   const refresh = useCallback(async () => {
@@ -148,11 +189,26 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       network,
       error,
       loading,
+      xlmBalance,
+      balanceLoading,
       connect,
       disconnect,
       signXdr,
+      refreshBalance,
     }),
-    [installed, address, network, error, loading, connect, disconnect, signXdr],
+    [
+      installed,
+      address,
+      network,
+      error,
+      loading,
+      xlmBalance,
+      balanceLoading,
+      connect,
+      disconnect,
+      signXdr,
+      refreshBalance,
+    ],
   );
 
   return <WalletCtx.Provider value={value}>{children}</WalletCtx.Provider>;
