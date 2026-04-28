@@ -41,10 +41,15 @@ type WalletState = {
   network: NetworkDetails | null;
   error: string | null;
   loading: boolean;
+  xlmBalance: string | null;
+  balanceLoading: boolean;
   connect: () => Promise<void>;
   disconnect: () => void;
   signXdr: (xdr: string, opts?: { networkPassphrase?: string }) => Promise<string>;
+  refreshBalance: () => Promise<void>;
 };
+
+const HORIZON_TESTNET = "https://horizon-testnet.stellar.org";
 
 const WalletCtx = createContext<WalletState | null>(null);
 
