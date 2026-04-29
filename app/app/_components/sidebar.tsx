@@ -52,6 +52,15 @@ const items = [
     ),
   },
   {
+    href: "/app/events",
+    label: "Events",
+    icon: (
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+        <path d="M3 10l3 0 2-5 4 10 2-5 3 0" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/app/send",
     label: "Send XLM",
     icon: (
