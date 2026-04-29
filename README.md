@@ -169,7 +169,7 @@ This repo is a **monorepo** — a snapshot of all three layers lives here so a r
 | --- | --- | --- |
 | Frontend (this repo) | `/` (root) | https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar |
 | Backend | [`/backend`](./backend) | https://github.com/ALGOREX-PH/Orizon-Agents-BE-Stellar |
-| Smart Contracts | [`/contracts`](./contracts) (4 Soroban contracts) | https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar |
+| Smart Contracts | [`/contract`](./contract) (4 Soroban contracts) | https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar |
 
 ## Testnet deployment
 
@@ -277,7 +277,7 @@ lib/
   wallet.tsx                 # StellarWalletsKit provider (multi-wallet)
   wallet-errors.ts           # classifyError() — wallet_not_found / user_rejected / insufficient_balance
   stellar-events.ts          # useStellarEvents() — polls RPC getEvents
-contracts/                   # snapshot of the Soroban contracts (Yellow Belt revision)
+contract/                    # snapshot of the Soroban contracts (per White-Belt revision)
 backend/                     # snapshot of the FastAPI + Agno backend
 components/ui/
   connect-wallet.tsx         # Freighter button
