@@ -119,6 +119,35 @@ Beyond the canonical Stellar fundamentals, the dApp also implements every Level 
 
 > **Sample contract-call tx hash:** [`47a13c4b4b3aa6ec25ba742f0e52857872fac49273620ba991b3795b4d78299a`](https://stellar.expert/explorer/testnet/tx/47a13c4b4b3aa6ec25ba742f0e52857872fac49273620ba991b3795b4d78299a) — `PaymentEscrow.authorize("orizon_batch", …)`, settled on Stellar testnet.
 
+## Orange Belt — tests, demo, polish
+
+The dApp ships with a **Vitest** unit-test suite covering the wallet-error classifier — the contract behind Yellow Belt's three error types. A regression here would silently degrade the friendly-error UX, so the tests pin the behavior.
+
+```bash
+npm install
+npm test
+```
+
+| Orange Belt requirement | Where |
+| --- | --- |
+| **3+ tests passing** | [`lib/wallet-errors.test.ts`](./lib/wallet-errors.test.ts) — 5 tests, see screenshot below |
+| README with complete docs | this file (White-Belt + Yellow-Belt + Orange-Belt sections) |
+| **Demo video (1 min)** | [▸ watch on YouTube](https://youtu.be/REPLACE_WITH_YOUR_VIDEO_ID) — full intent → wallet → on-chain settlement flow |
+| Live deploy | https://orizon-agents-fe-stellar.vercel.app |
+| 3+ meaningful commits | `git log --oneline | head -20` — well over 3 |
+
+**Test output (`npm test`):**
+
+![5 tests passing in Vitest](./public/tests-passing.png)
+
+**What the tests cover:**
+
+- Freighter "User declined access" → `user_rejected`
+- Horizon `tx_insufficient_balance` → `insufficient_balance` (with friendly copy)
+- Horizon `op_no_destination` → friendly "Destination doesn't exist" + raw code preserved
+- Unmapped errors fall through to `unknown` without losing context
+- Wallet-extension-missing messages → `wallet_not_found` + install hint
+
 ## Try it in 3 clicks
 
 1. Open the app → click **Launch Console ▸**
