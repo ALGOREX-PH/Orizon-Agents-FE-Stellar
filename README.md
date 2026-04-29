@@ -163,11 +163,13 @@ Coding intents go through our best worker (`code.gen` + a self-critique pass). N
 
 ## Repositories
 
-| layer | what's there | repo |
+This repo is a **monorepo** — a snapshot of all three layers lives here so a reviewer can see the full stack in one place. The canonical homes (with their independent git history) are linked too.
+
+| layer | folder in this repo | canonical repo |
 | --- | --- | --- |
-| Frontend (this repo) | the website + wallet UI | https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar |
-| Backend | orchestrator + Agno workers + Stellar client | https://github.com/ALGOREX-PH/Orizon-Agents-BE-Stellar |
-| Smart Contracts | Soroban (Rust) — registry, escrow, attestations, reputation | https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar |
+| Frontend (this repo) | `/` (root) | https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar |
+| Backend | [`/backend`](./backend) | https://github.com/ALGOREX-PH/Orizon-Agents-BE-Stellar |
+| Smart Contracts | [`/contracts`](./contracts) (4 Soroban contracts) | https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar |
 
 ## Testnet deployment
 
