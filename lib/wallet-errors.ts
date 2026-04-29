@@ -59,6 +59,14 @@ const WRONG_NETWORK_PATTERNS = [
 export function classifyError(e: unknown): FriendlyError {
   const raw = extractMessage(e);
   const horizonExtras = extractHorizonResultCodes(e);
+  // Build a richer "raw" string when Horizon gives us structured codes.
+  const enrichedRaw = horizonExtras
+    ? `${raw} · tx=${horizonExtras.transaction ?? "?"}${
+        horizonExtras.operations?.length
+          ? ` · ops=[${horizonExtras.operations.join(", ")}]`
+          : ""
+      }`
+    : raw;
 
   // Horizon's result_codes are the most reliable signal for on-chain failures.
   if (horizonExtras) {
@@ -70,9 +78,65 @@ export function classifyError(e: unknown): FriendlyError {
         title: "Insufficient XLM balance",
         detail:
           "Your wallet doesn't have enough XLM to cover this payment plus the network fee. Top up via Friendbot and try again.",
-        raw,
+        raw: enrichedRaw,
       };
     }
+    if (ops.includes("op_no_destination")) {
+      return {
+        kind: "unknown",
+        title: "Destination account doesn't exist",
+        detail:
+          "The destination G-address has never been funded on testnet. Plain payments only work to already-funded accounts. Either fund the destination via friendbot.stellar.org first, or send to a known-funded address (e.g. the contracts admin).",
+        raw: enrichedRaw,
+      };
+    }
+    if (tx === "tx_bad_auth" || tx === "tx_bad_auth_extra") {
+      return {
+        kind: "user_rejected",
+        title: "Bad signature",
+        detail:
+          "The wallet signed for a different account or network. Double-check the wallet is on Test Net and the connected address matches the source.",
+        raw: enrichedRaw,
+      };
+    }
+    if (tx === "tx_too_late" || tx === "tx_bad_seq") {
+      return {
+        kind: "unknown",
+        title: "Transaction expired or out of sequence",
+        detail:
+          "Horizon couldn't apply the tx because the timeout passed or the sequence number is stale. Retry — the next attempt fetches a fresh sequence.",
+        raw: enrichedRaw,
+      };
+    }
+    if (tx === "tx_insufficient_fee") {
+      return {
+        kind: "unknown",
+        title: "Fee too low",
+        detail:
+          "Network is congested and the base fee was rejected. Retry — we'll pick up the new minimum.",
+        raw: enrichedRaw,
+      };
+    }
+    if (ops.includes("op_low_reserve")) {
+      return {
+        kind: "insufficient_balance",
+        title: "Destination below reserve",
+        detail:
+          "The destination is below the Stellar minimum reserve. On testnet, fund it with at least 1 XLM via friendbot first.",
+        raw: enrichedRaw,
+      };
+    }
+    // Any other Horizon failure — surface the codes in the friendly detail.
+    const codeStr = `${tx || "tx_failed"}${
+      ops.length ? ` (${ops.join(", ")})` : ""
+    }`;
+    return {
+      kind: "unknown",
+      title: `Horizon rejected the tx — ${codeStr}`,
+      detail:
+        "The transaction reached Horizon but was rejected on-chain. Open the browser console for the full response, or look up the result code at https://developers.stellar.org/docs/data/horizon/api-reference/errors/result-codes.",
+      raw: enrichedRaw,
+    };
   }
 
   if (NOT_FOUND_PATTERNS.some((re) => re.test(raw))) {
