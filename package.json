@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@creit.tech/stellar-wallets-kit": "^2.1.0",
     "@stellar/freighter-api": "^6.0.1",
     "@stellar/stellar-sdk": "^15.0.1",
     "@types/react-syntax-highlighter": "^15.5.13",
