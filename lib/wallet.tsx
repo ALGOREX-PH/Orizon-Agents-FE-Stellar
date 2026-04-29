@@ -22,10 +22,10 @@ import {
 import {
   StellarWalletsKit,
   Networks as KitNetworks,
-  defaultModules,
-  FREIGHTER_ID,
   type ISupportedWallet,
 } from "@creit.tech/stellar-wallets-kit";
+import { defaultModules } from "@creit.tech/stellar-wallets-kit/modules/utils";
+import { FREIGHTER_ID } from "@creit.tech/stellar-wallets-kit/modules/freighter";
 import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
 
 const NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
