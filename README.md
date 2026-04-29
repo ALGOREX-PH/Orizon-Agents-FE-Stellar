@@ -221,7 +221,8 @@ Everything below is the technical side. Skip it if you just want to use the app.
 - **Next.js 14** (App Router) + **TypeScript**
 - **Tailwind CSS** (custom cyberpunk-neon theme)
 - **Framer Motion** (scroll + streaming animations)
-- **@stellar/freighter-api** + **@stellar/stellar-sdk** — wallet connect + XDR signing
+- **@creit.tech/stellar-wallets-kit** — multi-wallet picker (Freighter, xBull, Albedo, LOBSTR, Hana, Hot Wallet)
+- **@stellar/stellar-sdk** — XDR signing, Horizon payment, Soroban RPC `getEvents`
 - **react-syntax-highlighter** — Prism code viewer for artifacts
 - **EventSource / SSE** — live trace streaming from the FastAPI backend
 
