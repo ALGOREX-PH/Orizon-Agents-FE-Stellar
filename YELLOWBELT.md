@@ -134,7 +134,7 @@ git push origin main
 | Event listening + state sync | ✅ | `lib/stellar-events.ts` + `app/app/events/page.tsx` |
 | Tx status (pending/success/fail) | ✅ | `components/ui/tx-status.tsx` |
 | 2+ meaningful commits | ⚠️ pending push | see step 7 |
-| Folder named `contract` (reviewer revision) | ✅ | `contracts/contract/` (mirror) + canonical contracts repo `contract/` |
+| Folder named `contract` (reviewer revision) | ✅ | `contract/contract/` (mirror) + canonical contracts repo `contract/` |
 | README — wallet-options screenshot | ⚠️ pending | `public/wallet-options.png` |
 | README — events-feed screenshot | ⚠️ pending | `public/events-feed.png` |
 | README — tx-status screenshot | ⚠️ pending | `public/tx-status.png` |
