@@ -2,13 +2,17 @@
 
 Action list for completing **Level 1 — White Belt** of the Stellar Composability Hackathon. Code is in place; this is the manual verification + capture + submit work.
 
-> **Reviewer revision (resolved):** the smart contract now lives in a folder named `contract/` — both in this repo at [`/contract`](./contract) (full snapshot of the four Soroban contracts) and in the canonical contracts repo (`crates/` was renamed to `contract/`).
+> **Reviewer revisions (resolved):**
+>
+> - **Revision 1** — _Folder name "contract" with the smart contract inside._ Smart contracts now live in `contract/` both in this repo at [`/contract`](./contract) and in the canonical contracts repo (`crates/` was renamed to `contract/`).
+> - **Revision 2** — _Add the deployed contract on your README._ The four Soroban contract addresses are now in a prominent `## 📜 Deployed contracts (Stellar testnet)` section right under the Live Deployment banner at the top of the README — no scrolling required. Each address links to `stellar.expert/explorer/testnet/contract/<id>`.
 
-## 0. Sanity-check the rename (~1 min)
+## 0. Sanity-check the revisions (~1 min)
 
 - [ ] `ls contract/` — should list the four Soroban contracts (`agent-registry`, `attestation-registry`, `payment-escrow`, `reputation-ledger`, `shared`) plus `Cargo.toml`, `Makefile`, `README.md`, `addresses.json`, `scripts/`.
 - [ ] `ls contracts 2>/dev/null` — should output nothing (the old plural folder no longer exists).
-- [ ] Confirm `README.md` references the new path: search for `./contract` (singular).
+- [ ] Open `README.md` — within the first 40 lines, the `## 📜 Deployed contracts (Stellar testnet)` table is visible with all 4 contract IDs + Asset SAC.
+- [ ] Click any address in that table — it should open the `stellar.expert` page for that contract on testnet.
 
 ## 1. Verify locally (~5 min)
 
