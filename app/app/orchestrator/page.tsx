@@ -321,6 +321,13 @@ export default function OrchestratorPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <TxStatus
+        state={txState}
+        hash={authorizeHash ?? undefined}
+        error={friendlyError}
+        network="testnet"
+      />
     </div>
   );
 }
