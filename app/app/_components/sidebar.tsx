@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
+import { useMobileNav } from "./mobile-nav-context";
 
 const items = [
   {
