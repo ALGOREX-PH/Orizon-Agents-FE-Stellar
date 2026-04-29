@@ -3,6 +3,7 @@ import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { useWallet } from "@/lib/wallet";
+import { useMobileNav } from "./mobile-nav-context";
 
 const titles: Record<string, { t: string; b: string[] }> = {
   "/app": { t: "Overview", b: ["console", "overview"] },
