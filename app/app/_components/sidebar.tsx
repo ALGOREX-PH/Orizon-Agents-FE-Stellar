@@ -98,14 +98,32 @@ const items = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { open, setOpen } = useMobileNav();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-border bg-surface/60 backdrop-blur-xl">
+    <>
+      {/* Mobile-only backdrop, visible when the drawer is open. */}
+      <button
+        aria-label="close menu"
+        onClick={() => setOpen(false)}
+        className={cn(
+          "fixed inset-0 z-30 bg-black/60 backdrop-blur-sm md:hidden transition-opacity",
+          open ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+      />
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-border bg-surface/95 md:bg-surface/60 backdrop-blur-xl transition-transform duration-200",
+          // Mobile: slide in/out. Desktop: always visible.
+          open ? "translate-x-0" : "-translate-x-full",
+          "md:translate-x-0",
+        )}
+      >
       <div className="flex h-16 items-center px-5 border-b border-border">
         <Logo />
       </div>
 
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
         <div className="px-3 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-muted">
           workspace
         </div>
@@ -118,6 +136,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setOpen(false)}
               className={cn(
                 "relative flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm transition-all",
                 active
