@@ -81,13 +81,16 @@ export default function OrchestratorPage() {
     }
   };
 
-  /** Real on-chain path: Freighter signs authorize, backend charges + seals. */
+  /** Real on-chain path: wallet signs authorize, backend charges + seals. */
   const authorizeAndExecute = async () => {
     if (!plan || !wallet.connected || !wallet.address) return;
     setExecuting(true);
     setError(null);
+    setFriendlyError(null);
+    setAuthorizeHash(null);
     try {
       setStep("sign");
+      setTxState("building");
       const { xdr } = await buildAuthorize({
         payer: wallet.address,
         agent_id: "orizon_batch",
@@ -95,9 +98,11 @@ export default function OrchestratorPage() {
         ttl_seconds: 600,
       });
 
+      setTxState("signing");
       const signedXdr = await wallet.signXdr(xdr);
 
       setStep("broadcast");
+      setTxState("broadcasting");
       const broadcast = (await submitSigned(signedXdr)) as {
         status: string;
         hash: string;
@@ -118,6 +123,9 @@ export default function OrchestratorPage() {
       const authHex = bytesToHex(broadcast.return_value);
       if (!authHex) throw new Error("failed to read auth_id from tx result");
 
+      setAuthorizeHash(broadcast.hash);
+      setTxState("success");
+
       setStep("execute");
       const { task_id } = await execute(plan.plan_id, {
         auth_id_hex: authHex,
@@ -125,7 +133,10 @@ export default function OrchestratorPage() {
       });
       router.push(`/app/trace?task=${task_id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "failed");
+      const friendly = classifyError(e);
+      setFriendlyError(friendly);
+      setError(friendly.detail);
+      setTxState("failed");
       setExecuting(false);
       setStep("");
     }
