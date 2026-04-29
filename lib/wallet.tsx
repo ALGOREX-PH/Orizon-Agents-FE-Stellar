@@ -107,10 +107,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [xlmBalance, setXlmBalance] = useState<string | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
 
-  const network: NetworkDetails = {
-    network: "TESTNET",
-    networkPassphrase: NETWORK_PASSPHRASE,
-  };
+  const network = useMemo<NetworkDetails>(
+    () => ({ network: "TESTNET", networkPassphrase: NETWORK_PASSPHRASE }),
+    [],
+  );
 
   const fetchBalance = useCallback(async (g: string) => {
     setBalanceLoading(true);
