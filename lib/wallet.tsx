@@ -22,7 +22,6 @@ import {
 import {
   StellarWalletsKit,
   Networks as KitNetworks,
-  type ISupportedWallet,
 } from "@creit.tech/stellar-wallets-kit";
 import { defaultModules } from "@creit.tech/stellar-wallets-kit/modules/utils";
 import { FREIGHTER_ID } from "@creit.tech/stellar-wallets-kit/modules/freighter";
