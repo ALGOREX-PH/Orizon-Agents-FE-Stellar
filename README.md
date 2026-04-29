@@ -74,6 +74,35 @@ Beyond the agent platform, the dApp also implements every Level 1 (White Belt) S
 **Transaction on stellar.expert**
 ![stellar.expert tx page](./public/stellar-expert.png)
 
+## Yellow Belt — multi-wallet, events, status
+
+Beyond the canonical Stellar fundamentals, the dApp also implements every Level 2 (Yellow Belt) requirement — a multi-wallet picker (StellarWalletsKit), explicit handling of three distinct error types, a deployed Soroban contract called from the FE with reads + writes, a live contract-event feed, and an explicit per-stage transaction status indicator.
+
+| Yellow Belt requirement | Where it lives in the dApp |
+| --- | --- |
+| **StellarWalletsKit** (multi-wallet) | `lib/wallet.tsx` — Connect button opens a modal with Freighter, xBull, Albedo, LOBSTR, Hana, Hot Wallet |
+| **Error type #1: wallet not found** | classified in `lib/wallet-errors.ts` → friendly "No wallet detected" card with install link |
+| **Error type #2: user rejected sign** | classified in `lib/wallet-errors.ts` → friendly "Signature cancelled" card |
+| **Error type #3: insufficient balance** | classified from Horizon `tx_insufficient_balance` → friendly "Insufficient XLM balance" card |
+| **Contract deployed on testnet** | 4 contracts — see [Testnet deployment ↓](#testnet-deployment) |
+| **Contract called from FE** | `/app/orchestrator` → `PaymentEscrow.authorize` (signed XDR) and `Send` flow via Horizon |
+| **Read + write contract data** | reads via `getEvents` + `/api/stellar/network`; writes via signed `authorize/charge/seal` |
+| **Event listening + state sync** | `/app/events` polls Soroban RPC `getEvents` every 5 s; UI updates as events land |
+| **Tx status (pending → success/fail)** | `<TxStatus />` lifecycle dots: Build → Sign → Broadcast → Pending → Confirmed |
+
+**▸ Try the Yellow-Belt flow:** [open the events page](https://orizon-agents-fe-stellar.vercel.app/app/events) — leave it open in one tab. In a second tab, [run a workflow](https://orizon-agents-fe-stellar.vercel.app/app/orchestrator). Within ~5 s of the workflow's charge + seal landing, those events appear in the feed with their tx hashes.
+
+**Multi-wallet picker (StellarWalletsKit modal)**
+![Wallet options modal](./public/wallet-options.png)
+
+**Live contract event feed**
+![Soroban events feed](./public/events-feed.png)
+
+**Tx status — full lifecycle**
+![TxStatus component, build → confirmed](./public/tx-status.png)
+
+> **Sample contract-call tx hash** — every workflow on `/app/orchestrator` produces a fresh one, and the trace UI renders them with `stellar.expert` deep-links. For an evergreen example, run the orchestrator once and pin your own hash here.
+
 ## Try it in 3 clicks
 
 1. Open the app → click **Launch Console ▸**
