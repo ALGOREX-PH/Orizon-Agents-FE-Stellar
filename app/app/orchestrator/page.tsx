@@ -48,6 +48,9 @@ export default function OrchestratorPage() {
   const [executing, setExecuting] = useState(false);
   const [step, setStep] = useState<"" | "sign" | "broadcast" | "execute">("");
   const [error, setError] = useState<string | null>(null);
+  const [txState, setTxState] = useState<TxState>("idle");
+  const [friendlyError, setFriendlyError] = useState<FriendlyError | null>(null);
+  const [authorizeHash, setAuthorizeHash] = useState<string | null>(null);
 
   const run = async () => {
     if (!intent.trim()) return;
