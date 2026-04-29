@@ -11,3 +11,16 @@ dist
 .vercel
 next-env.d.ts
 .turbo
+
+# Monorepo subdirs (contracts + backend)
+contracts/target/
+contracts/.stellar/
+contracts/**/*.wasm
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/.env
+backend/.pytest_cache/
+backend/.ruff_cache/
+backend/.mypy_cache/
