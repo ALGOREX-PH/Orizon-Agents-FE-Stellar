@@ -117,7 +117,7 @@ Beyond the canonical Stellar fundamentals, the dApp also implements every Level 
 **Tx status — full lifecycle**
 ![TxStatus component, build → confirmed](./public/tx-status.png)
 
-> **Sample contract-call tx hash** — every workflow on `/app/orchestrator` produces a fresh one, and the trace UI renders them with `stellar.expert` deep-links. For an evergreen example, run the orchestrator once and pin your own hash here.
+> **Sample contract-call tx hash:** [`47a13c4b4b3aa6ec25ba742f0e52857872fac49273620ba991b3795b4d78299a`](https://stellar.expert/explorer/testnet/tx/47a13c4b4b3aa6ec25ba742f0e52857872fac49273620ba991b3795b4d78299a) — `PaymentEscrow.authorize("orizon_batch", …)`, settled on Stellar testnet.
 
 ## Try it in 3 clicks
 
