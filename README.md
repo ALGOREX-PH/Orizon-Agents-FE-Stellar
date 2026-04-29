@@ -132,7 +132,7 @@ npm test
 | --- | --- |
 | **3+ tests passing** | [`lib/wallet-errors.test.ts`](./lib/wallet-errors.test.ts) — 5 tests, see screenshot below |
 | README with complete docs | this file (White-Belt + Yellow-Belt + Orange-Belt sections) |
-| **Demo video (1 min)** | [▸ watch on YouTube](https://youtu.be/REPLACE_WITH_YOUR_VIDEO_ID) — full intent → wallet → on-chain settlement flow |
+| **Demo video (1 min)** | [▸ watch on YouTube](https://youtu.be/E4EYx-RoxpY) — full intent → wallet → on-chain settlement flow |
 | Live deploy | https://orizon-agents-fe-stellar.vercel.app |
 | 3+ meaningful commits | `git log --oneline | head -20` — well over 3 |
 
