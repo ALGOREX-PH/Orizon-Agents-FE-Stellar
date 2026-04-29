@@ -9,6 +9,7 @@ const titles: Record<string, { t: string; b: string[] }> = {
   "/app/agents": { t: "Agent Registry", b: ["console", "agents"] },
   "/app/orchestrator": { t: "Orchestrator", b: ["console", "orchestrator"] },
   "/app/trace": { t: "Trace", b: ["console", "trace"] },
+  "/app/events": { t: "Events", b: ["console", "events"] },
   "/app/send": { t: "Send XLM", b: ["console", "send"] },
   "/app/flow": { t: "Flow", b: ["console", "flow"] },
 };
