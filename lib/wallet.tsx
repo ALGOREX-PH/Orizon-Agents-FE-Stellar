@@ -173,24 +173,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     try {
       ensureKitInit();
       // Open the multi-wallet picker. Resolves to the chosen wallet's address.
-      let chosen: ISupportedWallet | null = null;
-      const result = await StellarWalletsKit.authModal({
-        // Default container is body; nothing extra needed.
-      } as unknown as Parameters<typeof StellarWalletsKit.authModal>[0]);
-
+      const { address: addr } = await StellarWalletsKit.authModal();
       // The kit sets the active module internally before resolving authModal.
-      // We can read it back via getAddress.
-      const addr = result.address;
-      // selectedModule is read-only — pull the id from it.
       const id = StellarWalletsKit.selectedModule.productId;
-      chosen = {
-        id,
-        name: StellarWalletsKit.selectedModule.productName,
-      } as ISupportedWallet;
+      const name = StellarWalletsKit.selectedModule.productName;
 
       setAddress(addr);
       setWalletId(id);
-      setWalletName(chosen?.name ?? prettyName(id));
+      setWalletName(name ?? prettyName(id));
       saveSession({ walletId: id, address: addr });
     } catch (e) {
       const f = classifyError(e);
