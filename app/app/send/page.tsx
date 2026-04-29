@@ -13,22 +13,11 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
+import { TxStatus, type TxState } from "@/components/ui/tx-status";
 import { useWallet } from "@/lib/wallet";
+import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
 
 const HORIZON_TESTNET = "https://horizon-testnet.stellar.org";
-
-type SuccessState = {
-  hash: string;
-  destination: string;
-  amount: string;
-  memo: string | null;
-};
-
-type ErrorState = {
-  message: string;
-  code?: string;
-  resultCodes?: { transaction?: string; operations?: string[] };
-};
 
 function isValidGAddress(s: string): boolean {
   return /^G[A-Z2-7]{55}$/.test(s.trim());
@@ -43,20 +32,22 @@ function trimMemo(m: string): string {
   return s;
 }
 
-function shortG(g: string): string {
-  return `${g.slice(0, 6)}…${g.slice(-6)}`;
-}
-
 export default function SendPage() {
   const wallet = useWallet();
 
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("");
   const [memo, setMemo] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [step, setStep] = useState<"" | "build" | "sign" | "submit">("");
-  const [success, setSuccess] = useState<SuccessState | null>(null);
-  const [err, setErr] = useState<ErrorState | null>(null);
+  const [txState, setTxState] = useState<TxState>("idle");
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [lastSent, setLastSent] = useState<{
+    amount: string;
+    destination: string;
+    memo: string | null;
+  } | null>(null);
+  const [err, setErr] = useState<FriendlyError | null>(null);
+
+  const submitting = txState !== "idle" && txState !== "success" && txState !== "failed";
 
   const balanceNum = wallet.xlmBalance ? parseFloat(wallet.xlmBalance) : null;
   const amountNum = amount ? parseFloat(amount) : NaN;
@@ -79,12 +70,12 @@ export default function SendPage() {
     if (!wallet.connected || !wallet.address) return;
     if (validation) return;
 
-    setSubmitting(true);
     setErr(null);
-    setSuccess(null);
+    setTxHash(null);
+    setLastSent(null);
 
     try {
-      setStep("build");
+      setTxState("building");
       const server = new Horizon.Server(HORIZON_TESTNET);
       const account = await server.loadAccount(wallet.address);
 
@@ -104,47 +95,38 @@ export default function SendPage() {
 
       const tx = (memoTrimmed ? builder.addMemo(Memo.text(memoTrimmed)) : builder).build();
 
-      setStep("sign");
+      setTxState("signing");
       const signedXdr = await wallet.signXdr(tx.toXDR(), {
         networkPassphrase: Networks.TESTNET,
       });
 
-      setStep("submit");
+      setTxState("broadcasting");
       const signedTx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
+      // Brief "pending" frame so users see the lifecycle stage explicitly.
+      setTxState("pending");
       const result = await server.submitTransaction(signedTx);
 
-      setSuccess({
-        hash: result.hash,
+      setTxHash(result.hash);
+      setLastSent({
+        amount: `${amountNum.toFixed(7)} XLM`,
         destination: destination.trim(),
-        amount: amountNum.toFixed(7),
         memo: memoTrimmed || null,
       });
+      setTxState("success");
       setDestination("");
       setAmount("");
       setMemo("");
-      // Refresh balance to reflect the spend.
       wallet.refreshBalance();
     } catch (e: unknown) {
-      const ex = e as {
-        message?: string;
-        response?: {
-          data?: {
-            extras?: {
-              result_codes?: { transaction?: string; operations?: string[] };
-            };
-          };
-        };
-      };
-      const codes = ex?.response?.data?.extras?.result_codes;
-      setErr({
-        message: ex?.message || "transaction failed",
-        code: codes?.transaction,
-        resultCodes: codes,
-      });
-    } finally {
-      setSubmitting(false);
-      setStep("");
+      setErr(classifyError(e));
+      setTxState("failed");
     }
+  };
+
+  const reset = () => {
+    setTxState("idle");
+    setTxHash(null);
+    setErr(null);
   };
 
   return (
@@ -153,8 +135,8 @@ export default function SendPage() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Send XLM</h1>
           <p className="mt-1 text-sm text-muted">
-            Plain Stellar payment — sign with Freighter, broadcast through Horizon
-            testnet.
+            Plain Stellar payment — sign with any supported wallet, broadcast through
+            Horizon testnet.
           </p>
         </div>
         <ConnectWallet size="md" />
@@ -168,8 +150,8 @@ export default function SendPage() {
                 ▸ wallet required
               </div>
               <div className="text-sm">
-                Connect Freighter on <b className="text-text">Test Net</b> to send a
-                payment.
+                Connect a Stellar wallet on <b className="text-text">Test Net</b> to
+                send a payment.
               </div>
             </div>
             <ConnectWallet size="md" />
@@ -199,7 +181,8 @@ export default function SendPage() {
                 placeholder="G… 56 chars"
                 spellCheck={false}
                 autoComplete="off"
-                className="mt-1.5 w-full bg-bg/60 border border-border p-3 font-mono text-sm placeholder:text-muted/70 focus:border-violet focus:outline-none focus:shadow-neon-violet transition"
+                disabled={submitting}
+                className="mt-1.5 w-full bg-bg/60 border border-border p-3 font-mono text-sm placeholder:text-muted/70 focus:border-violet focus:outline-none focus:shadow-neon-violet transition disabled:opacity-50"
               />
             </div>
 
@@ -215,7 +198,8 @@ export default function SendPage() {
                   }
                   placeholder="1.0000000"
                   inputMode="decimal"
-                  className="mt-1.5 w-full bg-bg/60 border border-border p-3 font-mono text-sm placeholder:text-muted/70 focus:border-violet focus:outline-none focus:shadow-neon-violet transition"
+                  disabled={submitting}
+                  className="mt-1.5 w-full bg-bg/60 border border-border p-3 font-mono text-sm placeholder:text-muted/70 focus:border-violet focus:outline-none focus:shadow-neon-violet transition disabled:opacity-50"
                 />
                 <div className="mt-1.5 flex items-center justify-between font-mono text-[10px] uppercase tracking-widest text-muted">
                   <span>
@@ -242,9 +226,10 @@ export default function SendPage() {
                 <input
                   value={memo}
                   onChange={(e) => setMemo(e.target.value)}
-                  placeholder="White Belt"
+                  placeholder="Yellow Belt"
                   maxLength={28}
-                  className="mt-1.5 w-full bg-bg/60 border border-border p-3 font-mono text-sm placeholder:text-muted/70 focus:border-violet focus:outline-none focus:shadow-neon-violet transition"
+                  disabled={submitting}
+                  className="mt-1.5 w-full bg-bg/60 border border-border p-3 font-mono text-sm placeholder:text-muted/70 focus:border-violet focus:outline-none focus:shadow-neon-violet transition disabled:opacity-50"
                 />
               </div>
             </div>
@@ -258,97 +243,42 @@ export default function SendPage() {
                 <span>ready · base fee {BASE_FEE} stroops · timeout 60s</span>
               )}
             </div>
-            <Button
-              variant="cyan"
-              size="md"
-              onClick={send}
-              disabled={Boolean(validation) || submitting}
-            >
-              {submitting
-                ? step === "build"
-                  ? "◉ Building…"
-                  : step === "sign"
-                    ? "◉ Freighter…"
-                    : "◉ Submitting…"
-                : "Send XLM ▸"}
-            </Button>
+            <div className="flex gap-2">
+              {(txState === "success" || txState === "failed") && (
+                <Button variant="outline" size="md" onClick={reset}>
+                  reset
+                </Button>
+              )}
+              <Button
+                variant="cyan"
+                size="md"
+                onClick={send}
+                disabled={Boolean(validation) || submitting}
+              >
+                {submitting
+                  ? txState === "building"
+                    ? "◉ Building…"
+                    : txState === "signing"
+                      ? "◉ Wallet…"
+                      : txState === "broadcasting"
+                        ? "◉ Broadcasting…"
+                        : "◉ Pending…"
+                  : "Send XLM ▸"}
+              </Button>
+            </div>
           </div>
         </Card>
       )}
 
-      {success && (
-        <Card>
-          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan mb-3">
-            ✓ transaction successful
-          </div>
-          <div className="space-y-2 font-mono text-sm">
-            <div className="flex items-baseline justify-between gap-4 flex-wrap">
-              <span className="text-muted text-[10px] uppercase tracking-widest">
-                sent
-              </span>
-              <span className="text-text">
-                {success.amount} XLM → {shortG(success.destination)}
-              </span>
-            </div>
-            {success.memo && (
-              <div className="flex items-baseline justify-between gap-4 flex-wrap">
-                <span className="text-muted text-[10px] uppercase tracking-widest">
-                  memo
-                </span>
-                <span className="text-text">{success.memo}</span>
-              </div>
-            )}
-            <div className="flex items-baseline justify-between gap-4 flex-wrap">
-              <span className="text-muted text-[10px] uppercase tracking-widest">
-                tx hash
-              </span>
-              <span className="text-cyan break-all text-right">{success.hash}</span>
-            </div>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <a
-              href={`https://stellar.expert/explorer/testnet/tx/${success.hash}`}
-              target="_blank"
-              rel="noreferrer"
-              className="clip-cyber-sm border border-cyan/60 bg-cyan/10 px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-cyan hover:bg-cyan/20 transition"
-            >
-              view on stellar.expert ▸
-            </a>
-            <a
-              href={`${HORIZON_TESTNET}/transactions/${success.hash}`}
-              target="_blank"
-              rel="noreferrer"
-              className="clip-cyber-sm border border-border px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-muted hover:text-text hover:border-violet/60 transition"
-            >
-              raw horizon ▸
-            </a>
-          </div>
-        </Card>
-      )}
-
-      {err && (
-        <Card>
-          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-magenta mb-3">
-            ✗ transaction failed
-          </div>
-          <div className="font-mono text-sm text-magenta break-all">
-            {err.message}
-          </div>
-          {err.code && (
-            <div className="mt-3 font-mono text-xs text-muted">
-              transaction: <span className="text-text">{err.code}</span>
-            </div>
-          )}
-          {err.resultCodes?.operations && err.resultCodes.operations.length > 0 && (
-            <div className="mt-1 font-mono text-xs text-muted">
-              operations:{" "}
-              <span className="text-text">
-                {err.resultCodes.operations.join(", ")}
-              </span>
-            </div>
-          )}
-        </Card>
-      )}
+      <TxStatus
+        state={txState}
+        hash={txHash ?? undefined}
+        amount={lastSent?.amount}
+        destination={lastSent?.destination}
+        memo={lastSent?.memo}
+        error={err}
+        network="testnet"
+      />
     </div>
   );
 }
