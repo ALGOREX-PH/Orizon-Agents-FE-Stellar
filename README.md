@@ -268,8 +268,17 @@ app/
     orchestrator/page.tsx    # intent → plan → Authorize & Execute
     trace/page.tsx           # SSE stream + Artifact tab
     send/page.tsx            # plain XLM payment (White Belt)
+    events/page.tsx          # live Soroban event feed (Yellow Belt)
     flow/page.tsx            # DAG viewer
     wallet/page.tsx          # Freighter + balance + contracts panel
+components/ui/
+  tx-status.tsx              # shared pending → confirmed lifecycle (Yellow Belt)
+lib/
+  wallet.tsx                 # StellarWalletsKit provider (multi-wallet)
+  wallet-errors.ts           # classifyError() — wallet_not_found / user_rejected / insufficient_balance
+  stellar-events.ts          # useStellarEvents() — polls RPC getEvents
+contracts/                   # snapshot of the Soroban contracts (Yellow Belt revision)
+backend/                     # snapshot of the FastAPI + Agno backend
 components/ui/
   connect-wallet.tsx         # Freighter button
   artifact-viewer.tsx        # Preview + Files + Download
