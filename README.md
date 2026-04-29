@@ -1,5 +1,8 @@
 # Orizon Agents
 
+[![CI](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml/badge.svg)](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml) [![tests](https://img.shields.io/badge/tests-5%20passing-brightgreen)](./lib/wallet-errors.test.ts) [![Stellar Testnet](https://img.shields.io/badge/Stellar-Testnet-cyan)](https://stellar.expert/explorer/testnet/contract/CBJPTMAPMGODGZCZ2IMEQSRUX3WGUXNMKDTNN2KMJ3NFGYZ5OJ5525PI)
+
+
 > **Type what you want. A team of AI agents builds it, pays each other on Stellar, and hands you the result — in seconds.**
 
 ## 🚀 Live deployment
