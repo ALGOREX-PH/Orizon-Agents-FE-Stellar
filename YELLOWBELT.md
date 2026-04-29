@@ -12,7 +12,7 @@ Action list for completing **Level 2 — Yellow Belt** of the Stellar Composabil
 - ✅ **Tx status lifecycle** (`components/ui/tx-status.tsx`) — Build → Sign → Broadcast → Pending → Confirmed (or Failed).
 - ✅ **Live Soroban event feed** at `/app/events` (`lib/stellar-events.ts` polls RPC `getEvents` every 5 s).
 - ✅ **Contract folder rename** — `crates/` → `contract/` in the smart-contract repo (reviewer revision).
-- ✅ **Monorepo snapshot** — `/contracts/` and `/backend/` mirrored into this repo so the full stack is visible in one place.
+- ✅ **Monorepo snapshot** — `/contract/` and `/backend/` mirrored into this repo so the full stack is visible in one place. (Folder name is **singular `contract`** per the White-Belt reviewer revision.)
 
 ## 1. Verify locally (~10 min)
 
