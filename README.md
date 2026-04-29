@@ -151,6 +151,40 @@ npm test
 - Unmapped errors fall through to `unknown` without losing context
 - Wallet-extension-missing messages → `wallet_not_found` + install hint
 
+## Green Belt — production readiness
+
+Green Belt is about making the dApp ship-grade: cross-contract logic, CI, and mobile.
+
+| Green Belt requirement | Where |
+| --- | --- |
+| **Inter-contract call** working | `PaymentEscrow.charge()` calls `AgentRegistry.owner_of()` + `Token.transfer()` — see [`contract/contract/payment-escrow/src/lib.rs:140`](./contract/contract/payment-escrow/src/lib.rs#L140) and [`:149`](./contract/contract/payment-escrow/src/lib.rs#L149) |
+| **CI/CD pipeline** | GitHub Actions — [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs lint + tests + build on every push and PR. Status badge at the top of this README. |
+| **Mobile responsive** | App shell (sidebar collapses behind a hamburger drawer; main content reflows) — see screenshot below. |
+| **Custom token / pool** | _Not applicable_ — workflow settles in **native XLM** via the Stellar Asset Contract (SAC) [`CDLZFC3S…CYSC`](https://stellar.expert/explorer/testnet/contract/CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC). No custom asset issued. |
+| **Advanced event streaming** | Already shipped in Yellow Belt — see `/app/events` polling RPC `getEvents` every 5 s, plus the BE's SSE trace stream. |
+| 8+ meaningful commits | 50+ commits in the log; ≥ 8 dedicated to Green Belt (CI workflow, mobile drawer, hamburger, layout reflow, README badges, GREENBELT, etc.) |
+
+### Inter-contract call — how it works
+
+When the FE submits a signed `PaymentEscrow.authorize(payer, agent_id, max, ttl)` and the workflow runs, the BE then signs `PaymentEscrow.charge(caller, auth_id, amount, job_id)` per agent step. Inside that one Soroban transaction, **two cross-contract calls fire**:
+
+1. `AgentRegistry::owner_of(agent_id) → Address` — looks up who gets paid (registry contract).
+2. `Token::transfer(payer, agent_owner, amount)` — moves XLM via the SAC token contract.
+
+Both are typed `contractclient` calls in [`contract/contract/payment-escrow/src/lib.rs`](./contract/contract/payment-escrow/src/lib.rs) — so the call graph is verified at compile time, not strings-soup at runtime.
+
+> **Sample contract-call tx hash:** [`47a13c4b…78299a`](https://stellar.expert/explorer/testnet/tx/47a13c4b4b3aa6ec25ba742f0e52857872fac49273620ba991b3795b4d78299a) — `PaymentEscrow.authorize(...)`. Run a fresh `Authorize & Execute` flow on `/app/orchestrator` to also produce a `charge` tx, which is the inter-contract one (Registry + SAC).
+
+### Mobile responsive
+
+![Mobile responsive view](./public/mobile.png)
+
+### CI/CD
+
+Every push runs the GitHub Actions workflow above — `npm ci → lint → test → build`. The badge at the top of this README turns green when the latest run passes.
+
+![CI/CD passing](./public/ci-passing.png)
+
 ## Try it in 3 clicks
 
 1. Open the app → click **Launch Console ▸**
