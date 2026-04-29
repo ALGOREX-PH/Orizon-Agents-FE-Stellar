@@ -6,8 +6,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
+import { TxStatus, type TxState } from "@/components/ui/tx-status";
 import { buildAuthorize, decompose, execute, submitSigned } from "@/lib/api";
 import { useWallet } from "@/lib/wallet";
+import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
 import type { DecomposeResponse } from "@/lib/types";
 
 function bytesToHex(v: unknown): string | null {
