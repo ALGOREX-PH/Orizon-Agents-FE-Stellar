@@ -12,10 +12,10 @@ dist
 next-env.d.ts
 .turbo
 
-# Monorepo subdirs (contracts + backend)
-contracts/target/
-contracts/.stellar/
-contracts/**/*.wasm
+# Monorepo subdirs (contract + backend)
+contract/target/
+contract/.stellar/
+contract/**/*.wasm
 backend/.venv/
 backend/__pycache__/
 backend/**/__pycache__/
