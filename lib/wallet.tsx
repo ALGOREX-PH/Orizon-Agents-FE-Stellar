@@ -98,7 +98,7 @@ function saveSession(s: StoredSession | null) {
 }
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
-  const [installed, setInstalled] = useState(true); // kit modal handles "no wallet"
+  const installed = true; // kit modal handles the "no wallet" state inline
   const [address, setAddress] = useState<string | null>(null);
   const [walletId, setWalletId] = useState<string | null>(null);
   const [walletName, setWalletName] = useState<string | null>(null);
