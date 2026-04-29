@@ -135,8 +135,8 @@ git push origin main
 | Tx status (pending/success/fail) | ✅ | `components/ui/tx-status.tsx` |
 | 2+ meaningful commits | ⚠️ pending push | see step 7 |
 | Folder named `contract` (reviewer revision) | ✅ | `contract/contract/` (mirror) + canonical contracts repo `contract/` |
-| README — wallet-options screenshot | ⚠️ pending | `public/wallet-options.png` |
-| README — events-feed screenshot | ⚠️ pending | `public/events-feed.png` |
-| README — tx-status screenshot | ⚠️ pending | `public/tx-status.png` |
-| README — deployed contract address | ✅ | `README.md#testnet-deployment` |
-| README — contract-call tx hash | ⚠️ pending | step 6 above |
+| README — wallet-options screenshot | ✅ | `public/wallet-options.png` |
+| README — events-feed screenshot | ✅ | `public/events-feed.png` |
+| README — tx-status screenshot | ✅ | `public/tx-status.png` |
+| README — deployed contract address | ✅ | `README.md#-deployed-contracts-stellar-testnet` |
+| README — contract-call tx hash | ✅ | `47a13c4b…78299a` (PaymentEscrow.authorize), pinned in README |
