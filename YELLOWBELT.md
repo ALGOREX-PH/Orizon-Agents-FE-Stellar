@@ -128,7 +128,7 @@ git push origin main
 | Error: wallet not found | ✅ | `lib/wallet-errors.ts` (`wallet_not_found`) |
 | Error: user rejected sign | ✅ | `lib/wallet-errors.ts` (`user_rejected`) |
 | Error: insufficient balance | ✅ | `lib/wallet-errors.ts` (`insufficient_balance`) |
-| Contract deployed on testnet | ✅ | `contracts/addresses.json`, `README.md#testnet-deployment` |
+| Contract deployed on testnet | ✅ | `contract/addresses.json`, `README.md#testnet-deployment` |
 | Contract called from FE | ✅ | `app/app/orchestrator/page.tsx` (PaymentEscrow.authorize) |
 | Read + write contract data | ✅ | reads via `getEvents` (`/app/events`) + REST; writes via signed XDR |
 | Event listening + state sync | ✅ | `lib/stellar-events.ts` + `app/app/events/page.tsx` |
