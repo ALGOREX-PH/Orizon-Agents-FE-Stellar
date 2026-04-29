@@ -82,7 +82,7 @@ git add lib/wallet.tsx \
 git commit -m "feat(yellow-belt): multi-wallet kit, 3 error types, live events, tx status"
 
 # Commit 2 — monorepo snapshot + README + screenshots + YELLOWBELT
-git add contracts/ backend/ .gitignore \
+git add contract/ backend/ .gitignore \
         public/wallet-options.png \
         public/events-feed.png \
         public/tx-status.png \
