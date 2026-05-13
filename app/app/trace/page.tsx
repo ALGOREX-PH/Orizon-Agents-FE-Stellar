@@ -61,12 +61,21 @@ function TracePageInner() {
     if (artifactData?.artifact) setTab("artifact");
   }, [artifactData]);
 
-  // Demo mode (no task id) replays local mock data.
+  // Demo mode (no task id) replays local mock data using the timestamps
+  // embedded in each line — heavy steps (code.gen, code.critic) naturally
+  // produce a longer pause, snappy steps stay snappy. Total replay matches
+  // what a real run would look like (~6 seconds).
   useEffect(() => {
     if (taskId) return;
     if (!demoPlaying) return;
     if (demoCursor >= demoTrace.length) return;
-    const id = setTimeout(() => setDemoCursor((c) => c + 1), 550);
+    const prevT = demoCursor === 0 ? 0 : parseFloat(demoTrace[demoCursor - 1].t);
+    const nextT = parseFloat(demoTrace[demoCursor].t);
+    const rawDelta = Math.round((nextT - prevT) * 1000);
+    // Floor 120ms so very-fast steps still feel like motion; cap 2800ms so a
+    // single gap never stalls the demo into fatigue.
+    const deltaMs = Math.min(Math.max(rawDelta, 120), 2800);
+    const id = setTimeout(() => setDemoCursor((c) => c + 1), deltaMs);
     return () => clearTimeout(id);
   }, [taskId, demoCursor, demoPlaying]);
 
