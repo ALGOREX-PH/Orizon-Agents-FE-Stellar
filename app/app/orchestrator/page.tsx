@@ -166,9 +166,10 @@ export default function OrchestratorPage() {
         <div className="mt-4 flex items-center justify-between flex-wrap gap-3">
           <div className="flex gap-2 flex-wrap">
             {[
-              "code a calculator web app",
-              "build a pomodoro timer app",
-              "make a landing page for pulse ai",
+              "tetris game in html",
+              "calculator web app",
+              "snake game in html",
+              "pomodoro timer with sound",
             ].map((s) => (
               <button
                 key={s}
