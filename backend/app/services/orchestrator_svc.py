@@ -99,7 +99,7 @@ async def decompose(intent: str) -> DecomposeResponse:
     # deterministic 6-step pipeline. Reliable for live demos; no LLM cost.
     kit = detect_kit(intent)
     if kit is not None:
-        return _build_kit_plan(intent, kit)
+        return await _build_kit_plan(intent, kit)
 
     # ── Free-form path: LLM orchestrator decides the plan ──────────────────
     prompt = f"""{_registry_prompt_fragment()}
