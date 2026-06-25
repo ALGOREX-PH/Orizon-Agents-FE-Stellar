@@ -292,3 +292,37 @@ async def webhook_receive(request: Request) -> dict:
     # Persisting / reconciling the event with on-chain settlement is left to a
     # follow-up; for now we acknowledge receipt with the normalized event.
     return {"received": True, "event": event.model_dump()}
+
+
+# ── reference (accepted values for FE dropdowns) ────────────────
+@router.get("/reference")
+async def reference() -> dict:
+    """All PDAX accepted-value tables the frontend forms need."""
+    return {
+        "source_of_funds": sorted(pc.SOURCE_OF_FUNDS),
+        "purpose": sorted(pc.PURPOSE),
+        "relationship": sorted(pc.RELATIONSHIP),
+        "fee_type": sorted(pc.FEE_TYPE),
+        "sex": sorted(pc.SEX),
+        "fiat_deposit_methods": pc.FIAT_DEPOSIT_METHODS,
+        "fiat_withdrawal_methods": sorted(pc.FIAT_WITHDRAWAL_METHODS),
+        "travel_rule_threshold_php": pc.TRAVEL_RULE_THRESHOLD_PHP,
+    }
+
+
+@router.get("/reference/banks")
+async def reference_banks() -> dict:
+    """Bank / e-wallet display name → PDAX bank code."""
+    return {"banks": pc.BANK_NAME_TO_CODE}
+
+
+@router.get("/reference/tokens")
+async def reference_tokens() -> dict:
+    """Supported crypto token → network (Stellar tokens flagged)."""
+    return {"tokens": pc.TOKEN_NETWORKS, "stellar": sorted(pc.STELLAR_TOKENS)}
+
+
+@router.get("/reference/countries")
+async def reference_countries() -> dict:
+    """Accepted country list (case-sensitive)."""
+    return {"countries": sorted(pc.ACCEPTED_COUNTRIES)}
