@@ -3,7 +3,13 @@
 import type {
   PdaxBalance,
   PdaxEnvironment,
+  PdaxFirmQuoteRequest,
+  PdaxFirmQuoteV2Request,
+  PdaxOrder,
+  PdaxOrderRequest,
+  PdaxQuote,
   PdaxReference,
+  PdaxSide,
 } from "./pdax-types";
 
 const base = "/api/pdax";
