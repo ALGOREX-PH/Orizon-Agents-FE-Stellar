@@ -176,3 +176,34 @@ async def fiat_deposit(req: FiatDepositRequest) -> dict:
         return result.model_dump()
     except PdaxError as e:
         raise _fail(e) from e
+
+
+# ── withdrawals ─────────────────────────────────────────────────
+@router.post("/fiat/withdraw")
+async def fiat_withdraw(req: FiatWithdrawRequest) -> dict:
+    """Withdraw PHP to a bank / e-wallet beneficiary."""
+    try:
+        result = await pwd.fiat_withdraw(get_pdax_client(), req)
+        return result.model_dump()
+    except PdaxError as e:
+        raise _fail(e) from e
+
+
+@router.post("/fiat/user-info-upload")
+async def fiat_user_info_upload(req: FiatWithdrawRequest) -> dict:
+    """Upload sender/beneficiary travel-rule data for a fiat withdrawal."""
+    try:
+        result = await pwd.user_info_upload(get_pdax_client(), req)
+        return result.model_dump()
+    except PdaxError as e:
+        raise _fail(e) from e
+
+
+@router.post("/crypto/withdraw")
+async def crypto_withdraw(req: CryptoOutRequest) -> dict:
+    """Send a crypto token to an external address (e.g. USDCXLM)."""
+    try:
+        result = await pwd.crypto_out(get_pdax_client(), req)
+        return result.model_dump()
+    except PdaxError as e:
+        raise _fail(e) from e
