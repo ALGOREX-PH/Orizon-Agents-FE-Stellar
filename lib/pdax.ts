@@ -129,3 +129,28 @@ export const pdaxCryptoWithdraw = (body: {
   send_to_self?: string;
   beneficiary_wallet?: string;
 }) => post<PdaxCryptoOutResult, typeof body>("/crypto/withdraw", body);
+
+// ── transaction history + webhooks ──────────────────────────
+export const getPdaxFiatTransactions = (p?: {
+  mode?: string;
+  identifier?: string;
+  page?: number;
+  pageSize?: number;
+}) => get<{ transactions: PdaxFiatTransaction[] }>(`/fiat/transactions${qs(p ?? {})}`);
+
+export const getPdaxCryptoTransactions = (p?: {
+  identifier?: string;
+  txn_hash?: string;
+  type?: string;
+  page?: number;
+  pageSize?: number;
+}) => get<{ transactions: PdaxCryptoTransaction[] }>(`/crypto/transactions${qs(p ?? {})}`);
+
+export const pdaxRegisterWebhook = (body: {
+  event_type: "crypto" | "fiat";
+  webhook_endpoint: string;
+}) =>
+  post<{ webhook_endpoint: string; event_type: string }, typeof body>(
+    "/webhooks/register",
+    body,
+  );
