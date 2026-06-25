@@ -155,3 +155,24 @@ async def trade_orders(
         return {"orders": [o.model_dump() for o in orders]}
     except PdaxError as e:
         raise _fail(e) from e
+
+
+# ── funding (deposits) ──────────────────────────────────────────
+@router.get("/crypto/deposit")
+async def crypto_deposit(currency: str) -> dict:
+    """Wallet address to deposit a crypto token, e.g. currency=USDCXLM."""
+    try:
+        addr = await pf.crypto_deposit_address(get_pdax_client(), currency)
+        return addr.model_dump()
+    except PdaxError as e:
+        raise _fail(e) from e
+
+
+@router.post("/fiat/deposit")
+async def fiat_deposit(req: FiatDepositRequest) -> dict:
+    """Initiate a PHP cash-in; returns a payment_checkout_url."""
+    try:
+        result = await pf.fiat_deposit(get_pdax_client(), req)
+        return result.model_dump()
+    except PdaxError as e:
+        raise _fail(e) from e
