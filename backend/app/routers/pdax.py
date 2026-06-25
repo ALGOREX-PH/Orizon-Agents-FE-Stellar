@@ -51,3 +51,107 @@ async def environment() -> dict:
         "base_url": base_url(),
         "configured": bool(settings.pdax_username and settings.pdax_password),
     }
+
+
+# ── trade ───────────────────────────────────────────────────────
+@router.get("/trade/price")
+async def trade_price(
+    quote_currency: str,
+    side: Side,
+    base_quantity: str,
+    base_currency: str = "PHP",
+) -> dict:
+    """Indicative (non-binding) price for a pair."""
+    try:
+        params = IndicativePriceParams(
+            quote_currency=quote_currency,
+            base_currency=base_currency,
+            side=side,
+            base_quantity=base_quantity,
+        )
+        quote = await pt.indicative_price(get_pdax_client(), params)
+        return quote.model_dump()
+    except PdaxError as e:
+        raise _fail(e) from e
+
+
+@router.get("/trade/price/v2")
+async def trade_price_v2(
+    quote_currency: str,
+    side: Side,
+    currency: str,
+    quantity: str,
+    base_currency: str = "PHP",
+) -> dict:
+    """Indicative price (v2 — receive-side currency + quantity)."""
+    try:
+        params = IndicativePriceV2Params(
+            side=side,
+            quote_currency=quote_currency,
+            base_currency=base_currency,
+            currency=currency,
+            quantity=quantity,
+        )
+        quote = await pt.indicative_price_v2(get_pdax_client(), params)
+        return quote.model_dump()
+    except PdaxError as e:
+        raise _fail(e) from e
+
+
+@router.post("/trade/quote")
+async def trade_quote(req: FirmQuoteRequest) -> dict:
+    """Firm quote (expires in ~15s) acceptable via /trade/order."""
+    try:
+        quote = await pt.firm_quote(get_pdax_client(), req)
+        return quote.model_dump()
+    except PdaxError as e:
+        raise _fail(e) from e
+
+
+@router.post("/trade/quote/v2")
+async def trade_quote_v2(req: FirmQuoteV2Request) -> dict:
+    """Firm quote (v2)."""
+    try:
+        quote = await pt.firm_quote_v2(get_pdax_client(), req)
+        return quote.model_dump()
+    except PdaxError as e:
+        raise _fail(e) from e
+
+
+@router.post("/trade/order")
+async def trade_order(req: OrderRequest) -> dict:
+    """Accept a firm quote and execute the trade."""
+    try:
+        order = await pt.place_order(get_pdax_client(), req)
+        return order.model_dump()
+    except PdaxError as e:
+        raise _fail(e) from e
+
+
+@router.get("/trade/orders/{order_id}")
+async def trade_order_details(order_id: int) -> dict:
+    try:
+        order = await pt.get_order(get_pdax_client(), order_id)
+        return order.model_dump()
+    except PdaxError as e:
+        raise _fail(e) from e
+
+
+@router.get("/trade/orders")
+async def trade_orders(
+    page: int = 1,
+    page_size: int = Query(10, alias="pageSize"),
+    start_date: str | None = Query(None, alias="startDate"),
+    end_date: str | None = Query(None, alias="endDate"),
+) -> dict:
+    try:
+        orders = await pt.list_orders(
+            get_pdax_client(),
+            page=page,
+            page_size=page_size,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        return {"orders": [o.model_dump() for o in orders]}
+    except PdaxError as e:
+        raise _fail(e) from e
