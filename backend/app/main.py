@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .routers import agents, flow, metrics, orchestrator, payments, stellar, tasks, trace
+from .routers import agents, flow, metrics, orchestrator, payments, pdax, stellar, tasks, trace
 from .seed import seed_registry
 
 
