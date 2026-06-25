@@ -80,3 +80,85 @@ export type PdaxFiatDepositResult = {
   fee: number;
   status: string;
 };
+
+// Domain: withdrawals (fiat, crypto out).
+
+export type PdaxRetryMethod = {
+  request_id: string;
+  channel: string;
+  status: string;
+  fail_reason: string;
+  time?: string | null;
+};
+
+export type PdaxFiatWithdrawResult = {
+  request_id?: string | null;
+  identifier: string;
+  reference_number?: string | null;
+  amount: number;
+  method: string;
+  retry_methods: PdaxRetryMethod[];
+  status: string;
+  fee: number;
+};
+
+export type PdaxCryptoOutResult = {
+  identifier: string;
+  transaction_id: number;
+  transaction_hash: string;
+  amount: string;
+  address: string;
+  tag?: string | null;
+  total: string;
+  fee: string;
+  currency: string;
+  status: string;
+  created_at?: string | null;
+};
+
+// Domain: transaction history + reference tables.
+
+export type PdaxFiatTransaction = {
+  request_id: string;
+  transaction_id: number;
+  amount: string;
+  fee?: string | null;
+  method: string;
+  mode: string;
+  reference_number: string;
+  fulfilled_at?: string | null;
+  declined_at?: string | null;
+  rejection_reason?: string | null;
+  currency: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+  status: string;
+  identifier: string;
+  fee_type?: string | null;
+  retried_methods: PdaxRetryMethod[];
+};
+
+export type PdaxCryptoTransaction = {
+  transaction_id: number;
+  type: string;
+  credit_ccy?: string | null;
+  debit_ccy?: string | null;
+  credit_amount: string;
+  debit_amount: string;
+  fee_amount: string;
+  status: string;
+  created_at?: string | null;
+  txn_hash?: string | null;
+  identifier?: string | null;
+};
+
+export type PdaxReference = {
+  source_of_funds: string[];
+  purpose: string[];
+  relationship: string[];
+  fee_type: string[];
+  sex: string[];
+  fiat_deposit_methods: Record<string, string>;
+  fiat_withdrawal_methods: string[];
+  travel_rule_threshold_php: number;
+};
