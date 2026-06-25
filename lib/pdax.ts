@@ -103,3 +103,29 @@ export const getPdaxOrders = (p?: {
   startDate?: string;
   endDate?: string;
 }) => get<{ orders: PdaxOrder[] }>(`/trade/orders${qs(p ?? {})}`);
+
+// ── funding + withdrawals ───────────────────────────────────
+export const getPdaxCryptoDeposit = (currency: string) =>
+  get<PdaxCryptoDepositAddress>(`/crypto/deposit${qs({ currency })}`);
+
+export const pdaxFiatDeposit = (body: Record<string, unknown>) =>
+  post<PdaxFiatDepositResult, Record<string, unknown>>("/fiat/deposit", body);
+
+export const pdaxFiatWithdraw = (body: Record<string, unknown>) =>
+  post<PdaxFiatWithdrawResult, Record<string, unknown>>("/fiat/withdraw", body);
+
+export const pdaxUserInfoUpload = (body: Record<string, unknown>) =>
+  post<PdaxFiatWithdrawResult, Record<string, unknown>>("/fiat/user-info-upload", body);
+
+export const pdaxCryptoWithdraw = (body: {
+  identifier: string;
+  currency: string;
+  amount: string;
+  address: string;
+  tag?: string;
+  beneficiary_first_name?: string;
+  beneficiary_last_name?: string;
+  beneficiary_exchange?: string;
+  send_to_self?: string;
+  beneficiary_wallet?: string;
+}) => post<PdaxCryptoOutResult, typeof body>("/crypto/withdraw", body);
