@@ -20,9 +20,10 @@ from .errors import PdaxError
 from .models.auth import TokenSet
 from .totp import totp_now
 
-_LOGIN = "/pdax-institution/v1/login"
-_OTP = "/pdax-institution/v1/login/otp"
-_REFRESH = "/pdax-institution/v1/refresh-token"
+# Relative paths (no leading slash) so they join onto the trailing-slash base.
+_LOGIN = "pdax-institution/v1/login"
+_OTP = "pdax-institution/v1/login/otp"
+_REFRESH = "pdax-institution/v1/refresh-token"
 
 # Refresh this many seconds before the 10-minute access token actually expires.
 _EXPIRY_SKEW = 30
