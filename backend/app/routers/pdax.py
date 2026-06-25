@@ -207,3 +207,59 @@ async def crypto_withdraw(req: CryptoOutRequest) -> dict:
         return result.model_dump()
     except PdaxError as e:
         raise _fail(e) from e
+
+
+# ── transaction history ─────────────────────────────────────────
+@router.get("/fiat/transactions")
+async def fiat_transactions(
+    mode: str | None = None,
+    identifier: str | None = None,
+    page: int = 1,
+    page_size: int = Query(10, alias="pageSize"),
+) -> dict:
+    """Track PHP cash-in/out by mode (CashIn/CashOut) or identifier."""
+    try:
+        txns = await ptx.fiat_transactions(
+            get_pdax_client(),
+            mode=mode,
+            identifier=identifier,
+            page=page,
+            page_size=page_size,
+        )
+        return {"transactions": [t.model_dump() for t in txns]}
+    except PdaxError as e:
+        raise _fail(e) from e
+
+
+@router.get("/crypto/transactions")
+async def crypto_transactions(
+    identifier: str | None = None,
+    txn_hash: str | None = None,
+    type: str | None = None,
+    page: int = 1,
+    page_size: int = Query(10, alias="pageSize"),
+) -> dict:
+    """Track crypto deposits/withdrawals by identifier, hash, or type."""
+    try:
+        txns = await ptx.crypto_transactions(
+            get_pdax_client(),
+            identifier=identifier,
+            txn_hash=txn_hash,
+            type=type,
+            page=page,
+            page_size=page_size,
+        )
+        return {"transactions": [t.model_dump() for t in txns]}
+    except PdaxError as e:
+        raise _fail(e) from e
+
+
+# ── balances ────────────────────────────────────────────────────
+@router.get("/balances")
+async def balances(currency: str | None = None) -> dict:
+    """View balances for all assets (or a single currency)."""
+    try:
+        items = await pb.get_balances(get_pdax_client(), currency)
+        return {"balances": [b.model_dump() for b in items]}
+    except PdaxError as e:
+        raise _fail(e) from e
