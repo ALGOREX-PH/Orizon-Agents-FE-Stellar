@@ -2,7 +2,13 @@
 // Mirrors the fetch + error-extraction pattern in lib/api.ts.
 import type {
   PdaxBalance,
+  PdaxCryptoDepositAddress,
+  PdaxCryptoOutResult,
+  PdaxCryptoTransaction,
   PdaxEnvironment,
+  PdaxFiatDepositResult,
+  PdaxFiatTransaction,
+  PdaxFiatWithdrawResult,
   PdaxFirmQuoteRequest,
   PdaxFirmQuoteV2Request,
   PdaxOrder,
