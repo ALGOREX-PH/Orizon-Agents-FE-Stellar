@@ -71,6 +71,16 @@ const items = [
     ),
   },
   {
+    href: "/app/pdax",
+    label: "PDAX Ramp",
+    icon: (
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+        <path d="M4 7h11l-2.5-2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M16 13H5l2.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/app/wallet",
     label: "Wallet",
     icon: (
