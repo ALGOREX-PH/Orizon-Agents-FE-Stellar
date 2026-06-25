@@ -53,3 +53,30 @@ export type PdaxOrder = {
   created_at?: string | null;
   updated_at?: string | null;
 };
+
+// Domain: funding (crypto deposit address, fiat deposit) + balances.
+
+export type PdaxBalance = {
+  currency: string;
+  available: string;
+  hold: string;
+  total: string;
+  asset_type: string;
+};
+
+export type PdaxCryptoDepositAddress = {
+  currency: string;
+  address: string;
+  tag?: string | null;
+};
+
+export type PdaxFiatDepositResult = {
+  request_id: string;
+  identifier: string;
+  reference_number: string;
+  amount: number;
+  method: string;
+  payment_checkout_url: string;
+  fee: number;
+  status: string;
+};
