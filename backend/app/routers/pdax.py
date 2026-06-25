@@ -10,7 +10,7 @@ upstream status + message.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from ..config import settings
 from ..pdax import (
@@ -23,6 +23,17 @@ from ..pdax import (
 )
 from ..pdax import base_url, get_pdax_client
 from ..pdax.errors import PdaxError
+from ..pdax.models.common import Side
+from ..pdax.models.funding import FiatDepositRequest
+from ..pdax.models.trade import (
+    FirmQuoteRequest,
+    FirmQuoteV2Request,
+    IndicativePriceParams,
+    IndicativePriceV2Params,
+    OrderRequest,
+)
+from ..pdax.models.webhooks import WebhookRegisterRequest
+from ..pdax.models.withdrawals import CryptoOutRequest, FiatWithdrawRequest
 
 router = APIRouter(prefix="/pdax", tags=["pdax"])
 
