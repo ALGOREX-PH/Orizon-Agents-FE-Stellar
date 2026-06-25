@@ -62,3 +62,38 @@ export const getPdaxTokens = () =>
 
 export const getPdaxCountries = () =>
   get<{ countries: string[] }>("/reference/countries");
+
+// ── trade ───────────────────────────────────────────────────
+export const getPdaxPrice = (p: {
+  quote_currency: string;
+  side: PdaxSide;
+  base_quantity: string;
+  base_currency?: string;
+}) => get<PdaxQuote>(`/trade/price${qs(p)}`);
+
+export const getPdaxPriceV2 = (p: {
+  quote_currency: string;
+  side: PdaxSide;
+  currency: string;
+  quantity: string;
+  base_currency?: string;
+}) => get<PdaxQuote>(`/trade/price/v2${qs(p)}`);
+
+export const pdaxFirmQuote = (body: PdaxFirmQuoteRequest) =>
+  post<PdaxQuote, PdaxFirmQuoteRequest>("/trade/quote", body);
+
+export const pdaxFirmQuoteV2 = (body: PdaxFirmQuoteV2Request) =>
+  post<PdaxQuote, PdaxFirmQuoteV2Request>("/trade/quote/v2", body);
+
+export const pdaxPlaceOrder = (body: PdaxOrderRequest) =>
+  post<PdaxOrder, PdaxOrderRequest>("/trade/order", body);
+
+export const getPdaxOrder = (orderId: number | string) =>
+  get<PdaxOrder>(`/trade/orders/${orderId}`);
+
+export const getPdaxOrders = (p?: {
+  page?: number;
+  pageSize?: number;
+  startDate?: string;
+  endDate?: string;
+}) => get<{ orders: PdaxOrder[] }>(`/trade/orders${qs(p ?? {})}`);
