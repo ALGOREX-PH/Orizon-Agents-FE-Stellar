@@ -263,3 +263,32 @@ async def balances(currency: str | None = None) -> dict:
         return {"balances": [b.model_dump() for b in items]}
     except PdaxError as e:
         raise _fail(e) from e
+
+
+# ── webhooks ────────────────────────────────────────────────────
+@router.post("/webhooks/register")
+async def webhook_register(req: WebhookRegisterRequest) -> dict:
+    """Register this backend's URL to receive crypto or fiat events."""
+    try:
+        reg = await pw.register_webhook(get_pdax_client(), req)
+        return reg.model_dump()
+    except PdaxError as e:
+        raise _fail(e) from e
+
+
+@router.post("/webhooks/receive")
+async def webhook_receive(request: Request) -> dict:
+    """Inbound endpoint PDAX POSTs crypto/fiat events to. Validates the
+    optional HMAC signature, then parses the event into a typed model."""
+    raw = await request.body()
+    signature = request.headers.get("x-pdax-signature")
+    if not pw.verify_signature(raw, signature):
+        raise HTTPException(401, detail="invalid webhook signature")
+    try:
+        payload = await request.json()
+    except Exception as e:
+        raise HTTPException(400, detail="invalid webhook payload") from e
+    event = pw.parse_event(payload)
+    # Persisting / reconciling the event with on-chain settlement is left to a
+    # follow-up; for now we acknowledge receipt with the normalized event.
+    return {"received": True, "event": event.model_dump()}
