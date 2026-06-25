@@ -8,9 +8,9 @@ import {
   getPdaxEnvironment,
 } from "@/lib/pdax";
 import type { PdaxBalance, PdaxEnvironment } from "@/lib/pdax-types";
-
-const inputCls =
-  "w-full bg-bg/60 border border-border px-3 py-2 text-sm font-mono outline-none focus:border-violet";
+import { PricePanel } from "./_components/price-panel";
+import { DepositPanel } from "./_components/deposit-panel";
+import { TransactionsPanel } from "./_components/transactions-panel";
 
 export default function PdaxPage() {
   const [env, setEnv] = useState<PdaxEnvironment | null>(null);
