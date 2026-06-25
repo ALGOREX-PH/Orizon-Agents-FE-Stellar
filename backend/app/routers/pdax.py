@@ -21,7 +21,7 @@ from ..pdax import (
     webhooks as pw,
     withdrawals as pwd,
 )
-from ..pdax import base_url, get_pdax_client
+from ..pdax import base_url, constants as pc, get_pdax_client
 from ..pdax.errors import PdaxError
 from ..pdax.models.common import Side
 from ..pdax.models.funding import FiatDepositRequest
