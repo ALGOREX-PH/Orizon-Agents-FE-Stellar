@@ -43,6 +43,7 @@ app.include_router(metrics.router, prefix="/api")
 app.include_router(flow.router, prefix="/api")
 app.include_router(payments.router, prefix="/api")
 app.include_router(stellar.router, prefix="/api")
+app.include_router(pdax.router, prefix="/api")
 
 
 @app.get("/")
