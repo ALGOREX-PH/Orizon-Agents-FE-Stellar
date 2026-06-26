@@ -192,6 +192,14 @@ export type PdaxRampEstimate = {
   base_currency: string;
 };
 
+export type PdaxFundingQuote = {
+  usdc_target: number;
+  php_to_pay: number;
+  php_base: number;
+  buffer_bps: number;
+  price: number;
+};
+
 export type PdaxRampStage = {
   name: string;
   status: string;
