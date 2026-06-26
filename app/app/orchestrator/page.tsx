@@ -204,7 +204,12 @@ export default function OrchestratorPage() {
             <Card>
               <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold">Execution plan</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold">Execution plan</h2>
+                    <Badge tone="violet" dot>
+                      PHP accepted
+                    </Badge>
+                  </div>
                   <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
                     plan {plan.plan_id} · {plan.steps.length} step
                     {plan.steps.length === 1 ? "" : "s"}
