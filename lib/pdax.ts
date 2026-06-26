@@ -164,9 +164,13 @@ export const pdaxRegisterWebhook = (body: {
   );
 
 // ── ramp (PHP <-> USDCXLM orchestration) ────────────────────
-export const pdaxRampEstimate = (direction: RampDirection, amount: string) =>
+export const pdaxRampEstimate = (
+  direction: RampDirection,
+  amount: string,
+  currency?: string,
+) =>
   post<PdaxRampEstimate, Record<string, never>>(
-    `/ramp/estimate${qs({ direction, amount })}`,
+    `/ramp/estimate${qs({ direction, amount, currency })}`,
     {} as Record<string, never>,
   );
 
