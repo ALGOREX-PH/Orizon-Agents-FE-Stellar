@@ -10,6 +10,7 @@ import type {
   PdaxFiatTransaction,
   PdaxFiatWithdrawResult,
   PdaxFirmQuoteRequest,
+  PdaxHealth,
   PdaxFirmQuoteV2Request,
   PdaxOffRampRequest,
   PdaxOnRampRequest,
