@@ -40,12 +40,13 @@ export function FiatFund({
   useEffect(() => {
     if (!usdcAmount) return;
     setQuoting(true);
+    setErr(null);
     pdaxFundingQuote(String(usdcAmount))
       .then((q) => {
         setQuote(q);
         setPhp(String(q.php_to_pay));
       })
-      .catch(() => {})
+      .catch((e) => setErr(`couldn't price in PHP — ${String(e)}`))
       .finally(() => setQuoting(false));
   }, [usdcAmount]);
 
