@@ -16,6 +16,7 @@ import { TransactionsPanel } from "./_components/transactions-panel";
 
 export default function PdaxPage() {
   const [env, setEnv] = useState<PdaxEnvironment | null>(null);
+  const [health, setHealth] = useState<PdaxHealth | null>(null);
   const [balances, setBalances] = useState<PdaxBalance[] | null>(null);
   const [loadingBal, setLoadingBal] = useState(false);
   const [err, setErr] = useState<string | null>(null);
