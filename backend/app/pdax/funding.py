@@ -24,6 +24,7 @@ async def crypto_deposit_address(client: PdaxClient, currency: str) -> CryptoDep
 
 
 async def fiat_deposit(client: PdaxClient, req: FiatDepositRequest) -> FiatDepositResult:
+    validation.validate_fiat_deposit(req)
     data = await client.request(
         "POST", "pdax-institution/v1/fiat/deposit", json=req.model_dump(exclude_none=True)
     )
