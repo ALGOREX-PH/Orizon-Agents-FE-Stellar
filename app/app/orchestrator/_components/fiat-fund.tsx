@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { pdaxRampEstimate, pdaxStartOnRamp } from "@/lib/pdax";
-import type { PdaxRampRecord } from "@/lib/pdax-types";
+import { pdaxFundingQuote, pdaxStartOnRamp } from "@/lib/pdax";
+import type { PdaxFundingQuote, PdaxRampRecord } from "@/lib/pdax-types";
 
 const inputCls =
   "w-full bg-bg/60 border border-border px-3 py-2 text-sm font-mono outline-none focus:border-violet";
