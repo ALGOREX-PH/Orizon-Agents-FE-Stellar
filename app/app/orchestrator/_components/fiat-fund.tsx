@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { pdaxFundingQuote, pdaxStartOnRamp } from "@/lib/pdax";
+import { pdaxFundingQuote, pdaxReconcileRamp, pdaxStartOnRamp } from "@/lib/pdax";
 import type { PdaxFundingQuote, PdaxRampRecord } from "@/lib/pdax-types";
 
 const inputCls =
