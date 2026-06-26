@@ -133,11 +133,15 @@ export function FiatFund({
       <Button
         variant="primary"
         onClick={fund}
-        disabled={busy || !php || !address}
+        disabled={busy || quoting || !php || !address}
         size="md"
         className="mt-3 w-full"
       >
-        {busy ? "◉ starting…" : `Pay ₱${php || "…"} with PHP ▸`}
+        {busy
+          ? "◉ starting…"
+          : quoting
+            ? "◉ computing amount…"
+            : `Pay ₱${php} with PHP ▸`}
       </Button>
 
       {err && <div className="mt-2 text-xs font-mono text-magenta">{err}</div>}
