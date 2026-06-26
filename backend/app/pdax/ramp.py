@@ -36,9 +36,10 @@ USDCXLM = "USDCXLM"
 PHP = "PHP"
 
 
-def _num(x: float) -> str:
-    """PDAX amounts are strings; trim a float to a clean representation."""
-    return f"{x:.8f}".rstrip("0").rstrip(".")
+def _num(x: object) -> str:
+    """PDAX amounts are strings; format via Decimal so a float like 17.18 never
+    serializes as 17.179999999999998 and trips step validation."""
+    return money.format_amount(x)
 
 
 async def estimate(client: PdaxClient, direction: RampDirection, amount: str) -> RampEstimate:
