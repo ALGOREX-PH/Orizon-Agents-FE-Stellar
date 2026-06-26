@@ -26,6 +26,7 @@ from ..pdax import base_url, constants as pc, get_pdax_client
 from ..pdax.errors import PdaxError
 from ..pdax.models.common import Side
 from ..pdax.models.funding import FiatDepositRequest
+from ..pdax.models.ramp import OffRampRequest, OnRampRequest
 from ..pdax.models.trade import (
     FirmQuoteRequest,
     FirmQuoteV2Request,
