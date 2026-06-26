@@ -159,3 +159,21 @@ export const pdaxRegisterWebhook = (body: {
     "/webhooks/register",
     body,
   );
+
+// ── ramp (PHP <-> USDCXLM orchestration) ────────────────────
+export const pdaxRampEstimate = (direction: RampDirection, amount: string) =>
+  post<PdaxRampEstimate, Record<string, never>>(
+    `/ramp/estimate${qs({ direction, amount })}`,
+    {} as Record<string, never>,
+  );
+
+export const pdaxStartOnRamp = (body: PdaxOnRampRequest) =>
+  post<PdaxRampRecord, PdaxOnRampRequest>("/ramp/onramp", body);
+
+export const pdaxStartOffRamp = (body: PdaxOffRampRequest) =>
+  post<PdaxRampRecord, PdaxOffRampRequest>("/ramp/offramp", body);
+
+export const getPdaxRamp = (rampId: string) =>
+  get<PdaxRampRecord>(`/ramp/${rampId}`);
+
+export const getPdaxRamps = () => get<{ ramps: PdaxRampRecord[] }>("/ramp");
