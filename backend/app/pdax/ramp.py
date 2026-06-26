@@ -248,35 +248,45 @@ async def advance_offramp(client: PdaxClient, record: RampRecord) -> RampRecord:
     return ramp_store.save(record)
 
 
-async def handle_event(client: PdaxClient, event: CryptoEvent | FiatEvent) -> RampRecord | None:
-    """Webhook entry point — match a settlement event to a waiting ramp and
-    advance it. Returns the advanced record, or None if nothing matched."""
+def _match(event: CryptoEvent | FiatEvent):
+    """Find the ramp + advance function a settlement event belongs to."""
     if isinstance(event, FiatEvent):
         if "DEPOSIT" not in event.transaction_type.upper():
-            return None
+            return None, None
         if str(event.status).upper() != "COMPLETED" or not event.identifier:
-            return None
+            return None, None
         record = ramp_store.find_by_identifier(event.identifier)
-        if record and record.direction == "onramp" and record.status == "awaiting_payment":
-            record.status = "funded"
-            return await advance_onramp(client, record)
-        return None
+        if record and record.direction == "onramp":
+            return record, advance_onramp
+        return None, None
 
     # CryptoEvent — match an off-ramp by its USDCXLM deposit address.
     if "DEPOSIT" not in event.transaction_type.upper():
-        return None
+        return None, None
     if str(event.status).lower() != "completed":
-        return None
+        return None, None
     for record in ramp_store.list_all():
         if (
             record.direction == "offramp"
-            and record.status == "awaiting_payment"
             and record.deposit_address
             and record.deposit_address == event.destination_address
         ):
-            record.status = "funded"
-            return await advance_offramp(client, record)
-    return None
+            return record, advance_offramp
+    return None, None
+
+
+async def handle_event(client: PdaxClient, event: CryptoEvent | FiatEvent) -> RampRecord | None:
+    """Webhook entry point — match a settlement event to a waiting ramp and
+    advance it under a per-ramp lock. Idempotent: a ramp already past
+    `awaiting_payment` is returned untouched instead of advancing twice."""
+    record, advance = _match(event)
+    if record is None or advance is None:
+        return None
+    async with ramp_store.lock_for(record.ramp_id):
+        if record.status != "awaiting_payment":
+            return record
+        record.status = "funded"
+        return await advance(client, record)
 
 
 # Beneficiary payout details for in-flight off-ramps (kept beside the store).
