@@ -9,6 +9,13 @@ export type PdaxEnvironment = {
   configured: boolean;
 };
 
+export type PdaxHealth = {
+  status: "ok" | "degraded" | "unconfigured";
+  environment: string;
+  reason?: string;
+  code?: string | number | null;
+};
+
 export type PdaxQuote = {
   quote_id?: string | null;
   expires_at?: string | null;
