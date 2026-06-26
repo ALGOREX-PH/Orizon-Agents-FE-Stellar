@@ -328,3 +328,32 @@ async def reference_tokens() -> dict:
 async def reference_countries() -> dict:
     """Accepted country list (case-sensitive)."""
     return {"countries": sorted(pc.ACCEPTED_COUNTRIES)}
+
+
+# ── ramp (PHP <-> USDCXLM orchestration) ────────────────────────
+@router.post("/ramp/estimate")
+async def ramp_estimate(direction: str, amount: str) -> dict:
+    """Indicative conversion preview. amount = PHP (on-ramp) or USDC (off-ramp)."""
+    if direction not in {"onramp", "offramp"}:
+        raise HTTPException(400, detail="direction must be onramp or offramp")
+    try:
+        est = await pr.estimate(get_pdax_client(), direction, amount)  # type: ignore[arg-type]
+        return est.model_dump()
+    except PdaxError as e:
+        raise _fail(e) from e
+
+
+@router.post("/ramp/onramp")
+async def ramp_onramp(req: OnRampRequest) -> dict:
+    """Start a PHP → USDCXLM ramp. Returns a checkout URL for the buyer to pay;
+    settlement is completed by the fiat-deposit webhook."""
+    record = await pr.start_onramp(get_pdax_client(), req)
+    return record.model_dump()
+
+
+@router.post("/ramp/offramp")
+async def ramp_offramp(req: OffRampRequest) -> dict:
+    """Start a USDCXLM → PHP ramp. Returns a deposit address for the agent to
+    send USDC to; settlement is completed by the crypto-deposit webhook."""
+    record = await pr.start_offramp(get_pdax_client(), req)
+    return record.model_dump()
