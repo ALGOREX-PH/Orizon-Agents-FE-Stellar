@@ -101,6 +101,14 @@ export function FiatFund({
         </label>
       </div>
 
+      {quote && (
+        <div className="mt-2 text-[11px] font-mono text-muted">
+          funds <b className="text-text">{quote.usdc_target} USDC</b> · base ≈ ₱
+          {quote.php_base.toFixed(2)} + {(quote.buffer_bps / 100).toFixed(1)}% buffer →{" "}
+          <b className="text-violet">you pay ₱{quote.php_to_pay}</b>
+        </div>
+      )}
+
       <input
         value={address}
         onChange={(e) => setAddress(e.target.value)}
