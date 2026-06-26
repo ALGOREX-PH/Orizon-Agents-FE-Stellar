@@ -32,8 +32,9 @@ def quantize(amount: object, step: str = "0.00000001") -> Decimal:
 
 
 def format_amount(amount: object) -> str:
-    """Canonical fixed-point string: no exponent, trailing zeros trimmed."""
-    d = to_decimal(amount)
+    """Canonical fixed-point string: float noise erased, no exponent, trailing
+    zeros trimmed."""
+    d = to_decimal(amount).quantize(_FORMAT_PRECISION, rounding=ROUND_HALF_EVEN)
     s = format(d, "f")
     if "." in s:
         s = s.rstrip("0").rstrip(".")
