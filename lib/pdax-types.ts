@@ -162,3 +162,75 @@ export type PdaxReference = {
   fiat_withdrawal_methods: string[];
   travel_rule_threshold_php: number;
 };
+
+// Domain: ramp orchestration (PHP <-> USDCXLM).
+
+export type RampDirection = "onramp" | "offramp";
+
+export type RampStatus =
+  | "quoted"
+  | "awaiting_payment"
+  | "funded"
+  | "converting"
+  | "settling"
+  | "completed"
+  | "failed";
+
+export type PdaxRampEstimate = {
+  direction: RampDirection;
+  php_amount: number;
+  usdc_amount: number;
+  price: number;
+  quote_currency: string;
+  base_currency: string;
+};
+
+export type PdaxRampStage = {
+  name: string;
+  status: string;
+  detail: string;
+};
+
+export type PdaxRampRecord = {
+  ramp_id: string;
+  direction: RampDirection;
+  status: RampStatus;
+  created_at: string;
+  php_amount: number;
+  usdc_amount: number;
+  price: number;
+  stellar_address?: string | null;
+  deposit_address?: string | null;
+  deposit_tag?: string | null;
+  identifier?: string | null;
+  reference_number?: string | null;
+  checkout_url?: string | null;
+  order_id?: number | null;
+  crypto_tx_id?: number | null;
+  withdraw_request_id?: string | null;
+  stages: PdaxRampStage[];
+  error?: string | null;
+};
+
+export type PdaxOnRampRequest = {
+  php_amount: string;
+  stellar_address: string;
+  method: string;
+  identifier: string;
+  sender_first_name: string;
+  sender_last_name: string;
+  beneficiary_first_name: string;
+  beneficiary_last_name: string;
+};
+
+export type PdaxOffRampRequest = {
+  usdc_amount: string;
+  identifier: string;
+  beneficiary_bank_code: string;
+  beneficiary_account_name: string;
+  beneficiary_account_number: string;
+  sender_first_name: string;
+  sender_last_name: string;
+  beneficiary_first_name: string;
+  beneficiary_last_name: string;
+};
