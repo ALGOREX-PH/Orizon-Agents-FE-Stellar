@@ -11,11 +11,16 @@ import type {
   PdaxFiatWithdrawResult,
   PdaxFirmQuoteRequest,
   PdaxFirmQuoteV2Request,
+  PdaxOffRampRequest,
+  PdaxOnRampRequest,
   PdaxOrder,
   PdaxOrderRequest,
   PdaxQuote,
+  PdaxRampEstimate,
+  PdaxRampRecord,
   PdaxReference,
   PdaxSide,
+  RampDirection,
 } from "./pdax-types";
 
 const base = "/api/pdax";
