@@ -115,6 +115,17 @@ async def main() -> None:
     print("off-ramp settled: order", advanced2.order_id,
           f"({advanced2.usdc_amount} USDC → {advanced2.php_amount} PHP)")
 
+    # ── reconcile fallback: settle without a webhook (e.g. staging) ──
+    rec3 = await ramp.start_onramp(fake, OnRampRequest(
+        php_amount="200", stellar_address="GBUYERWALLET", method="instapay_upay_cashin",
+        identifier="reconcile-1", sender_first_name="Juan", sender_last_name="Cruz",
+        beneficiary_first_name="Juan", beneficiary_last_name="Cruz",
+    ))
+    assert rec3.status == "awaiting_payment"
+    settled = await ramp.reconcile(fake, rec3.ramp_id)
+    assert settled and settled.status == "completed", settled
+    print("reconcile: detected paid deposit and settled without a webhook")
+
     # ── funding quote: pesos paid must cover the workflow ──
     fq = await ramp.funding_quote(fake, "17.18")
     assert fq.php_to_pay >= fq.php_base, fq
