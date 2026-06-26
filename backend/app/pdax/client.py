@@ -44,17 +44,26 @@ class PdaxClient:
         json: dict[str, Any] | None = None,
         authenticated: bool = True,
     ) -> Any:
-        headers: dict[str, str] = {"Content-Type": "application/json"}
-        if authenticated:
-            headers.update(await self._auth.access_headers(self._http))
         clean_params = {k: v for k, v in (params or {}).items() if v is not None}
-        try:
-            resp = await self._http.request(
-                method, path.lstrip("/"), params=clean_params or None, json=json, headers=headers
-            )
-        except httpx.HTTPError as e:
-            raise PdaxError(f"PDAX transport error: {e}") from e
-        return _parse(resp)
+        rel = path.lstrip("/")
+
+        async def _send(attempt: int) -> Any:
+            await self._limiter.acquire()
+            headers: dict[str, str] = {"Content-Type": "application/json"}
+            if authenticated:
+                headers.update(await self._auth.access_headers(self._http))
+            t0 = time.monotonic()
+            try:
+                resp = await self._http.request(
+                    method, rel, params=clean_params or None, json=json, headers=headers
+                )
+            except httpx.HTTPError as e:
+                log_call(method, rel, None, (time.monotonic() - t0) * 1000, attempt=attempt, error=str(e))
+                raise PdaxError(f"PDAX transport error: {e}") from e
+            log_call(method, rel, resp.status_code, (time.monotonic() - t0) * 1000, attempt=attempt)
+            return _parse(resp)
+
+        return await with_retries(_send, attempts=self._retries)
 
     async def aclose(self) -> None:
         await self._http.aclose()
