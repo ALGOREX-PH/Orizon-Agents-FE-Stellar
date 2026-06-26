@@ -19,6 +19,7 @@ from .models.withdrawals import (
 
 
 async def fiat_withdraw(client: PdaxClient, req: FiatWithdrawRequest) -> FiatWithdrawResult:
+    validation.validate_fiat_withdraw(req)
     data = await client.request(
         "POST", "pdax-institution/v1/fiat/withdraw", json=req.model_dump(exclude_none=True)
     )
