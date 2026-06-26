@@ -30,6 +30,10 @@ class PdaxClient:
         base = base_url().rstrip("/") + "/"
         self._http = httpx.AsyncClient(base_url=base, timeout=timeout)
         self._auth = PdaxAuth()
+        self._limiter = RateLimiter(
+            settings.pdax_rate_limit_per_sec, settings.pdax_rate_limit_burst
+        )
+        self._retries = max(1, settings.pdax_max_retries)
 
     async def request(
         self,
