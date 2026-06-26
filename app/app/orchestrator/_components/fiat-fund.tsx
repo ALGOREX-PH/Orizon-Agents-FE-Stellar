@@ -34,11 +34,15 @@ export function FiatFund({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // Price the workflow's USDC total in pesos (currency=USDC → php needed).
+  // Server-authoritative funding quote: pesos that always cover the workflow
+  // (buffer + round-up applied backend-side).
   useEffect(() => {
     if (!usdcAmount) return;
-    pdaxRampEstimate("onramp", String(usdcAmount), "USDC")
-      .then((e) => setPhp(String(Math.ceil(e.php_amount * 1.02)))) // +2% slippage buffer
+    pdaxFundingQuote(String(usdcAmount))
+      .then((q) => {
+        setQuote(q);
+        setPhp(String(q.php_to_pay));
+      })
       .catch(() => {});
   }, [usdcAmount]);
 
