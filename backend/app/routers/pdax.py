@@ -291,9 +291,14 @@ async def webhook_receive(request: Request) -> dict:
     except Exception as e:
         raise HTTPException(400, detail="invalid webhook payload") from e
     event = pw.parse_event(payload)
-    # Persisting / reconciling the event with on-chain settlement is left to a
-    # follow-up; for now we acknowledge receipt with the normalized event.
-    return {"received": True, "event": event.model_dump()}
+    # Drive any waiting ramp forward (fiat deposit → buy → withdraw, or
+    # crypto deposit → sell → fiat withdraw).
+    advanced = await pr.handle_event(get_pdax_client(), event)
+    return {
+        "received": True,
+        "event": event.model_dump(),
+        "ramp": advanced.model_dump() if advanced else None,
+    }
 
 
 # ── reference (accepted values for FE dropdowns) ────────────────
