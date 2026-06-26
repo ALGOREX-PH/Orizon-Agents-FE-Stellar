@@ -175,6 +175,12 @@ export const pdaxRampEstimate = (
     {} as Record<string, never>,
   );
 
+export const pdaxFundingQuote = (usdc: string) =>
+  post<PdaxFundingQuote, Record<string, never>>(
+    `/ramp/funding-quote${qs({ usdc })}`,
+    {} as Record<string, never>,
+  );
+
 export const pdaxStartOnRamp = (body: PdaxOnRampRequest) =>
   post<PdaxRampRecord, PdaxOnRampRequest>("/ramp/onramp", body);
 
