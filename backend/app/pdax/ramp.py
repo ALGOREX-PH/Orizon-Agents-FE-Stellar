@@ -17,7 +17,7 @@ from __future__ import annotations
 import uuid
 
 from ..config import settings
-from . import funding, money, ramp_store, trade, withdrawals
+from . import funding, money, ramp_store, trade, transactions, withdrawals
 from .client import PdaxClient
 from .errors import PdaxError
 from .models.funding import FiatDepositRequest
