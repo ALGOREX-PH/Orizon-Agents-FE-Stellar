@@ -22,6 +22,7 @@ from .client import PdaxClient
 from .errors import PdaxError
 from .models.funding import FiatDepositRequest
 from .models.ramp import (
+    FundingQuote,
     OffRampRequest,
     OnRampRequest,
     RampDirection,
