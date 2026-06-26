@@ -22,6 +22,15 @@ from .funding import (
     FiatDepositRequest,
     FiatDepositResult,
 )
+from .ramp import (
+    OffRampRequest,
+    OnRampRequest,
+    RampDirection,
+    RampEstimate,
+    RampRecord,
+    RampStage,
+    RampStatus,
+)
 from .trade import (
     FirmQuoteRequest,
     FirmQuoteV2Request,
