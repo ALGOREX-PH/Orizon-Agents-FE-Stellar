@@ -322,6 +322,14 @@ export default function OrchestratorPage() {
                     <div className="flex gap-2 items-center">
                       <ConnectWallet size="md" />
                       <Button
+                        variant="primary"
+                        onClick={() => setShowFiat((v) => !v)}
+                        disabled={executing}
+                        size="md"
+                      >
+                        {showFiat ? "▾ Hide Fiat" : "Pay with Fiat ▸"}
+                      </Button>
+                      <Button
                         variant="outline"
                         onClick={runSimulated}
                         disabled={executing}
