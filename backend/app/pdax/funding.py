@@ -7,6 +7,7 @@ PDAX funding endpoints — crypto deposit address and fiat deposit (cash-in).
 """
 from __future__ import annotations
 
+from . import validation
 from .client import PdaxClient
 from .models.funding import (
     CryptoDepositAddress,
