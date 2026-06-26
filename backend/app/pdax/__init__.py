@@ -12,6 +12,8 @@ from __future__ import annotations
 from . import (
     balances,
     funding,
+    ramp,
+    ramp_store,
     trade,
     transactions,
     webhooks,
