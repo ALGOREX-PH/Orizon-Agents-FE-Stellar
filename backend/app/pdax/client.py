@@ -12,13 +12,17 @@ pass paths like "pdax-institution/v1/balances".
 """
 from __future__ import annotations
 
+import time
 from typing import Any
 
 import httpx
 
+from ..config import settings
 from .auth import PdaxAuth
 from .config import base_url
 from .errors import PdaxError
+from .observability import log_call
+from .resilience import RateLimiter, with_retries
 
 
 class PdaxClient:
