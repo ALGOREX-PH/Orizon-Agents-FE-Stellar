@@ -1,0 +1,138 @@
+"use client";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { pdaxRampEstimate, pdaxStartOnRamp } from "@/lib/pdax";
+import type { PdaxRampRecord } from "@/lib/pdax-types";
+
+const inputCls =
+  "w-full bg-bg/60 border border-border px-3 py-2 text-sm font-mono outline-none focus:border-violet";
+
+const METHODS = [
+  ["instapay_upay_cashin", "Bank / e-wallet (QRPh)"],
+  ["paymaya_pay", "Maya"],
+  ["grabpay_cashin", "GrabPay"],
+  ["ub_online_upay_cashin", "UnionBank online"],
+];
+
+/** Pay for a workflow in PHP: price the USDC total in pesos, then on-ramp via
+ * PDAX (bank/e-wallet) with USDCXLM delivered to the buyer's Stellar address. */
+export function FiatFund({
+  usdcAmount,
+  stellarAddress,
+}: {
+  usdcAmount: number;
+  stellarAddress?: string;
+}) {
+  const [php, setPhp] = useState("");
+  const [address, setAddress] = useState(stellarAddress ?? "");
+  const [method, setMethod] = useState(METHODS[0][0]);
+  const [first, setFirst] = useState("");
+  const [last, setLast] = useState("");
+  const [record, setRecord] = useState<PdaxRampRecord | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  // Price the workflow's USDC total in pesos (currency=USDC → php needed).
+  useEffect(() => {
+    if (!usdcAmount) return;
+    pdaxRampEstimate("onramp", String(usdcAmount), "USDC")
+      .then((e) => setPhp(String(Math.ceil(e.php_amount * 1.02)))) // +2% slippage buffer
+      .catch(() => {});
+  }, [usdcAmount]);
+
+  useEffect(() => {
+    if (stellarAddress) setAddress(stellarAddress);
+  }, [stellarAddress]);
+
+  const fund = async () => {
+    setErr(null);
+    setBusy(true);
+    setRecord(null);
+    try {
+      const r = await pdaxStartOnRamp({
+        php_amount: php,
+        stellar_address: address,
+        method,
+        identifier: crypto.randomUUID(),
+        sender_first_name: first,
+        sender_last_name: last,
+        beneficiary_first_name: first,
+        beneficiary_last_name: last,
+      });
+      setRecord(r);
+    } catch (e) {
+      setErr(String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="clip-cyber-sm border border-violet/40 bg-violet/5 p-4">
+      <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-violet mb-1">
+        ▸ pay with PHP (no crypto needed)
+      </div>
+      <p className="text-sm mb-3">
+        Fund this workflow with pesos via bank / e-wallet. PDAX converts to{" "}
+        <b className="text-text">USDCXLM</b> and delivers it to your Stellar
+        address, then you authorize as usual.
+      </p>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="space-y-1">
+          <span className="text-[10px] text-muted">amount (PHP)</span>
+          <input value={php} onChange={(e) => setPhp(e.target.value)} className={inputCls} placeholder="≈ pricing…" />
+        </label>
+        <label className="space-y-1">
+          <span className="text-[10px] text-muted">pay via</span>
+          <select value={method} onChange={(e) => setMethod(e.target.value)} className={inputCls}>
+            {METHODS.map(([v, label]) => (
+              <option key={v} value={v}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <input
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
+        className={`${inputCls} mt-2`}
+        placeholder="Stellar address (G…) to receive USDCXLM"
+      />
+      <div className="grid grid-cols-2 gap-2 mt-2">
+        <input value={first} onChange={(e) => setFirst(e.target.value)} className={inputCls} placeholder="first name" />
+        <input value={last} onChange={(e) => setLast(e.target.value)} className={inputCls} placeholder="last name" />
+      </div>
+
+      <Button
+        variant="primary"
+        onClick={fund}
+        disabled={busy || !php || !address}
+        size="md"
+        className="mt-3 w-full"
+      >
+        {busy ? "◉ starting…" : `Pay ₱${php || "…"} with PHP ▸`}
+      </Button>
+
+      {err && <div className="mt-2 text-xs font-mono text-magenta">{err}</div>}
+
+      {record && (
+        <div className="mt-3 border border-border bg-bg/40 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[11px] text-muted">{record.ramp_id}</span>
+            <Badge tone={record.status === "failed" ? "magenta" : "cyan"}>{record.status}</Badge>
+          </div>
+          {record.checkout_url && (
+            <a href={record.checkout_url} target="_blank" rel="noreferrer" className="block font-mono text-xs text-cyan underline break-all">
+              ▸ pay here: {record.checkout_url}
+            </a>
+          )}
+          {record.error && <div className="text-[11px] font-mono text-magenta">{record.error}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
