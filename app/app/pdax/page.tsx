@@ -8,6 +8,7 @@ import {
   getPdaxEnvironment,
 } from "@/lib/pdax";
 import type { PdaxBalance, PdaxEnvironment } from "@/lib/pdax-types";
+import { RampPanel } from "./_components/ramp-panel";
 import { PricePanel } from "./_components/price-panel";
 import { DepositPanel } from "./_components/deposit-panel";
 import { TransactionsPanel } from "./_components/transactions-panel";
