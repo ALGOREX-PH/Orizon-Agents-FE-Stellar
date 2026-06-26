@@ -31,6 +31,16 @@ def quantize(amount: object, step: str = "0.00000001") -> Decimal:
     return (d / s).to_integral_value(rounding=ROUND_DOWN) * s
 
 
+def quantize_up(amount: object, step: str = "1") -> Decimal:
+    """Round an amount UP to a step — for a funding quote, so the buyer always
+    pays enough to cover the workflow."""
+    d = to_decimal(amount)
+    s = to_decimal(step)
+    if s <= 0:
+        return d
+    return (d / s).to_integral_value(rounding=ROUND_UP) * s
+
+
 def format_amount(amount: object) -> str:
     """Canonical fixed-point string: float noise erased, no exponent, trailing
     zeros trimmed."""
