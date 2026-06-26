@@ -8,7 +8,7 @@ keep amounts as `Decimal` and emit a clean fixed-point string.
 """
 from __future__ import annotations
 
-from decimal import ROUND_DOWN, ROUND_HALF_EVEN, Decimal, InvalidOperation
+from decimal import ROUND_DOWN, ROUND_HALF_EVEN, ROUND_UP, Decimal, InvalidOperation
 
 # Normalize to this precision when formatting, to erase binary-float noise
 # (e.g. 17.179999999999998 → 17.18). Well below any crypto precision (8 dp).
