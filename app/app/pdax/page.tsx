@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import {
   getPdaxBalances,
   getPdaxEnvironment,
+  getPdaxHealth,
 } from "@/lib/pdax";
-import type { PdaxBalance, PdaxEnvironment } from "@/lib/pdax-types";
+import type { PdaxBalance, PdaxEnvironment, PdaxHealth } from "@/lib/pdax-types";
 import { RampPanel } from "./_components/ramp-panel";
 import { PricePanel } from "./_components/price-panel";
 import { DepositPanel } from "./_components/deposit-panel";
