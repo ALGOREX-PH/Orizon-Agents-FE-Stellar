@@ -290,6 +290,9 @@ async def webhook_receive(request: Request) -> dict:
         payload = await request.json()
     except Exception as e:
         raise HTTPException(400, detail="invalid webhook payload") from e
+    # Idempotency — a retried delivery must not advance a ramp twice.
+    if not pw.claim_event(pw.event_key(payload)):
+        return {"received": True, "duplicate": True}
     event = pw.parse_event(payload)
     # Drive any waiting ramp forward (fiat deposit → buy → withdraw, or
     # crypto deposit → sell → fiat withdraw).
