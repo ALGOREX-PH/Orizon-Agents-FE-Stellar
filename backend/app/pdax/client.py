@@ -68,6 +68,11 @@ class PdaxClient:
     async def aclose(self) -> None:
         await self._http.aclose()
 
+    async def healthcheck(self) -> None:
+        """Verify the PDAX auth handshake (cached when possible). Raises
+        PdaxError if credentials, MFA, or connectivity are not in order."""
+        await self._auth.access_headers(self._http)
+
 
 def _parse(resp: httpx.Response) -> Any:
     try:
