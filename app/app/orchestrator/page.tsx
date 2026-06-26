@@ -285,6 +285,14 @@ export default function OrchestratorPage() {
                         simulate
                       </Button>
                       <Button
+                        variant="primary"
+                        onClick={() => setShowFiat((v) => !v)}
+                        disabled={executing}
+                        size="md"
+                      >
+                        {showFiat ? "▾ Hide Fiat" : "Pay with Fiat ▸"}
+                      </Button>
+                      <Button
                         variant="cyan"
                         onClick={authorizeAndExecute}
                         disabled={executing}
