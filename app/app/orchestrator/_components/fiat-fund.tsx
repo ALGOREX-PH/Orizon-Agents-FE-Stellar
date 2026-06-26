@@ -178,6 +178,33 @@ export function FiatFund({
               ▸ pay here: {record.checkout_url}
             </a>
           )}
+          {record.status !== "completed" && record.status !== "failed" && (
+            <div className="text-[10px] font-mono text-muted">
+              ◉ tracking here — after you pay, this completes automatically.
+              You can ignore PDAX&apos;s redirect page.
+            </div>
+          )}
+          {record.stages.length > 0 && (
+            <div className="space-y-1 pt-1">
+              {record.stages.map((s, i) => (
+                <div key={i} className="flex items-center gap-2 font-mono text-[10px]">
+                  <span
+                    className={
+                      s.status === "success"
+                        ? "text-cyan"
+                        : s.status === "failed"
+                          ? "text-magenta"
+                          : "text-muted"
+                    }
+                  >
+                    {s.status === "success" ? "✓" : s.status === "failed" ? "✕" : "•"}
+                  </span>
+                  <span className="text-muted">{s.name}</span>
+                  {s.detail && <span className="text-muted/70">— {s.detail}</span>}
+                </div>
+              ))}
+            </div>
+          )}
           {record.error && <div className="text-[11px] font-mono text-magenta">{record.error}</div>}
         </div>
       )}
