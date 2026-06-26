@@ -54,6 +54,19 @@ export function FiatFund({
     if (stellarAddress) setAddress(stellarAddress);
   }, [stellarAddress]);
 
+  // Once a ramp is started, poll our backend (which reconciles against PDAX)
+  // so status updates here — no dependence on PDAX's redirect page.
+  useEffect(() => {
+    if (!record || record.status === "completed" || record.status === "failed") {
+      return;
+    }
+    const id = setInterval(() => {
+      pdaxReconcileRamp(record.ramp_id).then(setRecord).catch(() => {});
+    }, 6000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [record?.ramp_id, record?.status]);
+
   const fund = async () => {
     setErr(null);
     setBusy(true);
