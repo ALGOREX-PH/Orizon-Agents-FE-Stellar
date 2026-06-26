@@ -23,6 +23,7 @@ from .funding import (
     FiatDepositResult,
 )
 from .ramp import (
+    FundingQuote,
     OffRampRequest,
     OnRampRequest,
     RampDirection,
