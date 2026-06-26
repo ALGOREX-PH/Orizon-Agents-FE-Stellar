@@ -23,6 +23,7 @@ export default function PdaxPage() {
 
   useEffect(() => {
     getPdaxEnvironment().then(setEnv).catch((e) => setErr(String(e)));
+    getPdaxHealth().then(setHealth).catch(() => {});
   }, []);
 
   const loadBalances = async () => {
