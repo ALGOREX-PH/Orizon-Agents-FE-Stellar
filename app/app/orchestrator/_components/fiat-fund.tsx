@@ -89,8 +89,15 @@ export function FiatFund({
 
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="space-y-1">
-          <span className="text-[10px] text-muted">amount (PHP)</span>
-          <input value={php} onChange={(e) => setPhp(e.target.value)} className={inputCls} placeholder="≈ pricing…" />
+          <span className="text-[10px] text-muted">amount (PHP) · auto</span>
+          <input
+            value={quoting ? "" : php ? `₱${php}` : ""}
+            readOnly
+            tabIndex={-1}
+            aria-label="amount in PHP, computed automatically"
+            className={`${inputCls} cursor-default text-violet`}
+            placeholder={quoting ? "computing…" : "—"}
+          />
         </label>
         <label className="space-y-1">
           <span className="text-[10px] text-muted">pay via</span>
