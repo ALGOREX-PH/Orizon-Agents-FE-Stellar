@@ -190,4 +190,10 @@ export const pdaxStartOffRamp = (body: PdaxOffRampRequest) =>
 export const getPdaxRamp = (rampId: string) =>
   get<PdaxRampRecord>(`/ramp/${rampId}`);
 
+export const pdaxReconcileRamp = (rampId: string) =>
+  post<PdaxRampRecord, Record<string, never>>(
+    `/ramp/${rampId}/reconcile`,
+    {} as Record<string, never>,
+  );
+
 export const getPdaxRamps = () => get<{ ramps: PdaxRampRecord[] }>("/ramp");
