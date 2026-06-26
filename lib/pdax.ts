@@ -61,6 +61,8 @@ function qs(params: Record<string, string | number | undefined>): string {
 // ── meta + balances + reference ─────────────────────────────
 export const getPdaxEnvironment = () => get<PdaxEnvironment>("/environment");
 
+export const getPdaxHealth = () => get<PdaxHealth>("/health");
+
 export const getPdaxBalances = (currency?: string) =>
   get<{ balances: PdaxBalance[] }>(`/balances${qs({ currency })}`);
 
