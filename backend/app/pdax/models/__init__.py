@@ -81,6 +81,7 @@ __all__ = [
     "RampDirection",
     "RampStatus",
     "RampEstimate",
+    "FundingQuote",
     "RampStage",
     "OnRampRequest",
     "OffRampRequest",
