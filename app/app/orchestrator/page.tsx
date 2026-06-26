@@ -11,6 +11,7 @@ import { buildAuthorize, decompose, execute, submitSigned } from "@/lib/api";
 import { useWallet } from "@/lib/wallet";
 import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
 import type { DecomposeResponse } from "@/lib/types";
+import { FiatFund } from "./_components/fiat-fund";
 
 function bytesToHex(v: unknown): string | null {
   // The backend returns the 16-byte auth_id as a base64-ish or list — normalize.
