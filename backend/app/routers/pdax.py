@@ -16,6 +16,7 @@ from ..config import settings
 from ..pdax import (
     balances as pb,
     funding as pf,
+    ramp as pr,
     trade as pt,
     transactions as ptx,
     webhooks as pw,
