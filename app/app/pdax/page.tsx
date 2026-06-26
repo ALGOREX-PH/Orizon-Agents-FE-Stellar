@@ -59,13 +59,29 @@ export default function PdaxPage() {
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted">
             environment
           </div>
-          {env ? (
-            <Badge tone={env.configured ? "success" : "muted"} dot>
-              {env.environment}
-            </Badge>
-          ) : (
-            <Badge tone="muted">loading…</Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {health && (
+              <Badge
+                tone={
+                  health.status === "ok"
+                    ? "success"
+                    : health.status === "degraded"
+                      ? "magenta"
+                      : "muted"
+                }
+                dot
+              >
+                {health.status}
+              </Badge>
+            )}
+            {env ? (
+              <Badge tone={env.configured ? "success" : "muted"}>
+                {env.environment}
+              </Badge>
+            ) : (
+              <Badge tone="muted">loading…</Badge>
+            )}
+          </div>
         </div>
         {env && (
           <div className="mt-3 font-mono text-[11px] text-muted break-all">
