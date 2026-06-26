@@ -76,6 +76,23 @@ async def estimate(
     )
 
 
+async def funding_quote(client: PdaxClient, usdc_target: str) -> FundingQuote:
+    """Pesos a buyer must pay to end up with at least `usdc_target` USDC. Adds
+    the configured safety buffer and rounds UP to whole pesos, so the amount
+    always covers the workflow after spread, fees, and step rounding."""
+    est = await estimate(client, "onramp", usdc_target, currency=USDC)
+    buffer_bps = max(0, settings.pdax_ramp_buffer_bps)
+    buffered = est.php_amount * (1 + buffer_bps / 10_000)
+    php_to_pay = float(money.quantize_up(buffered, "1"))
+    return FundingQuote(
+        usdc_target=float(usdc_target),
+        php_to_pay=php_to_pay,
+        php_base=est.php_amount,
+        buffer_bps=buffer_bps,
+        price=est.price,
+    )
+
+
 async def start_onramp(client: PdaxClient, req: OnRampRequest) -> RampRecord:
     """Create the fiat deposit and a ramp record awaiting the buyer's payment."""
     record = RampRecord(
