@@ -52,6 +52,7 @@ export default function OrchestratorPage() {
   const [txState, setTxState] = useState<TxState>("idle");
   const [friendlyError, setFriendlyError] = useState<FriendlyError | null>(null);
   const [authorizeHash, setAuthorizeHash] = useState<string | null>(null);
+  const [showFiat, setShowFiat] = useState(false);
 
   const run = async () => {
     if (!intent.trim()) return;
