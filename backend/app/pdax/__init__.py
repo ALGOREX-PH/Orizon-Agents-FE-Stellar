@@ -35,4 +35,6 @@ __all__ = [
     "transactions",
     "balances",
     "webhooks",
+    "ramp",
+    "ramp_store",
 ]
