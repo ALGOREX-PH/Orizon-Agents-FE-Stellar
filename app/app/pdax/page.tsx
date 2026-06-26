@@ -107,6 +107,8 @@ export default function PdaxPage() {
         </div>
       </Card>
 
+      <RampPanel />
+
       <div className="grid gap-6 lg:grid-cols-2">
         <PricePanel />
         <DepositPanel />
