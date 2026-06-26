@@ -320,6 +320,25 @@ export default function OrchestratorPage() {
                   </div>
                 )}
               </motion.div>
+
+              <div className="mt-3">
+                <button
+                  onClick={() => setShowFiat((v) => !v)}
+                  className="font-mono text-[10px] uppercase tracking-widest text-violet hover:underline"
+                >
+                  {showFiat
+                    ? "▾ hide fiat option"
+                    : "▸ or pay with PHP (fiat) — no crypto needed"}
+                </button>
+                {showFiat && (
+                  <div className="mt-3">
+                    <FiatFund
+                      usdcAmount={plan.total_usdc}
+                      stellarAddress={wallet.address ?? undefined}
+                    />
+                  </div>
+                )}
+              </div>
             </Card>
           </motion.div>
         )}
