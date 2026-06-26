@@ -357,3 +357,18 @@ async def ramp_offramp(req: OffRampRequest) -> dict:
     send USDC to; settlement is completed by the crypto-deposit webhook."""
     record = await pr.start_offramp(get_pdax_client(), req)
     return record.model_dump()
+
+
+@router.get("/ramp")
+async def ramp_list() -> dict:
+    """All ramps tracked this process lifetime."""
+    return {"ramps": [r.model_dump() for r in pr.ramp_store.list_all()]}
+
+
+@router.get("/ramp/{ramp_id}")
+async def ramp_status(ramp_id: str) -> dict:
+    """Current state + stage history of a single ramp."""
+    record = pr.ramp_store.get(ramp_id)
+    if record is None:
+        raise HTTPException(404, detail="ramp not found")
+    return record.model_dump()
