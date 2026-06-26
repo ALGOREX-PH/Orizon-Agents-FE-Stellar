@@ -64,6 +64,13 @@ class FakeClient:
                 "amount": 945, "method": json["method"], "status": "PENDING",
                 "retry_methods": [],
             }}
+        if "fiat/transactions" in path:
+            return {"data": [{
+                "request_id": "r", "transaction_id": 1, "amount": "200",
+                "method": "instapay_upay_cashin", "mode": "CashIn",
+                "reference_number": "ref", "status": "COMPLETED",
+                "identifier": (params or {}).get("identifier", "x"),
+            }]}
         raise AssertionError(f"unexpected path {path}")
 
 
