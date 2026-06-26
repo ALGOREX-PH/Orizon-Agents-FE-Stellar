@@ -55,6 +55,24 @@ async def environment() -> dict:
     }
 
 
+@router.get("/health")
+async def health() -> dict:
+    """Liveness + dependency check. Probes the PDAX auth handshake and reports
+    ok / degraded / unconfigured — never exposing credentials."""
+    if not (settings.pdax_username and settings.pdax_password):
+        return {"status": "unconfigured", "environment": settings.pdax_environment}
+    try:
+        await get_pdax_client().healthcheck()
+        return {"status": "ok", "environment": settings.pdax_environment}
+    except PdaxError as e:
+        return {
+            "status": "degraded",
+            "environment": settings.pdax_environment,
+            "reason": e.message,
+            "code": e.code,
+        }
+
+
 # ── trade ───────────────────────────────────────────────────────
 @router.get("/trade/price")
 async def trade_price(
