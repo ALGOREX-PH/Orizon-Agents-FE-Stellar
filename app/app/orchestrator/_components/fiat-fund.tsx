@@ -117,6 +117,13 @@ export function FiatFund({
           funds <b className="text-text">{quote.usdc_target} USDC</b> · base ≈ ₱
           {quote.php_base.toFixed(2)} + {(quote.buffer_bps / 100).toFixed(1)}% buffer →{" "}
           <b className="text-violet">you pay ₱{quote.php_to_pay}</b>
+          {quote.php_to_pay >
+            quote.php_base * (1 + quote.buffer_bps / 10000) + 0.5 && (
+            <span className="text-cyan">
+              {" "}
+              · PDAX minimum — extra stays as USDC in your wallet
+            </span>
+          )}
         </div>
       )}
 
