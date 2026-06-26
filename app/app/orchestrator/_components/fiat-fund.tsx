@@ -25,6 +25,7 @@ export function FiatFund({
   stellarAddress?: string;
 }) {
   const [php, setPhp] = useState("");
+  const [quote, setQuote] = useState<PdaxFundingQuote | null>(null);
   const [address, setAddress] = useState(stellarAddress ?? "");
   const [method, setMethod] = useState(METHODS[0][0]);
   const [first, setFirst] = useState("");
