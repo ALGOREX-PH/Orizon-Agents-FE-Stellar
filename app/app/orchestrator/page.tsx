@@ -342,35 +342,14 @@ export default function OrchestratorPage() {
                 )}
               </motion.div>
 
-              <div className="mt-4 clip-cyber-sm border border-violet/50 bg-violet/10 p-4 shadow-neon-violet">
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div>
-                    <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-violet mb-1">
-                      ▸ no crypto? pay with pesos
-                    </div>
-                    <div className="text-sm">
-                      Fund this workflow in <b className="text-text">PHP</b> via
-                      bank, Maya, GrabPay or QRPh — PDAX converts it to USDCXLM
-                      automatically.
-                    </div>
-                  </div>
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    onClick={() => setShowFiat((v) => !v)}
-                  >
-                    {showFiat ? "▾ Hide" : "Pay with PHP ▸"}
-                  </Button>
+              {showFiat && (
+                <div className="mt-4">
+                  <FiatFund
+                    usdcAmount={plan.total_usdc}
+                    stellarAddress={wallet.address ?? undefined}
+                  />
                 </div>
-                {showFiat && (
-                  <div className="mt-4">
-                    <FiatFund
-                      usdcAmount={plan.total_usdc}
-                      stellarAddress={wallet.address ?? undefined}
-                    />
-                  </div>
-                )}
-              </div>
+              )}
             </Card>
           </motion.div>
         )}
