@@ -8,6 +8,7 @@ flat payload.
 """
 from __future__ import annotations
 
+from . import validation
 from .client import PdaxClient
 from .models.withdrawals import (
     CryptoOutRequest,
