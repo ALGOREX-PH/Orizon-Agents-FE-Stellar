@@ -14,13 +14,21 @@ export default function EventsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
+    let alive = true;
     fetch("/api/stellar/network")
       .then((r) => {
         if (!r.ok) throw new Error(`GET /api/stellar/network → ${r.status}`);
         return r.json();
       })
-      .then(setInfo)
-      .catch((e) => setLoadError(e.message));
+      .then((data) => {
+        if (alive) setInfo(data);
+      })
+      .catch((e) => {
+        if (alive) setLoadError(e.message);
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const contractIds = useMemo(
