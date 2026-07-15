@@ -26,6 +26,8 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        display: ["var(--font-display)", "system-ui", "sans-serif"],
+        techmono: ["var(--font-techmono)", "ui-monospace", "monospace"],
       },
       boxShadow: {
         "neon-violet":
