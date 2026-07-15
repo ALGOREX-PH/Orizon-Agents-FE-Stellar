@@ -141,14 +141,15 @@ export function FiatFund({
       )}
 
       <input
+        aria-label="Stellar address to receive USDCXLM"
         value={address}
         onChange={(e) => setAddress(e.target.value)}
         className={`${inputCls} mt-2`}
         placeholder="Stellar address (G…) to receive USDCXLM"
       />
       <div className="grid grid-cols-2 gap-2 mt-2">
-        <input value={first} onChange={(e) => setFirst(e.target.value)} className={inputCls} placeholder="first name" />
-        <input value={last} onChange={(e) => setLast(e.target.value)} className={inputCls} placeholder="last name" />
+        <input aria-label="First name" value={first} onChange={(e) => setFirst(e.target.value)} className={inputCls} placeholder="first name" />
+        <input aria-label="Last name" value={last} onChange={(e) => setLast(e.target.value)} className={inputCls} placeholder="last name" />
       </div>
 
       <Button
