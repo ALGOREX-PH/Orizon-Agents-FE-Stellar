@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -111,7 +111,7 @@ export default function AgentsPage() {
                 ))}
 
               {rows.map((a, i) => (
-                <motion.tr
+                <m.tr
                   key={a.id}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -151,7 +151,7 @@ export default function AgentsPage() {
                       ▸ view
                     </Button>
                   </td>
-                </motion.tr>
+                </m.tr>
               ))}
               {agents && rows.length === 0 && (
                 <tr>
