@@ -1,8 +1,10 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/ui/logo";
+import { getOverview } from "@/lib/api";
+import type { Overview } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useMobileNav } from "./mobile-nav-context";
 
@@ -111,6 +113,21 @@ export function Sidebar() {
   const pathname = usePathname();
   const { open, setOpen } = useMobileNav();
   const asideRef = useRef<HTMLElement>(null);
+  const [overview, setOverview] = useState<Overview | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    getOverview()
+      .then((o) => {
+        if (alive) setOverview(o);
+      })
+      .catch(() => {
+        // Keep the static fallback copy if metrics are unreachable.
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // Mobile drawer: Escape closes, body scroll locks, focus moves into the
   // drawer and returns to the opener (hamburger) on close.
@@ -202,9 +219,9 @@ export function Sidebar() {
             </span>
           </div>
           <div className="font-mono text-[11px] text-muted leading-5">
-            2,481 agents online
+            {overview ? `${overview.agents_online.toLocaleString()} agents online` : "— agents online"}
             <br />
-            avg latency 212ms
+            {overview ? `avg completion ${Math.round(overview.avg_completion)}s` : "avg completion —"}
           </div>
         </div>
         <div className="mt-3 flex items-center gap-3 px-1">
@@ -212,8 +229,8 @@ export function Sidebar() {
             ◆
           </div>
           <div className="flex-1">
-            <div className="text-xs">danielle.meer</div>
-            <div className="font-mono text-[10px] text-muted">ops·free</div>
+            <div className="text-xs">operator</div>
+            <div className="font-mono text-[10px] text-muted">testnet</div>
           </div>
         </div>
       </div>
