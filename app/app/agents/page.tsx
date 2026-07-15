@@ -68,6 +68,8 @@ export default function AgentsPage() {
               <path d="M14 14l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
             <input
+              type="search"
+              aria-label="Search agents by name or skill"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="search name or skill…"
