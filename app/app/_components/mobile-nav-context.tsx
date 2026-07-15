@@ -3,7 +3,7 @@
  * Tiny context shared between Sidebar (the drawer) and Topbar (the hamburger).
  * Mobile-only — desktop ignores `open` because the sidebar is always rendered.
  */
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 type Ctx = {
   open: boolean;
@@ -16,10 +16,11 @@ const MobileNavCtx = createContext<Ctx | null>(null);
 export function MobileNavProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const toggle = useCallback(() => setOpen((v) => !v), []);
+  // Memoize so consumers don't re-render on every provider render — the
+  // object identity only changes when `open` actually flips.
+  const value = useMemo<Ctx>(() => ({ open, setOpen, toggle }), [open, toggle]);
   return (
-    <MobileNavCtx.Provider value={{ open, setOpen, toggle }}>
-      {children}
-    </MobileNavCtx.Provider>
+    <MobileNavCtx.Provider value={value}>{children}</MobileNavCtx.Provider>
   );
 }
 
