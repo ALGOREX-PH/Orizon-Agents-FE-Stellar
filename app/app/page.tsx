@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getOverview, listTasks } from "@/lib/api";
 import type { Overview, Task } from "@/lib/types";
+import { usePolling } from "@/lib/use-polling";
 
 const statusTone: Record<Task["status"], "cyan" | "violet" | "muted" | "magenta"> = {
   complete: "cyan",
@@ -47,27 +48,18 @@ export default function OverviewPage() {
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let alive = true;
-    const load = async () => {
-      try {
-        const [o, t] = await Promise.all([getOverview(), listTasks()]);
-        if (!alive) return;
-        setOverview(o);
-        setTasks(t);
-        setError(null);
-      } catch (e) {
-        if (!alive) return;
-        setError(e instanceof Error ? e.message : "fetch failed");
-      }
-    };
-    load();
-    const id = setInterval(load, 5000);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
-  }, []);
+  usePolling(async () => {
+    try {
+      const [o, t] = await Promise.all([getOverview(), listTasks()]);
+      setOverview(o);
+      setTasks(t);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "fetch failed");
+      // Rethrow so the poller backs off while the backend is down.
+      throw e;
+    }
+  }, 5000);
 
   const metrics = overview
     ? [
