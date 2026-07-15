@@ -152,14 +152,14 @@ export function RampPanel() {
         )}
 
         <div className="grid grid-cols-2 gap-2">
-          <input value={first} onChange={(e) => setFirst(e.target.value)} className={inputCls} placeholder="first name" />
-          <input value={last} onChange={(e) => setLast(e.target.value)} className={inputCls} placeholder="last name" />
+          <input aria-label="First name" value={first} onChange={(e) => setFirst(e.target.value)} className={inputCls} placeholder="first name" />
+          <input aria-label="Last name" value={last} onChange={(e) => setLast(e.target.value)} className={inputCls} placeholder="last name" />
         </div>
 
         {onRamp ? (
           <>
-            <input value={stellar} onChange={(e) => setStellar(e.target.value)} className={inputCls} placeholder="Stellar address (G…) to receive USDCXLM" />
-            <select value={method} onChange={(e) => setMethod(e.target.value)} className={inputCls}>
+            <input aria-label="Stellar address to receive USDCXLM" value={stellar} onChange={(e) => setStellar(e.target.value)} className={inputCls} placeholder="Stellar address (G…) to receive USDCXLM" />
+            <select aria-label="Deposit method" value={method} onChange={(e) => setMethod(e.target.value)} className={inputCls}>
               {DEPOSIT_METHODS.map((m) => (
                 <option key={m} value={m}>
                   {m}
@@ -169,10 +169,10 @@ export function RampPanel() {
           </>
         ) : (
           <>
-            <input value={bankCode} onChange={(e) => setBankCode(e.target.value.toUpperCase())} className={inputCls} placeholder="bank code (e.g. BAUBPPH)" />
+            <input aria-label="Bank code" value={bankCode} onChange={(e) => setBankCode(e.target.value.toUpperCase())} className={inputCls} placeholder="bank code (e.g. BAUBPPH)" />
             <div className="grid grid-cols-2 gap-2">
-              <input value={accName} onChange={(e) => setAccName(e.target.value)} className={inputCls} placeholder="account name" />
-              <input value={accNumber} onChange={(e) => setAccNumber(e.target.value)} className={inputCls} placeholder="account number" />
+              <input aria-label="Account name" value={accName} onChange={(e) => setAccName(e.target.value)} className={inputCls} placeholder="account name" />
+              <input aria-label="Account number" value={accNumber} onChange={(e) => setAccNumber(e.target.value)} className={inputCls} placeholder="account number" />
             </div>
           </>
         )}
