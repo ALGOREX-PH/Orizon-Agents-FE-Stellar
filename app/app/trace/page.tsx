@@ -30,6 +30,7 @@ function TracePageInner() {
   const [tab, setTab] = useState<Tab>("trace");
   const [artifactData, setArtifactData] = useState<ArtifactResponse | null>(null);
   const [artifactError, setArtifactError] = useState<string | null>(null);
+  const [streamError, setStreamError] = useState(false);
 
   const [demoCursor, setDemoCursor] = useState(0);
   const [demoPlaying, setDemoPlaying] = useState(true);
@@ -42,6 +43,7 @@ function TracePageInner() {
     setDone(false);
     setArtifactData(null);
     setArtifactError(null);
+    setStreamError(false);
     const fetchArtifact = () =>
       getArtifact(taskId)
         .then((data) => {
@@ -63,6 +65,11 @@ function TracePageInner() {
       },
       () => {
         setDone(true);
+        fetchArtifact();
+      },
+      () => {
+        // Stream dropped mid-flight — do not present it as a sealed run.
+        setStreamError(true);
         fetchArtifact();
       },
     );
@@ -201,11 +208,20 @@ function TracePageInner() {
           <Card className="!p-0 overflow-hidden">
             <div className="flex items-center justify-between border-b border-border bg-surface/80 px-4 py-2.5">
               <div className="flex items-center gap-3">
-                <Badge tone={done ? "cyan" : "violet"} dot={!done}>
+                <Badge
+                  tone={streamError ? "magenta" : done ? "cyan" : "violet"}
+                  dot={!done && !streamError}
+                >
                   {taskId ?? "demo"}
                 </Badge>
                 <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-                  {taskId ? (done ? "sealed" : "streaming") : "demo replay"}
+                  {taskId
+                    ? streamError
+                      ? "stream interrupted"
+                      : done
+                        ? "sealed"
+                        : "streaming"
+                    : "demo replay"}
                 </span>
               </div>
               <span className="font-mono text-[10px] text-muted">
@@ -230,7 +246,7 @@ function TracePageInner() {
                   <span className="flex-1 text-text/90 leading-5">{line.msg}</span>
                 </div>
               ))}
-              {taskId && !done && (
+              {taskId && !done && !streamError && (
                 <div className="flex gap-3 animate-pulse">
                   <span className="w-16 text-muted">…</span>
                   <span className="w-14 text-violet uppercase tracking-widest text-[10px]">
@@ -252,7 +268,16 @@ function TracePageInner() {
                   ["Task", taskId ?? "demo"],
                   ["Lines", String(visible.length)],
                   ["Spent", `${spent.toFixed(3)} USDC`],
-                  ["State", taskId ? (done ? "sealed ✓" : "streaming…") : "demo"],
+                  [
+                    "State",
+                    taskId
+                      ? streamError
+                        ? "interrupted ✕"
+                        : done
+                          ? "sealed ✓"
+                          : "streaming…"
+                      : "demo",
+                  ],
                 ].map(([k, v]) => (
                   <div
                     key={k}
