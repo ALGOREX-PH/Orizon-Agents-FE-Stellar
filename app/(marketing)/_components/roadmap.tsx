@@ -1,5 +1,5 @@
 "use client";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -53,7 +53,7 @@ export function Roadmap() {
 
           <div className="grid gap-5 md:grid-cols-4">
             {stages.map((s, i) => (
-              <motion.div
+              <m.div
                 key={s.v}
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -87,7 +87,7 @@ export function Roadmap() {
                     ))}
                   </ul>
                 </div>
-              </motion.div>
+              </m.div>
             ))}
           </div>
         </div>

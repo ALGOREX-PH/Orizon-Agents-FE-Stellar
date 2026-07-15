@@ -1,5 +1,5 @@
 "use client";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Glow } from "@/components/ui/grid-bg";
@@ -51,9 +51,9 @@ export function Architecture() {
         />
 
         <div className="mt-14 grid gap-5 md:grid-cols-6">
-          {modules.map((m, i) => (
-            <motion.div
-              key={m.tag}
+          {modules.map((mod, i) => (
+            <m.div
+              key={mod.tag}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
@@ -67,14 +67,14 @@ export function Architecture() {
               <Card className="h-full">
                 <div className="flex items-center justify-between mb-5">
                   <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-cyan">
-                    ▸ {m.tag} / {m.spec}
+                    ▸ {mod.tag} / {mod.spec}
                   </span>
                   <span className="h-1.5 w-1.5 rounded-full bg-cyan shadow-[0_0_8px_#00FFD1]" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">{m.name}</h3>
-                <p className="text-sm leading-relaxed text-muted">{m.body}</p>
+                <h3 className="text-xl font-semibold mb-2">{mod.name}</h3>
+                <p className="text-sm leading-relaxed text-muted">{mod.body}</p>
               </Card>
-            </motion.div>
+            </m.div>
           ))}
         </div>
       </div>

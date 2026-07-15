@@ -5,8 +5,8 @@ import {
   Michroma,
   Share_Tech_Mono,
 } from "next/font/google";
-import { MotionConfig } from "framer-motion";
 import "./globals.css";
+import { MotionProvider } from "@/components/ui/motion-provider";
 import { WalletProvider } from "@/lib/wallet";
 
 const sans = Inter({
@@ -71,9 +71,9 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        <MotionConfig reducedMotion="user">
+        <MotionProvider>
           <WalletProvider>{children}</WalletProvider>
-        </MotionConfig>
+        </MotionProvider>
       </body>
     </html>
   );

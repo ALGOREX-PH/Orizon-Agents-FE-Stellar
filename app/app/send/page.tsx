@@ -1,14 +1,5 @@
 "use client";
 import { useMemo, useState } from "react";
-import {
-  Asset,
-  BASE_FEE,
-  Horizon,
-  Memo,
-  Networks,
-  Operation,
-  TransactionBuilder,
-} from "@stellar/stellar-sdk";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +9,9 @@ import { useWallet } from "@/lib/wallet";
 import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
 
 const HORIZON_TESTNET = "https://horizon-testnet.stellar.org";
+// stellar-sdk's BASE_FEE ("100" stroops) — inlined so the render path doesn't
+// need the SDK loaded.
+const BASE_FEE_STROOPS = "100";
 
 function isValidGAddress(s: string): boolean {
   return /^G[A-Z2-7]{55}$/.test(s.trim());
@@ -76,12 +70,16 @@ export default function SendPage() {
 
     try {
       setTxState("building");
+      // Lazy-load the (large) stellar-sdk on first send so it stays out of
+      // the initial page bundle.
+      const { Asset, Horizon, Memo, Networks, Operation, TransactionBuilder } =
+        await import("@stellar/stellar-sdk");
       const server = new Horizon.Server(HORIZON_TESTNET);
       const account = await server.loadAccount(wallet.address);
 
       const memoTrimmed = memo.trim() ? trimMemo(memo.trim()) : "";
       const builder = new TransactionBuilder(account, {
-        fee: BASE_FEE,
+        fee: BASE_FEE_STROOPS,
         networkPassphrase: Networks.TESTNET,
       })
         .addOperation(
@@ -252,7 +250,7 @@ export default function SendPage() {
               {validation ? (
                 <span className="text-magenta">⚠ {validation}</span>
               ) : (
-                <span>ready · base fee {BASE_FEE} stroops · timeout 60s</span>
+                <span>ready · base fee {BASE_FEE_STROOPS} stroops · timeout 60s</span>
               )}
             </div>
             <div className="flex gap-2">

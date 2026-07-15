@@ -63,6 +63,8 @@ export function FiatFund({
     }
     let failures = 0;
     const id = setInterval(() => {
+      // Skip polls while the tab is hidden — resume on return.
+      if (typeof document !== "undefined" && document.hidden) return;
       pdaxReconcileRamp(record.ramp_id)
         .then((r) => {
           failures = 0;

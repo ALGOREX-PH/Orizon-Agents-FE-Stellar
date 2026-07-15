@@ -1,30 +1,14 @@
 "use client";
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getFlow } from "@/lib/api";
-import type { Flow } from "@/lib/types";
+import { useFetch } from "@/lib/use-fetch";
 
 export default function FlowPage() {
-  const [flow, setFlow] = useState<Flow | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    getFlow()
-      .then((f) => {
-        if (alive) setFlow(f);
-      })
-      .catch((e) => {
-        if (alive) setError(e instanceof Error ? e.message : "fetch failed");
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const { data: flow, error } = useFetch(getFlow, []);
 
   const nodeById = flow ? Object.fromEntries(flow.nodes.map((n) => [n.id, n])) : {};
 
@@ -99,7 +83,7 @@ export default function FlowPage() {
                   const b = nodeById[to];
                   if (!a || !b) return null;
                   return (
-                    <motion.path
+                    <m.path
                       key={`${from}-${to}`}
                       d={`M${a.x},${a.y} C${(a.x + b.x) / 2},${a.y} ${(a.x + b.x) / 2},${b.y} ${b.x},${b.y}`}
                       stroke="url(#edge)"
@@ -116,7 +100,7 @@ export default function FlowPage() {
               </svg>
 
               {flow.nodes.map((n, i) => (
-                <motion.div
+                <m.div
                   key={n.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -134,7 +118,7 @@ export default function FlowPage() {
                     </div>
                     <div className="font-mono text-sm">{n.label}</div>
                   </div>
-                </motion.div>
+                </m.div>
               ))}
             </>
           )}

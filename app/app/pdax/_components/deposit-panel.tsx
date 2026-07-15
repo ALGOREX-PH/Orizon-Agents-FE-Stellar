@@ -4,9 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getPdaxCryptoDeposit } from "@/lib/pdax";
 import type { PdaxCryptoDepositAddress } from "@/lib/pdax-types";
-
-const inputCls =
-  "w-full bg-bg/60 border border-border px-3 py-2 text-sm font-mono outline-none focus:border-violet";
+import { inputCls } from "@/lib/ui";
 
 /** Fetch a PDAX deposit wallet for a token (default USDCXLM — USDC on Stellar). */
 export function DepositPanel() {

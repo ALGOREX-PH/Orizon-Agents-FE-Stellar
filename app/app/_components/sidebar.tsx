@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Logo } from "@/components/ui/logo";
 import { getOverview } from "@/lib/api";
-import type { Overview } from "@/lib/types";
+import { useFetch } from "@/lib/use-fetch";
 import { cn } from "@/lib/utils";
 import { useMobileNav } from "./mobile-nav-context";
 
@@ -113,21 +113,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const { open, setOpen } = useMobileNav();
   const asideRef = useRef<HTMLElement>(null);
-  const [overview, setOverview] = useState<Overview | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    getOverview()
-      .then((o) => {
-        if (alive) setOverview(o);
-      })
-      .catch(() => {
-        // Keep the static fallback copy if metrics are unreachable.
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  // Errors are ignored: the static fallback copy stays if metrics are unreachable.
+  const { data: overview } = useFetch(getOverview, []);
 
   // Mobile drawer: Escape closes, body scroll locks, focus moves into the
   // drawer and returns to the opener (hamburger) on close.

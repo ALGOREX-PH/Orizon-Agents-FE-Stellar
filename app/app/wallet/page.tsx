@@ -4,21 +4,15 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { useWallet } from "@/lib/wallet";
-
-type StellarInfo = {
-  network: string;
-  rpc_url: string;
-  network_passphrase: string;
-  admin: string;
-  contracts: Record<string, string>;
-  asset: string;
-  asset_sac: string;
-};
+import { KVRow } from "@/components/ui/kv-row";
+import { StellarExpertLink, stellarExpertUrl } from "@/components/ui/stellar-link";
+import type { StellarNetworkInfo } from "@/lib/types";
+import { prettyName } from "@/lib/utils";
 
 export default function WalletPage() {
   const { connected, address, network, xlmBalance, balanceLoading, refreshBalance } =
     useWallet();
-  const [info, setInfo] = useState<StellarInfo | null>(null);
+  const [info, setInfo] = useState<StellarNetworkInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -95,14 +89,11 @@ export default function WalletPage() {
                 ▸ fund testnet
               </a>
               {address && (
-                <a
-                  href={`https://stellar.expert/explorer/testnet/account/${address}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="clip-cyber-sm border border-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted hover:text-text hover:border-violet/60 transition"
-                >
-                  view on stellar.expert ▸
-                </a>
+                <StellarExpertLink
+                  kind="account"
+                  id={address}
+                  className="clip-cyber-sm border border-border px-3 py-1.5 text-muted hover:border-violet/60 transition"
+                />
               )}
               <button
                 onClick={() => refreshBalance()}
@@ -123,9 +114,9 @@ export default function WalletPage() {
           </div>
           {connected ? (
             <dl className="space-y-3 text-sm font-mono">
-              <Row k="address" v={address ?? ""} />
-              <Row k="network" v={network?.network ?? ""} />
-              <Row k="passphrase" v={network?.networkPassphrase ?? ""} />
+              <KVRow k="address" value={address ?? ""} />
+              <KVRow k="network" value={network?.network ?? ""} />
+              <KVRow k="passphrase" value={network?.networkPassphrase ?? ""} />
             </dl>
           ) : (
             <div className="text-sm text-muted">
@@ -146,9 +137,9 @@ export default function WalletPage() {
           )}
           {info ? (
             <dl className="space-y-3 text-sm font-mono">
-              <Row k="rpc" v={info.rpc_url} />
-              <Row k="admin" v={info.admin} />
-              <Row k="asset" v={`${info.asset} (${info.asset_sac.slice(0, 8)}…)`} />
+              <KVRow k="rpc" value={info.rpc_url} />
+              <KVRow k="admin" value={info.admin} />
+              <KVRow k="asset" value={`${info.asset} (${info.asset_sac.slice(0, 8)}…)`} />
             </dl>
           ) : (
             !error && <div className="text-sm text-muted">loading…</div>
@@ -165,13 +156,13 @@ export default function WalletPage() {
             ? Object.entries(info.contracts).map(([name, id]) => (
                 <a
                   key={name}
-                  href={`https://stellar.expert/explorer/${info.network}/contract/${id}`}
+                  href={stellarExpertUrl("contract", id, info.network)}
                   target="_blank"
                   rel="noreferrer"
                   className="clip-cyber-sm border border-border bg-bg/40 p-4 hover:border-violet/60 hover:bg-violet/5 transition"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold">{pretty(name)}</span>
+                    <span className="text-sm font-semibold">{prettyName(name)}</span>
                     <Badge tone="cyan">live</Badge>
                   </div>
                   <div className="font-mono text-[11px] text-muted break-all">{id}</div>
@@ -190,20 +181,4 @@ export default function WalletPage() {
       </Card>
     </div>
   );
-}
-
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b border-border/40 pb-2 last:border-0">
-      <dt className="text-muted text-[10px] uppercase tracking-widest pt-1">{k}</dt>
-      <dd className="text-right break-all text-text">{v}</dd>
-    </div>
-  );
-}
-
-function pretty(s: string) {
-  return s
-    .split("_")
-    .map((w) => w[0]?.toUpperCase() + w.slice(1))
-    .join(" ");
 }

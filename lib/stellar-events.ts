@@ -106,7 +106,9 @@ export function useStellarEvents(
       if (/cursor|retention|out of range|invalid/i.test(msg)) {
         cursorRef.current = null;
       }
+      return false;
     }
+    return true;
   }, [contractIds, max]);
 
   useEffect(() => {
@@ -115,7 +117,8 @@ export function useStellarEvents(
     setStatus("starting");
     setError(null);
 
-    let timer: ReturnType<typeof setInterval> | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let removeVisListener: (() => void) | null = null;
 
     (async () => {
       try {
@@ -130,12 +133,42 @@ export function useStellarEvents(
         setLatestLedger(latest.sequence);
         if (stoppedRef.current) return;
 
+        // Self-scheduling poll: pauses while the tab is hidden (no RPC calls
+        // in the background) and backs off ×2 up to ×4 after consecutive
+        // failures, resetting on the first success.
+        let fails = 0;
+        const schedule = () => {
+          if (stoppedRef.current) return;
+          const delay = Math.min(intervalMs * 2 ** fails, intervalMs * 4);
+          timer = setTimeout(async () => {
+            if (stoppedRef.current) return;
+            if (typeof document !== "undefined" && document.hidden) {
+              schedule();
+              return;
+            }
+            const ok = await tick(server, scValToNative);
+            fails = ok ? 0 : Math.min(fails + 1, 2);
+            schedule();
+          }, delay);
+        };
+
+        // Poll promptly when the tab becomes visible again.
+        const onVisible = () => {
+          if (document.hidden || stoppedRef.current) return;
+          if (timer) clearTimeout(timer);
+          void tick(server, scValToNative).then((ok) => {
+            fails = ok ? 0 : Math.min(fails + 1, 2);
+            schedule();
+          });
+        };
+        document.addEventListener("visibilitychange", onVisible);
+        removeVisListener = () =>
+          document.removeEventListener("visibilitychange", onVisible);
+
         // Initial pull + then poll.
         await tick(server, scValToNative);
         setStatus("live");
-        timer = setInterval(() => {
-          if (!stoppedRef.current) tick(server, scValToNative);
-        }, intervalMs);
+        schedule();
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         setError(msg);
@@ -145,7 +178,8 @@ export function useStellarEvents(
 
     return () => {
       stoppedRef.current = true;
-      if (timer) clearInterval(timer);
+      if (timer) clearTimeout(timer);
+      removeVisListener?.();
     };
   }, [contractIds, intervalMs, tick]);
 

@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getOverview, listTasks } from "@/lib/api";
 import type { Overview, Task } from "@/lib/types";
+import { usePolling } from "@/lib/use-polling";
 
 const statusTone: Record<Task["status"], "cyan" | "violet" | "muted" | "magenta"> = {
   complete: "cyan",
@@ -47,27 +48,18 @@ export default function OverviewPage() {
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let alive = true;
-    const load = async () => {
-      try {
-        const [o, t] = await Promise.all([getOverview(), listTasks()]);
-        if (!alive) return;
-        setOverview(o);
-        setTasks(t);
-        setError(null);
-      } catch (e) {
-        if (!alive) return;
-        setError(e instanceof Error ? e.message : "fetch failed");
-      }
-    };
-    load();
-    const id = setInterval(load, 5000);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
-  }, []);
+  usePolling(async () => {
+    try {
+      const [o, t] = await Promise.all([getOverview(), listTasks()]);
+      setOverview(o);
+      setTasks(t);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "fetch failed");
+      // Rethrow so the poller backs off while the backend is down.
+      throw e;
+    }
+  }, 5000);
 
   const metrics = overview
     ? [
@@ -93,15 +85,15 @@ export default function OverviewPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        {(overview ? metrics : [0, 1, 2, 3]).map((m, i) =>
-          typeof m === "number" ? (
+        {(overview ? metrics : [0, 1, 2, 3]).map((metric, i) =>
+          typeof metric === "number" ? (
             <Card key={i}>
               <Skeleton className="h-3 w-24 mb-4" />
               <Skeleton className="h-8 w-16" />
             </Card>
           ) : (
-            <motion.div
-              key={m.k}
+            <m.div
+              key={metric.k}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: i * 0.06 }}
@@ -109,13 +101,13 @@ export default function OverviewPage() {
               <Card>
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-                    {m.k}
+                    {metric.k}
                   </span>
-                  <Badge tone={m.tone}>{m.d}</Badge>
+                  <Badge tone={metric.tone}>{metric.d}</Badge>
                 </div>
-                <div className="font-mono text-3xl neon-text">{m.v}</div>
+                <div className="font-mono text-3xl neon-text">{metric.v}</div>
               </Card>
-            </motion.div>
+            </m.div>
           ),
         )}
       </div>

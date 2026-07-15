@@ -1,12 +1,13 @@
 "use client";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, memo, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArtifactViewer } from "@/components/ui/artifact-viewer";
+import { KVRow } from "@/components/ui/kv-row";
+import { StellarExpertLink } from "@/components/ui/stellar-link";
 import { getArtifact, openTraceStream } from "@/lib/api";
-import { traceLines as demoTrace } from "@/lib/mock-data";
 import type { ArtifactResponse, TraceLine } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,26 @@ const levelColor: Record<TraceLine["level"], string> = {
 
 type Tab = "trace" | "artifact";
 
+// Memoized row: every SSE tick appends a line — previously the whole list
+// re-rendered per tick. Line objects are stable references, so memo skips
+// all already-rendered rows.
+const TraceRow = memo(function TraceRow({ line }: { line: TraceLine }) {
+  return (
+    <div className="flex gap-3">
+      <span className="w-16 text-muted">{line.t}</span>
+      <span
+        className={cn(
+          "w-14 uppercase tracking-widest text-[10px]",
+          levelColor[line.level],
+        )}
+      >
+        {line.level}
+      </span>
+      <span className="flex-1 text-text/90 leading-5">{line.msg}</span>
+    </div>
+  );
+});
+
 function TracePageInner() {
   const params = useSearchParams();
   const taskId = params.get("task");
@@ -34,7 +55,20 @@ function TracePageInner() {
 
   const [demoCursor, setDemoCursor] = useState(0);
   const [demoPlaying, setDemoPlaying] = useState(true);
+  // Demo replay data loads on demand — live-task views never ship it.
+  const [demoTrace, setDemoTrace] = useState<TraceLine[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (taskId) return;
+    let alive = true;
+    import("@/lib/mock-data").then(({ traceLines }) => {
+      if (alive) setDemoTrace(traceLines as TraceLine[]);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [taskId]);
 
   // Live mode: subscribe to SSE.
   useEffect(() => {
@@ -97,7 +131,7 @@ function TracePageInner() {
     const deltaMs = Math.min(Math.max(rawDelta, 120), 2800);
     const id = setTimeout(() => setDemoCursor((c) => c + 1), deltaMs);
     return () => clearTimeout(id);
-  }, [taskId, demoCursor, demoPlaying]);
+  }, [taskId, demoCursor, demoPlaying, demoTrace]);
 
   useEffect(() => {
     containerRef.current?.scrollTo({
@@ -106,7 +140,7 @@ function TracePageInner() {
     });
   }, [lines.length, demoCursor]);
 
-  const visible: TraceLine[] = taskId ? lines : (demoTrace.slice(0, demoCursor) as TraceLine[]);
+  const visible: TraceLine[] = taskId ? lines : demoTrace.slice(0, demoCursor);
   const total = taskId ? lines.length : demoTrace.length;
 
   const spent = visible
@@ -233,18 +267,7 @@ function TracePageInner() {
               className="font-mono text-xs p-5 h-[540px] overflow-y-auto space-y-1.5 bg-[#060010]"
             >
               {visible.map((line, i) => (
-                <div key={i} className="flex gap-3">
-                  <span className="w-16 text-muted">{line.t}</span>
-                  <span
-                    className={cn(
-                      "w-14 uppercase tracking-widest text-[10px]",
-                      levelColor[line.level],
-                    )}
-                  >
-                    {line.level}
-                  </span>
-                  <span className="flex-1 text-text/90 leading-5">{line.msg}</span>
-                </div>
+                <TraceRow key={i} line={line} />
               ))}
               {taskId && !done && !streamError && (
                 <div className="flex gap-3 animate-pulse">
@@ -300,14 +323,11 @@ function TracePageInner() {
                   "awaiting ERC-8004 attestation…"}
               </div>
               {artifactData?.proof_tx && (
-                <a
-                  href={`https://stellar.expert/explorer/testnet/tx/${artifactData.proof_tx}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 inline-block font-mono text-[10px] uppercase tracking-widest text-cyan hover:text-text"
-                >
-                  view on stellar.expert ▸
-                </a>
+                <StellarExpertLink
+                  kind="tx"
+                  id={artifactData.proof_tx}
+                  className="mt-3 inline-block"
+                />
               )}
             </Card>
           </div>
@@ -319,22 +339,10 @@ function TracePageInner() {
 
 function TxRow({ label, hash }: { label: string; hash: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-border/40 pb-2 last:border-0">
-      <dt className="text-muted text-[10px] uppercase tracking-widest pt-1 w-16">
-        {label}
-      </dt>
-      <dd className="text-right flex-1">
-        <div className="break-all">{hash}</div>
-        <a
-          href={`https://stellar.expert/explorer/testnet/tx/${hash}`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-block mt-1 text-[10px] uppercase tracking-widest text-cyan hover:text-text"
-        >
-          view on stellar.expert ▸
-        </a>
-      </dd>
-    </div>
+    <KVRow k={label}>
+      <div className="break-all">{hash}</div>
+      <StellarExpertLink kind="tx" id={hash} className="inline-block mt-1" />
+    </KVRow>
   );
 }
 

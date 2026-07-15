@@ -79,3 +79,14 @@ export type Overview = {
   throughput: number[];
   skills: { name: string; pct: number; tone: "violet" | "cyan" | "magenta" }[];
 };
+
+/** Response of GET /api/stellar/network — network meta + deployed contract ids. */
+export type StellarNetworkInfo = {
+  network: string;
+  rpc_url: string;
+  network_passphrase: string;
+  admin: string;
+  contracts: Record<string, string>;
+  asset: string;
+  asset_sac: string;
+};

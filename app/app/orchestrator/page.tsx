@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -190,7 +190,7 @@ export default function OrchestratorPage() {
 
       <AnimatePresence>
         {plan && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
@@ -231,7 +231,7 @@ export default function OrchestratorPage() {
 
               <ol className="space-y-3">
                 {plan.steps.map((s, i) => (
-                  <motion.li
+                  <m.li
                     key={`${s.agent_id}-${i}`}
                     initial={{ opacity: 0, x: -12 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -247,11 +247,11 @@ export default function OrchestratorPage() {
                     <div className="font-mono text-xs text-cyan">
                       {s.est_price_usdc.toFixed(3)} · {s.est_eta_seconds.toFixed(1)}s
                     </div>
-                  </motion.li>
+                  </m.li>
                 ))}
               </ol>
 
-              <motion.div
+              <m.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
@@ -334,7 +334,7 @@ export default function OrchestratorPage() {
                     </div>
                   </div>
                 )}
-              </motion.div>
+              </m.div>
 
               {showFiat && (
                 <div className="mt-4">
@@ -345,7 +345,7 @@ export default function OrchestratorPage() {
                 </div>
               )}
             </Card>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
