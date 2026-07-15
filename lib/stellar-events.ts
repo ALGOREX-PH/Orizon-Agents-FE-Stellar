@@ -13,7 +13,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { rpc as RpcNs, scValToNative } from "@stellar/stellar-sdk";
 
-const RPC_URL = "https://soroban-testnet.stellar.org";
+// Env-driven RPC endpoint — falls back to Stellar testnet when unset.
+const RPC_URL =
+  process.env.NEXT_PUBLIC_SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
 
 export type FeedEvent = {
   id: string;
