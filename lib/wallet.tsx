@@ -19,12 +19,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import {
-  StellarWalletsKit,
-  Networks as KitNetworks,
-} from "@creit.tech/stellar-wallets-kit";
-import { defaultModules } from "@creit.tech/stellar-wallets-kit/modules/utils";
-import { FREIGHTER_ID } from "@creit.tech/stellar-wallets-kit/modules/freighter";
+import type { Networks as KitNetworks } from "@creit.tech/stellar-wallets-kit";
 import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
 
 // Env-driven network config — falls back to Stellar testnet when unset.
@@ -34,9 +29,16 @@ const NETWORK_PASSPHRASE =
 const HORIZON_URL =
   process.env.NEXT_PUBLIC_HORIZON_URL || "https://horizon-testnet.stellar.org";
 // Friendly label for the passphrase — "TESTNET" for the default config.
-const NETWORK_NAME =
-  Object.entries(KitNetworks).find(([, v]) => v === NETWORK_PASSPHRASE)?.[0] ??
-  "CUSTOM";
+// Mirrors the kit's `Networks` enum so the label resolves without pulling
+// the (lazily loaded) kit into the initial bundle.
+const NETWORK_NAMES: Record<string, string> = {
+  "Public Global Stellar Network ; September 2015": "PUBLIC",
+  "Test SDF Network ; September 2015": "TESTNET",
+  "Test SDF Future Network ; October 2022": "FUTURENET",
+  "Local Sandbox Stellar Network ; September 2022": "SANDBOX",
+  "Standalone Network ; February 2017": "STANDALONE",
+};
+const NETWORK_NAME = NETWORK_NAMES[NETWORK_PASSPHRASE] ?? "CUSTOM";
 const STORAGE_KEY = "orizon.wallet.v2";
 
 type StoredSession = {
@@ -70,16 +72,41 @@ type WalletState = {
 
 const WalletCtx = createContext<WalletState | null>(null);
 
-let kitInitialized = false;
-function ensureKitInit() {
-  if (kitInitialized) return;
-  if (typeof window === "undefined") return;
-  StellarWalletsKit.init({
-    modules: defaultModules(),
-    selectedWalletId: FREIGHTER_ID,
-    network: NETWORK_PASSPHRASE as KitNetworks,
-  });
-  kitInitialized = true;
+/**
+ * StellarWalletsKit (plus every wallet module it bundles) is heavy, so it is
+ * loaded on demand instead of shipping in every route's first-load JS: the
+ * dynamic import runs when a saved session is restored on mount or on the
+ * first connect(). The promise is cached module-level so the chunk is
+ * fetched and the kit initialized exactly once.
+ */
+type KitModule = typeof import("@creit.tech/stellar-wallets-kit");
+type Kit = KitModule["StellarWalletsKit"];
+
+let kitPromise: Promise<Kit> | null = null;
+
+function loadKit(): Promise<Kit> {
+  if (!kitPromise) {
+    kitPromise = Promise.all([
+      import("@creit.tech/stellar-wallets-kit"),
+      import("@creit.tech/stellar-wallets-kit/modules/utils"),
+      import("@creit.tech/stellar-wallets-kit/modules/freighter"),
+    ])
+      .then(([{ StellarWalletsKit }, { defaultModules }, { FREIGHTER_ID }]) => {
+        StellarWalletsKit.init({
+          modules: defaultModules(),
+          selectedWalletId: FREIGHTER_ID,
+          network: NETWORK_PASSPHRASE as KitNetworks,
+        });
+        return StellarWalletsKit;
+      })
+      .catch((e) => {
+        // Don't cache a failed load — a retry (e.g. next connect click)
+        // should attempt the import again.
+        kitPromise = null;
+        throw e;
+      });
+  }
+  return kitPromise;
 }
 
 function loadSession(): StoredSession | null {
@@ -158,32 +185,40 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
   }, [address, fetchBalance]);
 
-  // On mount: init kit + try to restore the previous session silently.
+  // On mount: try to restore the previous session silently. Only a saved
+  // session triggers the (lazy) kit load — first-time visitors don't pay
+  // for the kit until they hit connect().
   useEffect(() => {
-    ensureKitInit();
     const saved = loadSession();
-    if (saved) {
+    if (!saved) return;
+    let cancelled = false;
+    (async () => {
       try {
-        StellarWalletsKit.setWallet(saved.walletId);
+        const kit = await loadKit();
+        kit.setWallet(saved.walletId);
+        if (cancelled) return;
         setWalletId(saved.walletId);
         setAddress(saved.address);
         setWalletName(prettyName(saved.walletId));
       } catch {
         // module not available in this browser — silently ignore.
       }
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const connect = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      ensureKitInit();
+      const kit = await loadKit();
       // Open the multi-wallet picker. Resolves to the chosen wallet's address.
-      const { address: addr } = await StellarWalletsKit.authModal();
+      const { address: addr } = await kit.authModal();
       // The kit sets the active module internally before resolving authModal.
-      const id = StellarWalletsKit.selectedModule.productId;
-      const name = StellarWalletsKit.selectedModule.productName;
+      const id = kit.selectedModule.productId;
+      const name = kit.selectedModule.productName;
 
       setAddress(addr);
       setWalletId(id);
@@ -199,7 +234,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const disconnect = useCallback(async () => {
     try {
-      await StellarWalletsKit.disconnect();
+      // If the kit never loaded there is nothing to disconnect from —
+      // don't force the chunk to download just to tear state down.
+      if (kitPromise) {
+        const kit = await kitPromise;
+        await kit.disconnect();
+      }
     } catch {
       // ignore — we still want to clear local state.
     }
@@ -214,7 +254,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     async (xdr: string, opts?: { networkPassphrase?: string }) => {
       if (!address) throw new Error("wallet not connected");
       try {
-        const res = await StellarWalletsKit.signTransaction(xdr, {
+        const kit = await loadKit();
+        const res = await kit.signTransaction(xdr, {
           networkPassphrase: opts?.networkPassphrase ?? NETWORK_PASSPHRASE,
           address,
         });
