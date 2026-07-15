@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useStellarEvents, type FeedEvent } from "@/lib/stellar-events";
@@ -148,7 +148,9 @@ export default function EventsPage() {
   );
 }
 
-function EventRow({
+// Memoized: the feed re-polls every 5s — rows whose event object and
+// idToLabel Map (stable via useMemo) haven't changed skip re-rendering.
+const EventRow = memo(function EventRow({
   event,
   idToLabel,
 }: {
@@ -191,7 +193,7 @@ function EventRow({
       </div>
     </li>
   );
-}
+});
 
 function summarize(v: unknown): string {
   if (v == null) return "—";
