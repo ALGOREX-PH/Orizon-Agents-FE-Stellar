@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, memo, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,26 @@ const levelColor: Record<TraceLine["level"], string> = {
 };
 
 type Tab = "trace" | "artifact";
+
+// Memoized row: every SSE tick appends a line — previously the whole list
+// re-rendered per tick. Line objects are stable references, so memo skips
+// all already-rendered rows.
+const TraceRow = memo(function TraceRow({ line }: { line: TraceLine }) {
+  return (
+    <div className="flex gap-3">
+      <span className="w-16 text-muted">{line.t}</span>
+      <span
+        className={cn(
+          "w-14 uppercase tracking-widest text-[10px]",
+          levelColor[line.level],
+        )}
+      >
+        {line.level}
+      </span>
+      <span className="flex-1 text-text/90 leading-5">{line.msg}</span>
+    </div>
+  );
+});
 
 function TracePageInner() {
   const params = useSearchParams();
@@ -233,18 +253,7 @@ function TracePageInner() {
               className="font-mono text-xs p-5 h-[540px] overflow-y-auto space-y-1.5 bg-[#060010]"
             >
               {visible.map((line, i) => (
-                <div key={i} className="flex gap-3">
-                  <span className="w-16 text-muted">{line.t}</span>
-                  <span
-                    className={cn(
-                      "w-14 uppercase tracking-widest text-[10px]",
-                      levelColor[line.level],
-                    )}
-                  >
-                    {line.level}
-                  </span>
-                  <span className="flex-1 text-text/90 leading-5">{line.msg}</span>
-                </div>
+                <TraceRow key={i} line={line} />
               ))}
               {taskId && !done && !streamError && (
                 <div className="flex gap-3 animate-pulse">
