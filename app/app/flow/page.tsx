@@ -1,5 +1,5 @@
 "use client";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,7 +83,7 @@ export default function FlowPage() {
                   const b = nodeById[to];
                   if (!a || !b) return null;
                   return (
-                    <motion.path
+                    <m.path
                       key={`${from}-${to}`}
                       d={`M${a.x},${a.y} C${(a.x + b.x) / 2},${a.y} ${(a.x + b.x) / 2},${b.y} ${b.x},${b.y}`}
                       stroke="url(#edge)"
@@ -100,7 +100,7 @@ export default function FlowPage() {
               </svg>
 
               {flow.nodes.map((n, i) => (
-                <motion.div
+                <m.div
                   key={n.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -118,7 +118,7 @@ export default function FlowPage() {
                     </div>
                     <div className="font-mono text-sm">{n.label}</div>
                   </div>
-                </motion.div>
+                </m.div>
               ))}
             </>
           )}
