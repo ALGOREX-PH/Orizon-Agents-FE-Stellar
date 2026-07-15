@@ -5,9 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getPdaxPrice, pdaxFirmQuote } from "@/lib/pdax";
 import type { PdaxQuote, PdaxSide } from "@/lib/pdax-types";
-
-const inputCls =
-  "w-full bg-bg/60 border border-border px-3 py-2 text-sm font-mono outline-none focus:border-violet";
+import { inputCls } from "@/lib/ui";
 
 /** Indicative price + firm-quote console for a PHP pair (default USDC). */
 export function PricePanel() {
