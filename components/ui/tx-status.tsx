@@ -13,6 +13,7 @@
  */
 
 import { Card } from "@/components/ui/card";
+import { StellarExpertLink } from "@/components/ui/stellar-link";
 import type { FriendlyError } from "@/lib/wallet-errors";
 
 export type TxState =
@@ -160,14 +161,12 @@ function SuccessCard({
         <Row k="tx hash" v={hash} mono />
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
-        <a
-          href={`https://stellar.expert/explorer/${network}/tx/${hash}`}
-          target="_blank"
-          rel="noreferrer"
-          className="clip-cyber-sm border border-cyan/60 bg-cyan/10 px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-cyan hover:bg-cyan/20 transition"
-        >
-          view on stellar.expert ▸
-        </a>
+        <StellarExpertLink
+          kind="tx"
+          id={hash}
+          network={network}
+          className="clip-cyber-sm border border-cyan/60 bg-cyan/10 px-3 py-2 hover:bg-cyan/20 hover:text-cyan transition"
+        />
         <a
           href={`https://horizon-${network === "testnet" ? "testnet" : ""}.stellar.org/transactions/${hash}`}
           target="_blank"
