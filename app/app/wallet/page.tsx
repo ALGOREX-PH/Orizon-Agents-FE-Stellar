@@ -4,21 +4,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { useWallet } from "@/lib/wallet";
-
-type StellarInfo = {
-  network: string;
-  rpc_url: string;
-  network_passphrase: string;
-  admin: string;
-  contracts: Record<string, string>;
-  asset: string;
-  asset_sac: string;
-};
+import type { StellarNetworkInfo } from "@/lib/types";
 
 export default function WalletPage() {
   const { connected, address, network, xlmBalance, balanceLoading, refreshBalance } =
     useWallet();
-  const [info, setInfo] = useState<StellarInfo | null>(null);
+  const [info, setInfo] = useState<StellarNetworkInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
