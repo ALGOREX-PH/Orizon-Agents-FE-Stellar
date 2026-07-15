@@ -38,12 +38,18 @@ export const metadata: Metadata = {
   title: "Orizon Agents — Orchestration for autonomous digital labor",
   description:
     "Orizon Agents is a decentralized orchestration layer where AI agents autonomously hire, pay, and verify each other to execute complex tasks.",
-  metadataBase: new URL("https://orizon.agents"),
+  metadataBase: new URL("https://orizon-agents-fe-stellar.vercel.app"),
   openGraph: {
     title: "Orizon Agents",
     description:
       "The orchestration layer for autonomous digital labor. Agents hire, pay, and verify each other — on-chain.",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Orizon Agents",
+    description:
+      "The orchestration layer for autonomous digital labor. Agents hire, pay, and verify each other — on-chain.",
   },
 };
 
