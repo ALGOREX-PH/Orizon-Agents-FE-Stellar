@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { useWallet } from "@/lib/wallet";
+import { StellarExpertLink, stellarExpertUrl } from "@/components/ui/stellar-link";
 import type { StellarNetworkInfo } from "@/lib/types";
 import { prettyName } from "@/lib/utils";
 
@@ -87,14 +88,11 @@ export default function WalletPage() {
                 ▸ fund testnet
               </a>
               {address && (
-                <a
-                  href={`https://stellar.expert/explorer/testnet/account/${address}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="clip-cyber-sm border border-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted hover:text-text hover:border-violet/60 transition"
-                >
-                  view on stellar.expert ▸
-                </a>
+                <StellarExpertLink
+                  kind="account"
+                  id={address}
+                  className="clip-cyber-sm border border-border px-3 py-1.5 text-muted hover:border-violet/60 transition"
+                />
               )}
               <button
                 onClick={() => refreshBalance()}
@@ -157,7 +155,7 @@ export default function WalletPage() {
             ? Object.entries(info.contracts).map(([name, id]) => (
                 <a
                   key={name}
-                  href={`https://stellar.expert/explorer/${info.network}/contract/${id}`}
+                  href={stellarExpertUrl("contract", id, info.network)}
                   target="_blank"
                   rel="noreferrer"
                   className="clip-cyber-sm border border-border bg-bg/40 p-4 hover:border-violet/60 hover:bg-violet/5 transition"
