@@ -1,5 +1,5 @@
 "use client";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { ButtonLink } from "@/components/ui/button";
 import { GridBg, Glow } from "@/components/ui/grid-bg";
 
@@ -9,7 +9,7 @@ export function CTA() {
       <GridBg />
       <Glow color="violet" className="left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2" />
 
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-80px" }}
@@ -41,7 +41,7 @@ export function CTA() {
             Browse Agents
           </ButtonLink>
         </div>
-      </motion.div>
+      </m.div>
     </section>
   );
 }
