@@ -1,12 +1,12 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listAgents } from "@/lib/api";
-import type { Agent } from "@/lib/types";
+import { useFetch } from "@/lib/use-fetch";
 
 const statusTone = {
   online: "cyan" as const,
@@ -15,24 +15,9 @@ const statusTone = {
 };
 
 export default function AgentsPage() {
-  const [agents, setAgents] = useState<Agent[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { data: agents, error } = useFetch(listAgents, []);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "online" | "idle" | "offline">("all");
-
-  useEffect(() => {
-    let alive = true;
-    listAgents()
-      .then((a) => {
-        if (alive) setAgents(a);
-      })
-      .catch((e) => {
-        if (alive) setError(e instanceof Error ? e.message : "fetch failed");
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   const rows = useMemo(() => {
     if (!agents) return [];
