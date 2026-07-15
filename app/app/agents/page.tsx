@@ -21,9 +21,17 @@ export default function AgentsPage() {
   const [filter, setFilter] = useState<"all" | "online" | "idle" | "offline">("all");
 
   useEffect(() => {
+    let alive = true;
     listAgents()
-      .then((a) => setAgents(a))
-      .catch((e) => setError(e instanceof Error ? e.message : "fetch failed"));
+      .then((a) => {
+        if (alive) setAgents(a);
+      })
+      .catch((e) => {
+        if (alive) setError(e instanceof Error ? e.message : "fetch failed");
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const rows = useMemo(() => {
