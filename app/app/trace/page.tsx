@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArtifactViewer } from "@/components/ui/artifact-viewer";
 import { getArtifact, openTraceStream } from "@/lib/api";
-import { traceLines as demoTrace } from "@/lib/mock-data";
 import type { ArtifactResponse, TraceLine } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -54,7 +53,20 @@ function TracePageInner() {
 
   const [demoCursor, setDemoCursor] = useState(0);
   const [demoPlaying, setDemoPlaying] = useState(true);
+  // Demo replay data loads on demand — live-task views never ship it.
+  const [demoTrace, setDemoTrace] = useState<TraceLine[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (taskId) return;
+    let alive = true;
+    import("@/lib/mock-data").then(({ traceLines }) => {
+      if (alive) setDemoTrace(traceLines as TraceLine[]);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [taskId]);
 
   // Live mode: subscribe to SSE.
   useEffect(() => {
@@ -117,7 +129,7 @@ function TracePageInner() {
     const deltaMs = Math.min(Math.max(rawDelta, 120), 2800);
     const id = setTimeout(() => setDemoCursor((c) => c + 1), deltaMs);
     return () => clearTimeout(id);
-  }, [taskId, demoCursor, demoPlaying]);
+  }, [taskId, demoCursor, demoPlaying, demoTrace]);
 
   useEffect(() => {
     containerRef.current?.scrollTo({
@@ -126,7 +138,7 @@ function TracePageInner() {
     });
   }, [lines.length, demoCursor]);
 
-  const visible: TraceLine[] = taskId ? lines : (demoTrace.slice(0, demoCursor) as TraceLine[]);
+  const visible: TraceLine[] = taskId ? lines : demoTrace.slice(0, demoCursor);
   const total = taskId ? lines.length : demoTrace.length;
 
   const spent = visible
