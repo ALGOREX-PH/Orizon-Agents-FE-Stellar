@@ -34,6 +34,7 @@ export function FiatFund({
   const [record, setRecord] = useState<PdaxRampRecord | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [pollStale, setPollStale] = useState(false);
 
   // Server-authoritative funding quote: pesos that always cover the workflow
   // (buffer + round-up applied backend-side).
@@ -60,8 +61,19 @@ export function FiatFund({
     if (!record || record.status === "completed" || record.status === "failed") {
       return;
     }
+    let failures = 0;
     const id = setInterval(() => {
-      pdaxReconcileRamp(record.ramp_id).then(setRecord).catch(() => {});
+      pdaxReconcileRamp(record.ramp_id)
+        .then((r) => {
+          failures = 0;
+          setPollStale(false);
+          setRecord(r);
+        })
+        .catch(() => {
+          // One missed poll is transient; only surface a persistent outage.
+          failures += 1;
+          if (failures >= 3) setPollStale(true);
+        });
     }, 6000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -183,6 +195,11 @@ export function FiatFund({
             <div className="text-[10px] font-mono text-muted">
               ◉ tracking here — after you pay, this completes automatically.
               You can ignore PDAX&apos;s redirect page.
+            </div>
+          )}
+          {pollStale && (
+            <div role="status" className="text-[10px] font-mono text-magenta">
+              ⚠ status refresh failing — shown state may be stale; retrying…
             </div>
           )}
           {record.stages.length > 0 && (
