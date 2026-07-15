@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArtifactViewer } from "@/components/ui/artifact-viewer";
+import { KVRow } from "@/components/ui/kv-row";
 import { StellarExpertLink } from "@/components/ui/stellar-link";
 import { getArtifact, openTraceStream } from "@/lib/api";
 import type { ArtifactResponse, TraceLine } from "@/lib/types";
@@ -338,15 +339,10 @@ function TracePageInner() {
 
 function TxRow({ label, hash }: { label: string; hash: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-border/40 pb-2 last:border-0">
-      <dt className="text-muted text-[10px] uppercase tracking-widest pt-1 w-16">
-        {label}
-      </dt>
-      <dd className="text-right flex-1">
-        <div className="break-all">{hash}</div>
-        <StellarExpertLink kind="tx" id={hash} className="inline-block mt-1" />
-      </dd>
-    </div>
+    <KVRow k={label}>
+      <div className="break-all">{hash}</div>
+      <StellarExpertLink kind="tx" id={hash} className="inline-block mt-1" />
+    </KVRow>
   );
 }
 
