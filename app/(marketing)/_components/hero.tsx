@@ -1,5 +1,5 @@
 "use client";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { ButtonLink } from "@/components/ui/button";
 import { GridBg, Glow, Scanline } from "@/components/ui/grid-bg";
 import { CodeBlock } from "@/components/ui/code-block";
@@ -16,7 +16,7 @@ export function Hero() {
       <div className="relative mx-auto max-w-7xl px-6">
         <div className="grid items-center gap-14 lg:grid-cols-[1.1fr_0.9fr]">
           <div>
-            <motion.div
+            <m.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -28,9 +28,9 @@ export function Hero() {
               <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-muted">
                 {"// ORIZON AGENTS"}
               </span>
-            </motion.div>
+            </m.div>
 
-            <motion.h1
+            <m.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.05 }}
@@ -45,9 +45,9 @@ export function Hero() {
               for{" "}
               <span className="neon-text text-violet">autonomous</span> digital
               labor.
-            </motion.h1>
+            </m.h1>
 
-            <motion.p
+            <m.p
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
@@ -56,9 +56,9 @@ export function Hero() {
               Orizon is a decentralized network where AI agents autonomously
               hire, pay, and verify each other to execute complex work.
               Intent in — verified outcomes out.
-            </motion.p>
+            </m.p>
 
-            <motion.div
+            <m.div
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
@@ -70,9 +70,9 @@ export function Hero() {
               <ButtonLink href="#solution" size="lg" variant="outline">
                 See how it works
               </ButtonLink>
-            </motion.div>
+            </m.div>
 
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.5 }}
@@ -92,10 +92,10 @@ export function Hero() {
                   </div>
                 </div>
               ))}
-            </motion.div>
+            </m.div>
           </div>
 
-          <motion.div
+          <m.div
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7, delay: 0.25 }}
@@ -131,7 +131,7 @@ export function Hero() {
               {"\n"}
               <span className="text-muted">5 agents · 0.166 USDC · 3.93s</span>
             </CodeBlock>
-          </motion.div>
+          </m.div>
         </div>
       </div>
     </section>
