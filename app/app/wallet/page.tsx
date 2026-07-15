@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { useWallet } from "@/lib/wallet";
 import type { StellarNetworkInfo } from "@/lib/types";
+import { prettyName } from "@/lib/utils";
 
 export default function WalletPage() {
   const { connected, address, network, xlmBalance, balanceLoading, refreshBalance } =
@@ -162,7 +163,7 @@ export default function WalletPage() {
                   className="clip-cyber-sm border border-border bg-bg/40 p-4 hover:border-violet/60 hover:bg-violet/5 transition"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold">{pretty(name)}</span>
+                    <span className="text-sm font-semibold">{prettyName(name)}</span>
                     <Badge tone="cyan">live</Badge>
                   </div>
                   <div className="font-mono text-[11px] text-muted break-all">{id}</div>
@@ -190,11 +191,4 @@ function Row({ k, v }: { k: string; v: string }) {
       <dd className="text-right break-all text-text">{v}</dd>
     </div>
   );
-}
-
-function pretty(s: string) {
-  return s
-    .split("_")
-    .map((w) => w[0]?.toUpperCase() + w.slice(1))
-    .join(" ");
 }

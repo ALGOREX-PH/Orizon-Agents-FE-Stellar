@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useStellarEvents, type FeedEvent } from "@/lib/stellar-events";
 import type { StellarNetworkInfo } from "@/lib/types";
+import { prettyName } from "@/lib/utils";
 
 const FEED_OPTIONS = { intervalMs: 5000, max: 60 };
 
@@ -216,11 +217,4 @@ function relativeTime(iso: string): string {
   if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
   if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
   return new Date(iso).toLocaleDateString();
-}
-
-function prettyName(s: string): string {
-  return s
-    .split("_")
-    .map((w) => (w[0]?.toUpperCase() ?? "") + w.slice(1))
-    .join(" ");
 }
