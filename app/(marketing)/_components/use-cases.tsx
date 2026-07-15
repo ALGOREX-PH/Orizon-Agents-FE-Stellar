@@ -1,5 +1,5 @@
 "use client";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -67,7 +67,7 @@ export function UseCases() {
           ))}
         </div>
 
-        <motion.div
+        <m.div
           key={current.id}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -89,7 +89,7 @@ export function UseCases() {
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   {current.chain.map((agent, i) => (
-                    <motion.div
+                    <m.div
                       key={agent}
                       initial={{ opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -100,7 +100,7 @@ export function UseCases() {
                       {i < current.chain.length - 1 && (
                         <span className="text-cyan text-xs">→</span>
                       )}
-                    </motion.div>
+                    </m.div>
                   ))}
                 </div>
               </div>
@@ -113,7 +113,7 @@ export function UseCases() {
               </div>
             </div>
           </Card>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );
