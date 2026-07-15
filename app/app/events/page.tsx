@@ -3,13 +3,11 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useStellarEvents, type FeedEvent } from "@/lib/stellar-events";
+import type { StellarNetworkInfo } from "@/lib/types";
 
 const FEED_OPTIONS = { intervalMs: 5000, max: 60 };
 
-type StellarInfo = {
-  network: string;
-  contracts: Record<string, string>;
-};
+type StellarInfo = Pick<StellarNetworkInfo, "network" | "contracts">;
 
 export default function EventsPage() {
   const [info, setInfo] = useState<StellarInfo | null>(null);
