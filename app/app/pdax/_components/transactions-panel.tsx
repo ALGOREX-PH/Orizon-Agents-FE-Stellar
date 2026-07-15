@@ -5,13 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getPdaxCryptoTransactions } from "@/lib/pdax";
 import type { PdaxCryptoTransaction } from "@/lib/pdax-types";
-
-function tone(status: string): "success" | "magenta" | "muted" {
-  const s = status.toLowerCase();
-  if (s === "completed") return "success";
-  if (s === "failed") return "magenta";
-  return "muted";
-}
+import { statusTone } from "@/lib/ui";
 
 /** Recent crypto deposits / withdrawals on the PDAX account. */
 export function TransactionsPanel() {
@@ -67,7 +61,7 @@ export function TransactionsPanel() {
               <span className="font-mono text-xs">
                 {t.credit_amount !== "0" ? `+${t.credit_amount}` : `-${t.debit_amount}`}
               </span>
-              <Badge tone={tone(t.status)}>{t.status}</Badge>
+              <Badge tone={statusTone(t.status)}>{t.status}</Badge>
             </div>
           </div>
         ))}
