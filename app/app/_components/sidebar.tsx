@@ -11,7 +11,7 @@ const items = [
     href: "/app",
     label: "Overview",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <rect x="2" y="2" width="7" height="7" stroke="currentColor" strokeWidth="1.5" />
         <rect x="11" y="2" width="7" height="4" stroke="currentColor" strokeWidth="1.5" />
         <rect x="11" y="8" width="7" height="10" stroke="currentColor" strokeWidth="1.5" />
@@ -23,7 +23,7 @@ const items = [
     href: "/app/agents",
     label: "Agents",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <circle cx="10" cy="6" r="3" stroke="currentColor" strokeWidth="1.5" />
         <path d="M3 17c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="currentColor" strokeWidth="1.5" />
       </svg>
@@ -33,7 +33,7 @@ const items = [
     href: "/app/orchestrator",
     label: "Orchestrator",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <circle cx="10" cy="10" r="2" stroke="currentColor" strokeWidth="1.5" />
         <circle cx="4" cy="4" r="1.5" stroke="currentColor" strokeWidth="1.5" />
         <circle cx="16" cy="4" r="1.5" stroke="currentColor" strokeWidth="1.5" />
@@ -47,7 +47,7 @@ const items = [
     href: "/app/trace",
     label: "Trace",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <path d="M3 5h14M3 10h10M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         <circle cx="15" cy="10" r="1.5" fill="currentColor" />
       </svg>
@@ -57,7 +57,7 @@ const items = [
     href: "/app/events",
     label: "Events",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <path d="M3 10l3 0 2-5 4 10 2-5 3 0" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
       </svg>
     ),
@@ -66,7 +66,7 @@ const items = [
     href: "/app/send",
     label: "Send XLM",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <path d="M3 10l14-7-5 17-3-7-6-3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
       </svg>
     ),
@@ -75,7 +75,7 @@ const items = [
     href: "/app/pdax",
     label: "PDAX Ramp",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <path d="M4 7h11l-2.5-2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         <path d="M16 13H5l2.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
@@ -85,7 +85,7 @@ const items = [
     href: "/app/wallet",
     label: "Wallet",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <rect x="2" y="5" width="16" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
         <path d="M2 8h16" stroke="currentColor" strokeWidth="1.5" />
         <circle cx="14" cy="12" r="1.2" fill="currentColor" />
@@ -96,7 +96,7 @@ const items = [
     href: "/app/flow",
     label: "Flow",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <circle cx="3" cy="5" r="1.5" fill="currentColor" />
         <circle cx="10" cy="10" r="1.5" fill="currentColor" />
         <circle cx="3" cy="15" r="1.5" fill="currentColor" />
@@ -175,6 +175,7 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               onClick={() => setOpen(false)}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "relative flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm transition-all",
                 active
