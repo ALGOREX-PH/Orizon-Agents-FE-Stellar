@@ -48,6 +48,7 @@ export function DepositPanel() {
 
       <div className="mt-4 flex gap-3">
         <input
+          aria-label="Deposit currency"
           value={currency}
           onChange={(e) => setCurrency(e.target.value.toUpperCase())}
           className={inputCls}
