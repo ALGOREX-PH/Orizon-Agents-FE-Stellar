@@ -31,8 +31,12 @@ export function DepositPanel() {
 
   const copy = async () => {
     if (!addr) return;
-    await navigator.clipboard.writeText(addr.address);
-    setCopied(true);
+    try {
+      await navigator.clipboard.writeText(addr.address);
+      setCopied(true);
+    } catch {
+      setErr("copy failed — clipboard unavailable");
+    }
     setTimeout(() => setCopied(false), 1500);
   };
 
