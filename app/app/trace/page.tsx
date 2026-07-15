@@ -29,6 +29,7 @@ function TracePageInner() {
   const [done, setDone] = useState(false);
   const [tab, setTab] = useState<Tab>("trace");
   const [artifactData, setArtifactData] = useState<ArtifactResponse | null>(null);
+  const [artifactError, setArtifactError] = useState<string | null>(null);
 
   const [demoCursor, setDemoCursor] = useState(0);
   const [demoPlaying, setDemoPlaying] = useState(true);
@@ -40,17 +41,29 @@ function TracePageInner() {
     setLines([]);
     setDone(false);
     setArtifactData(null);
+    setArtifactError(null);
+    const fetchArtifact = () =>
+      getArtifact(taskId)
+        .then((data) => {
+          setArtifactData(data);
+          setArtifactError(null);
+        })
+        .catch((err: unknown) => {
+          setArtifactError(
+            err instanceof Error ? err.message : "artifact fetch failed",
+          );
+        });
     const close = openTraceStream(
       taskId,
       (line) => {
         setLines((prev) => [...prev, line]);
         if (line.level === "artifact") {
-          getArtifact(taskId).then(setArtifactData).catch(() => {});
+          fetchArtifact();
         }
       },
       () => {
         setDone(true);
-        getArtifact(taskId).then(setArtifactData).catch(() => {});
+        fetchArtifact();
       },
     );
     return close;
@@ -152,6 +165,15 @@ function TracePageInner() {
           >
             ▣ artifact
           </button>
+        </div>
+      )}
+
+      {artifactError && !artifact && (
+        <div
+          role="alert"
+          className="border border-magenta/40 bg-magenta/10 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] text-magenta"
+        >
+          ⚠ artifact fetch failed — {artifactError}
         </div>
       )}
 
