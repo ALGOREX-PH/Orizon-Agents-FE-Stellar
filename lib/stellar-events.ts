@@ -11,7 +11,12 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { rpc as RpcNs, scValToNative } from "@stellar/stellar-sdk";
+// Type-only import — the SDK itself is lazy-loaded inside the polling effect
+// so the (large) @stellar/stellar-sdk stays out of the initial bundle.
+import type { rpc as RpcNs } from "@stellar/stellar-sdk";
+
+type StellarSdk = typeof import("@stellar/stellar-sdk");
+type ScValToNativeFn = StellarSdk["scValToNative"];
 
 // Env-driven RPC endpoint — falls back to Stellar testnet when unset.
 const RPC_URL =
@@ -54,7 +59,7 @@ export function useStellarEvents(
   const startLedgerRef = useRef<number | null>(null);
   const stoppedRef = useRef(false);
 
-  const tick = useCallback(async (server: RpcNs.Server) => {
+  const tick = useCallback(async (server: RpcNs.Server, scValToNative: ScValToNativeFn) => {
     if (!contractIds || contractIds.length === 0) return;
     try {
       // First call: anchor on a recent ledger; later: advance with cursor.
@@ -84,8 +89,8 @@ export function useStellarEvents(
         ledgerClosedAt: e.ledgerClosedAt,
         contractId: e.contractId?.toString() ?? "",
         txHash: e.txHash,
-        topics: e.topic.map(safeScValToString),
-        value: tryScValToNative(e.value),
+        topics: e.topic.map((t) => safeScValToString(scValToNative, t)),
+        value: tryScValToNative(scValToNative, e.value),
       }));
 
       setEvents((prev) => {
@@ -110,12 +115,15 @@ export function useStellarEvents(
     setStatus("starting");
     setError(null);
 
-    const server = new RpcNs.Server(RPC_URL);
-
     let timer: ReturnType<typeof setInterval> | null = null;
 
     (async () => {
       try {
+        // Lazy-load the SDK on first use — keeps it out of the initial bundle.
+        const { rpc, scValToNative } = await import("@stellar/stellar-sdk");
+        if (stoppedRef.current) return;
+        const server = new rpc.Server(RPC_URL);
+
         const latest = await server.getLatestLedger();
         // Anchor 50 ledgers back so we catch fresh events for active workflows.
         startLedgerRef.current = Math.max(latest.sequence - 50, 1);
@@ -123,10 +131,10 @@ export function useStellarEvents(
         if (stoppedRef.current) return;
 
         // Initial pull + then poll.
-        await tick(server);
+        await tick(server, scValToNative);
         setStatus("live");
         timer = setInterval(() => {
-          if (!stoppedRef.current) tick(server);
+          if (!stoppedRef.current) tick(server, scValToNative);
         }, intervalMs);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -144,9 +152,9 @@ export function useStellarEvents(
   return { status, events, latestLedger, lastTickAt, error };
 }
 
-function safeScValToString(sv: unknown): string {
+function safeScValToString(scValToNative: ScValToNativeFn, sv: unknown): string {
   try {
-    const v = scValToNative(sv as Parameters<typeof scValToNative>[0]);
+    const v = scValToNative(sv as Parameters<ScValToNativeFn>[0]);
     if (v == null) return "";
     if (typeof v === "string") return v;
     if (typeof v === "number" || typeof v === "bigint" || typeof v === "boolean")
@@ -158,9 +166,9 @@ function safeScValToString(sv: unknown): string {
   }
 }
 
-function tryScValToNative(sv: unknown): unknown {
+function tryScValToNative(scValToNative: ScValToNativeFn, sv: unknown): unknown {
   try {
-    return scValToNative(sv as Parameters<typeof scValToNative>[0]);
+    return scValToNative(sv as Parameters<ScValToNativeFn>[0]);
   } catch {
     return null;
   }
