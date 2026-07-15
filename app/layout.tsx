@@ -64,6 +64,12 @@ export default function RootLayout({
       className={`${sans.variable} ${mono.variable} ${displayFont.variable} ${techMono.variable}`}
     >
       <body className="noise bg-bg text-text font-sans antialiased">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:border focus:border-cyan focus:bg-surface focus:px-4 focus:py-2 focus:font-mono focus:text-xs focus:uppercase focus:tracking-[0.2em] focus:text-cyan"
+        >
+          Skip to content
+        </a>
         <WalletProvider>{children}</WalletProvider>
       </body>
     </html>
