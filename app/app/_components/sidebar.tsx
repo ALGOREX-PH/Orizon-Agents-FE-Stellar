@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
 import { useMobileNav } from "./mobile-nav-context";
@@ -109,6 +110,28 @@ const items = [
 export function Sidebar() {
   const pathname = usePathname();
   const { open, setOpen } = useMobileNav();
+  const asideRef = useRef<HTMLElement>(null);
+
+  // Mobile drawer: Escape closes, body scroll locks, focus moves into the
+  // drawer and returns to the opener (hamburger) on close.
+  useEffect(() => {
+    if (!open) return;
+    const opener =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.body.classList.add("overflow-hidden");
+    asideRef.current?.focus();
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.classList.remove("overflow-hidden");
+      opener?.focus();
+    };
+  }, [open, setOpen]);
 
   return (
     <>
@@ -122,6 +145,11 @@ export function Sidebar() {
         )}
       />
       <aside
+        ref={asideRef}
+        tabIndex={-1}
+        role={open ? "dialog" : undefined}
+        aria-modal={open ? "true" : undefined}
+        aria-label="Navigation"
         className={cn(
           "fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-border bg-surface/95 md:bg-surface/60 backdrop-blur-xl transition-transform duration-200",
           // Mobile: slide in/out. Desktop: always visible.
