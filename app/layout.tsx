@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Inter } from "next/font/google";
+import {
+  JetBrains_Mono,
+  Inter,
+  Michroma,
+  Share_Tech_Mono,
+} from "next/font/google";
 import "./globals.css";
 import { WalletProvider } from "@/lib/wallet";
 
@@ -12,6 +17,20 @@ const sans = Inter({
 const mono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+  display: "swap",
+});
+
+const displayFont = Michroma({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-display",
+  display: "swap",
+});
+
+const techMono = Share_Tech_Mono({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-techmono",
   display: "swap",
 });
 
@@ -34,7 +53,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
+    <html
+      lang="en"
+      className={`${sans.variable} ${mono.variable} ${displayFont.variable} ${techMono.variable}`}
+    >
       <body className="noise bg-bg text-text font-sans antialiased">
         <WalletProvider>{children}</WalletProvider>
       </body>
