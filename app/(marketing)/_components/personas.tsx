@@ -1,5 +1,5 @@
 "use client";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { SectionHeading } from "@/components/ui/section-heading";
 
@@ -32,7 +32,7 @@ export function Personas() {
 
         <div className="mt-14 grid gap-5 md:grid-cols-3">
           {personas.map((p, i) => (
-            <motion.div
+            <m.div
               key={p.label}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -49,7 +49,7 @@ export function Personas() {
                   ◆ {p.stat}
                 </div>
               </Card>
-            </motion.div>
+            </m.div>
           ))}
         </div>
       </div>
