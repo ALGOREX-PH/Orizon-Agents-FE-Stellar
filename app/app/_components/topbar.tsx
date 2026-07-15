@@ -13,6 +13,8 @@ const titles: Record<string, { t: string; b: string[] }> = {
   "/app/events": { t: "Events", b: ["console", "events"] },
   "/app/send": { t: "Send XLM", b: ["console", "send"] },
   "/app/flow": { t: "Flow", b: ["console", "flow"] },
+  "/app/pdax": { t: "PDAX", b: ["console", "pdax"] },
+  "/app/wallet": { t: "Wallet", b: ["console", "wallet"] },
 };
 
 function fmtXlm(b: string | null): string {

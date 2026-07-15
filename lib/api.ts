@@ -86,12 +86,15 @@ export const submitSigned = (signedXdr: string) =>
 
 /**
  * Subscribe to a live SSE trace stream.
- * Returns a disposer. onEvent is called for each trace line; onDone fires on completion.
+ * Returns a disposer. onEvent is called for each trace line; onDone fires on
+ * completion; onError fires if the stream drops mid-flight (falls back to
+ * onDone when not provided, preserving the old behavior).
  */
 export function openTraceStream(
   taskId: string,
   onEvent: (line: TraceLine) => void,
   onDone?: () => void,
+  onError?: () => void,
 ): () => void {
   const es = new EventSource(`${base}/trace/${taskId}/stream`);
   es.addEventListener("trace", (e) => {
@@ -108,7 +111,7 @@ export function openTraceStream(
   });
   es.addEventListener("error", () => {
     es.close();
-    onDone?.();
+    (onError ?? onDone)?.();
   });
   return () => es.close();
 }

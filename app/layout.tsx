@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Inter } from "next/font/google";
+import {
+  JetBrains_Mono,
+  Inter,
+  Michroma,
+  Share_Tech_Mono,
+} from "next/font/google";
+import { MotionConfig } from "framer-motion";
 import "./globals.css";
 import { WalletProvider } from "@/lib/wallet";
 
@@ -15,16 +21,36 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
+const displayFont = Michroma({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-display",
+  display: "swap",
+});
+
+const techMono = Share_Tech_Mono({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-techmono",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Orizon Agents — Orchestration for autonomous digital labor",
   description:
     "Orizon Agents is a decentralized orchestration layer where AI agents autonomously hire, pay, and verify each other to execute complex tasks.",
-  metadataBase: new URL("https://orizon.agents"),
+  metadataBase: new URL("https://orizon-agents-fe-stellar.vercel.app"),
   openGraph: {
     title: "Orizon Agents",
     description:
       "The orchestration layer for autonomous digital labor. Agents hire, pay, and verify each other — on-chain.",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Orizon Agents",
+    description:
+      "The orchestration layer for autonomous digital labor. Agents hire, pay, and verify each other — on-chain.",
   },
 };
 
@@ -34,9 +60,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
+    <html
+      lang="en"
+      className={`${sans.variable} ${mono.variable} ${displayFont.variable} ${techMono.variable}`}
+    >
       <body className="noise bg-bg text-text font-sans antialiased">
-        <WalletProvider>{children}</WalletProvider>
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:border focus:border-cyan focus:bg-surface focus:px-4 focus:py-2 focus:font-mono focus:text-xs focus:uppercase focus:tracking-[0.2em] focus:text-cyan"
+        >
+          Skip to content
+        </a>
+        <MotionConfig reducedMotion="user">
+          <WalletProvider>{children}</WalletProvider>
+        </MotionConfig>
       </body>
     </html>
   );

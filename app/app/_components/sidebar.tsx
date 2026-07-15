@@ -1,7 +1,10 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/ui/logo";
+import { getOverview } from "@/lib/api";
+import type { Overview } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useMobileNav } from "./mobile-nav-context";
 
@@ -10,7 +13,7 @@ const items = [
     href: "/app",
     label: "Overview",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <rect x="2" y="2" width="7" height="7" stroke="currentColor" strokeWidth="1.5" />
         <rect x="11" y="2" width="7" height="4" stroke="currentColor" strokeWidth="1.5" />
         <rect x="11" y="8" width="7" height="10" stroke="currentColor" strokeWidth="1.5" />
@@ -22,7 +25,7 @@ const items = [
     href: "/app/agents",
     label: "Agents",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <circle cx="10" cy="6" r="3" stroke="currentColor" strokeWidth="1.5" />
         <path d="M3 17c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="currentColor" strokeWidth="1.5" />
       </svg>
@@ -32,7 +35,7 @@ const items = [
     href: "/app/orchestrator",
     label: "Orchestrator",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <circle cx="10" cy="10" r="2" stroke="currentColor" strokeWidth="1.5" />
         <circle cx="4" cy="4" r="1.5" stroke="currentColor" strokeWidth="1.5" />
         <circle cx="16" cy="4" r="1.5" stroke="currentColor" strokeWidth="1.5" />
@@ -46,7 +49,7 @@ const items = [
     href: "/app/trace",
     label: "Trace",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <path d="M3 5h14M3 10h10M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         <circle cx="15" cy="10" r="1.5" fill="currentColor" />
       </svg>
@@ -56,7 +59,7 @@ const items = [
     href: "/app/events",
     label: "Events",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <path d="M3 10l3 0 2-5 4 10 2-5 3 0" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
       </svg>
     ),
@@ -65,7 +68,7 @@ const items = [
     href: "/app/send",
     label: "Send XLM",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <path d="M3 10l14-7-5 17-3-7-6-3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
       </svg>
     ),
@@ -74,7 +77,7 @@ const items = [
     href: "/app/pdax",
     label: "PDAX Ramp",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <path d="M4 7h11l-2.5-2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         <path d="M16 13H5l2.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
@@ -84,7 +87,7 @@ const items = [
     href: "/app/wallet",
     label: "Wallet",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <rect x="2" y="5" width="16" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
         <path d="M2 8h16" stroke="currentColor" strokeWidth="1.5" />
         <circle cx="14" cy="12" r="1.2" fill="currentColor" />
@@ -95,7 +98,7 @@ const items = [
     href: "/app/flow",
     label: "Flow",
     icon: (
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
         <circle cx="3" cy="5" r="1.5" fill="currentColor" />
         <circle cx="10" cy="10" r="1.5" fill="currentColor" />
         <circle cx="3" cy="15" r="1.5" fill="currentColor" />
@@ -109,6 +112,43 @@ const items = [
 export function Sidebar() {
   const pathname = usePathname();
   const { open, setOpen } = useMobileNav();
+  const asideRef = useRef<HTMLElement>(null);
+  const [overview, setOverview] = useState<Overview | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    getOverview()
+      .then((o) => {
+        if (alive) setOverview(o);
+      })
+      .catch(() => {
+        // Keep the static fallback copy if metrics are unreachable.
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Mobile drawer: Escape closes, body scroll locks, focus moves into the
+  // drawer and returns to the opener (hamburger) on close.
+  useEffect(() => {
+    if (!open) return;
+    const opener =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.body.classList.add("overflow-hidden");
+    asideRef.current?.focus();
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.classList.remove("overflow-hidden");
+      opener?.focus();
+    };
+  }, [open, setOpen]);
 
   return (
     <>
@@ -122,6 +162,11 @@ export function Sidebar() {
         )}
       />
       <aside
+        ref={asideRef}
+        tabIndex={-1}
+        role={open ? "dialog" : undefined}
+        aria-modal={open ? "true" : undefined}
+        aria-label="Navigation"
         className={cn(
           "fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-border bg-surface/95 md:bg-surface/60 backdrop-blur-xl transition-transform duration-200",
           // Mobile: slide in/out. Desktop: always visible.
@@ -147,6 +192,7 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               onClick={() => setOpen(false)}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "relative flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm transition-all",
                 active
@@ -173,9 +219,9 @@ export function Sidebar() {
             </span>
           </div>
           <div className="font-mono text-[11px] text-muted leading-5">
-            2,481 agents online
+            {overview ? `${overview.agents_online.toLocaleString()} agents online` : "— agents online"}
             <br />
-            avg latency 212ms
+            {overview ? `avg completion ${Math.round(overview.avg_completion)}s` : "avg completion —"}
           </div>
         </div>
         <div className="mt-3 flex items-center gap-3 px-1">
@@ -183,8 +229,8 @@ export function Sidebar() {
             ◆
           </div>
           <div className="flex-1">
-            <div className="text-xs">danielle.meer</div>
-            <div className="font-mono text-[10px] text-muted">ops·free</div>
+            <div className="text-xs">operator</div>
+            <div className="font-mono text-[10px] text-muted">testnet</div>
           </div>
         </div>
       </div>

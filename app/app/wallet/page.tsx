@@ -22,13 +22,21 @@ export default function WalletPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let alive = true;
     fetch("/api/stellar/network")
       .then((r) => {
         if (!r.ok) throw new Error(`GET /api/stellar/network → ${r.status}`);
         return r.json();
       })
-      .then(setInfo)
-      .catch((e) => setError(e.message));
+      .then((data) => {
+        if (alive) setInfo(data);
+      })
+      .catch((e) => {
+        if (alive) setError(e.message);
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const networkMismatch =

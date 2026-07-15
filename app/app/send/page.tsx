@@ -172,10 +172,14 @@ export default function SendPage() {
 
           <div className="space-y-4">
             <div>
-              <label className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
+              <label
+                htmlFor="send-destination"
+                className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted"
+              >
                 destination
               </label>
               <input
+                id="send-destination"
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
                 placeholder="G… 56 chars"
@@ -188,10 +192,14 @@ export default function SendPage() {
 
             <div className="grid gap-4 sm:grid-cols-[1fr,1fr]">
               <div>
-                <label className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
+                <label
+                  htmlFor="send-amount"
+                  className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted"
+                >
                   amount (XLM)
                 </label>
                 <input
+                  id="send-amount"
                   value={amount}
                   onChange={(e) =>
                     setAmount(e.target.value.replace(/[^0-9.]/g, ""))
@@ -220,10 +228,14 @@ export default function SendPage() {
               </div>
 
               <div>
-                <label className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
+                <label
+                  htmlFor="send-memo"
+                  className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted"
+                >
                   memo (optional · ≤28 bytes)
                 </label>
                 <input
+                  id="send-memo"
                   value={memo}
                   onChange={(e) => setMemo(e.target.value)}
                   placeholder="Yellow Belt"

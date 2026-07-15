@@ -27,3 +27,4 @@ backend/.mypy_cache/
 
 # Internal docs — litepaper & Instawards SOW/budget (kept local, not published)
 whitepaper/
+tsconfig.tsbuildinfo

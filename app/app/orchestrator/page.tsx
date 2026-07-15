@@ -105,13 +105,7 @@ export default function OrchestratorPage() {
 
       setStep("broadcast");
       setTxState("broadcasting");
-      const broadcast = (await submitSigned(signedXdr)) as {
-        status: string;
-        hash: string;
-        return_value: unknown;
-        diagnostic?: string;
-        explorer?: string;
-      };
+      const broadcast = await submitSigned(signedXdr);
       if (broadcast.status !== "SUCCESS") {
         const bits = [
           `authorize tx ${broadcast.status}`,

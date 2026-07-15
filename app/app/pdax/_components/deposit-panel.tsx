@@ -31,8 +31,12 @@ export function DepositPanel() {
 
   const copy = async () => {
     if (!addr) return;
-    await navigator.clipboard.writeText(addr.address);
-    setCopied(true);
+    try {
+      await navigator.clipboard.writeText(addr.address);
+      setCopied(true);
+    } catch {
+      setErr("copy failed — clipboard unavailable");
+    }
     setTimeout(() => setCopied(false), 1500);
   };
 
@@ -44,6 +48,7 @@ export function DepositPanel() {
 
       <div className="mt-4 flex gap-3">
         <input
+          aria-label="Deposit currency"
           value={currency}
           onChange={(e) => setCurrency(e.target.value.toUpperCase())}
           className={inputCls}

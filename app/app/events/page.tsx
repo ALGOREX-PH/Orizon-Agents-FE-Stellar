@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useStellarEvents, type FeedEvent } from "@/lib/stellar-events";
 
+const FEED_OPTIONS = { intervalMs: 5000, max: 60 };
+
 type StellarInfo = {
   network: string;
   contracts: Record<string, string>;
@@ -14,13 +16,21 @@ export default function EventsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
+    let alive = true;
     fetch("/api/stellar/network")
       .then((r) => {
         if (!r.ok) throw new Error(`GET /api/stellar/network → ${r.status}`);
         return r.json();
       })
-      .then(setInfo)
-      .catch((e) => setLoadError(e.message));
+      .then((data) => {
+        if (alive) setInfo(data);
+      })
+      .catch((e) => {
+        if (alive) setLoadError(e.message);
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const contractIds = useMemo(
@@ -40,7 +50,7 @@ export default function EventsPage() {
 
   const { status, events, latestLedger, lastTickAt, error } = useStellarEvents(
     contractIds,
-    { intervalMs: 5000, max: 60 },
+    FEED_OPTIONS,
   );
 
   const ageSec =

@@ -13,9 +13,17 @@ export default function FlowPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let alive = true;
     getFlow()
-      .then(setFlow)
-      .catch((e) => setError(e instanceof Error ? e.message : "fetch failed"));
+      .then((f) => {
+        if (alive) setFlow(f);
+      })
+      .catch((e) => {
+        if (alive) setError(e instanceof Error ? e.message : "fetch failed");
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const nodeById = flow ? Object.fromEntries(flow.nodes.map((n) => [n.id, n])) : {};

@@ -15,7 +15,7 @@ export default function AppLayout({
         <Sidebar />
         <div className="md:pl-60">
           <Topbar />
-          <main className="relative px-4 sm:px-6 md:px-8 py-6 md:py-8">
+          <main id="main" className="relative px-4 sm:px-6 md:px-8 py-6 md:py-8">
             {children}
           </main>
         </div>

@@ -27,7 +27,7 @@ const agentTags = [
 
 export default function Home() {
   return (
-    <main className="relative overflow-hidden">
+    <main id="main" className="relative overflow-hidden">
       <Nav />
       <Hero />
       <Marquee items={agentTags} />

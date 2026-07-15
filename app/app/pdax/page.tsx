@@ -17,13 +17,33 @@ import { TransactionsPanel } from "./_components/transactions-panel";
 export default function PdaxPage() {
   const [env, setEnv] = useState<PdaxEnvironment | null>(null);
   const [health, setHealth] = useState<PdaxHealth | null>(null);
+  const [healthDown, setHealthDown] = useState(false);
   const [balances, setBalances] = useState<PdaxBalance[] | null>(null);
   const [loadingBal, setLoadingBal] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    getPdaxEnvironment().then(setEnv).catch((e) => setErr(String(e)));
-    getPdaxHealth().then(setHealth).catch(() => {});
+    let alive = true;
+    getPdaxEnvironment()
+      .then((e) => {
+        if (alive) setEnv(e);
+      })
+      .catch((e) => {
+        if (alive) setErr(String(e));
+      });
+    getPdaxHealth()
+      .then((h) => {
+        if (alive) {
+          setHealth(h);
+          setHealthDown(false);
+        }
+      })
+      .catch(() => {
+        if (alive) setHealthDown(true);
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const loadBalances = async () => {
@@ -72,6 +92,11 @@ export default function PdaxPage() {
                 dot
               >
                 {health.status}
+              </Badge>
+            )}
+            {healthDown && !health && (
+              <Badge tone="magenta" dot>
+                health unreachable
               </Badge>
             )}
             {env ? (

@@ -21,9 +21,17 @@ export default function AgentsPage() {
   const [filter, setFilter] = useState<"all" | "online" | "idle" | "offline">("all");
 
   useEffect(() => {
+    let alive = true;
     listAgents()
-      .then((a) => setAgents(a))
-      .catch((e) => setError(e instanceof Error ? e.message : "fetch failed"));
+      .then((a) => {
+        if (alive) setAgents(a);
+      })
+      .catch((e) => {
+        if (alive) setError(e instanceof Error ? e.message : "fetch failed");
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const rows = useMemo(() => {
@@ -54,12 +62,15 @@ export default function AgentsPage() {
             <svg
               viewBox="0 0 20 20"
               fill="none"
+              aria-hidden="true"
               className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted"
             >
               <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.5" />
               <path d="M14 14l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
             <input
+              type="search"
+              aria-label="Search agents by name or skill"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="search name or skill…"

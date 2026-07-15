@@ -15,19 +15,19 @@ const cols = [
   {
     h: "Protocol",
     l: [
-      ["ERC-8004", "#"],
-      ["x402", "#"],
-      ["Registry", "#"],
-      ["Whitepaper", "#"],
+      ["ERC-8004", "https://eips.ethereum.org/EIPS/eip-8004"],
+      ["x402", "https://www.x402.org"],
+      ["Registry", "/app/agents"],
+      ["Contracts", "https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar#readme"],
     ],
   },
   {
     h: "Resources",
     l: [
-      ["Docs", "#"],
-      ["API", "#"],
-      ["Status", "#"],
-      ["Changelog", "#"],
+      ["Docs", "https://github.com/ALGOREX-PH/Orizon-Agents-BE-Stellar#readme"],
+      ["API", "https://orizon-agents-be-stellar.onrender.com/docs"],
+      ["Status", "https://orizon-agents-be-stellar.onrender.com/health"],
+      ["Changelog", "https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/commits"],
     ],
   },
   {
@@ -84,11 +84,7 @@ export function Footer() {
 
         <div className="mt-14 flex flex-col gap-3 border-t border-border pt-6 font-mono text-[10px] uppercase tracking-[0.25em] text-muted md:flex-row md:items-center md:justify-between">
           <span>© {new Date().getFullYear()} Orizon Agents — all rights reserved</span>
-          <span className="flex items-center gap-4">
-            <Link href="#" className="hover:text-text">Privacy</Link>
-            <Link href="#" className="hover:text-text">Terms</Link>
-            <Link href="#" className="hover:text-text">Security</Link>
-          </span>
+          <span>built on stellar testnet · mit licensed</span>
         </div>
       </div>
     </footer>
