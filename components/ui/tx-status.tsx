@@ -13,6 +13,7 @@
  */
 
 import { Card } from "@/components/ui/card";
+import { KVRow } from "@/components/ui/kv-row";
 import { StellarExpertLink } from "@/components/ui/stellar-link";
 import type { FriendlyError } from "@/lib/wallet-errors";
 
@@ -155,10 +156,10 @@ function SuccessCard({
       </div>
       <div className="space-y-2 font-mono text-sm">
         {amount && destination && (
-          <Row k="sent" v={`${amount} → ${shortG(destination)}`} />
+          <KVRow k="sent" value={`${amount} → ${shortG(destination)}`} divider={false} />
         )}
-        {memo && <Row k="memo" v={memo} />}
-        <Row k="tx hash" v={hash} mono />
+        {memo && <KVRow k="memo" value={memo} divider={false} />}
+        <KVRow k="tx hash" value={hash} divider={false} valueClassName="text-cyan" />
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         <StellarExpertLink
@@ -202,16 +203,7 @@ function FailedCard({ error }: { error: FriendlyError }) {
   );
 }
 
-function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4 flex-wrap">
-      <span className="text-muted text-[10px] uppercase tracking-widest">{k}</span>
-      <span className={`text-right ${mono ? "text-cyan break-all" : "text-text"}`}>
-        {v}
-      </span>
-    </div>
-  );
-}
+
 
 function shortG(g: string): string {
   if (g.length <= 12) return g;
