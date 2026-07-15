@@ -17,6 +17,7 @@ import { TransactionsPanel } from "./_components/transactions-panel";
 export default function PdaxPage() {
   const [env, setEnv] = useState<PdaxEnvironment | null>(null);
   const [health, setHealth] = useState<PdaxHealth | null>(null);
+  const [healthDown, setHealthDown] = useState(false);
   const [balances, setBalances] = useState<PdaxBalance[] | null>(null);
   const [loadingBal, setLoadingBal] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -32,9 +33,14 @@ export default function PdaxPage() {
       });
     getPdaxHealth()
       .then((h) => {
-        if (alive) setHealth(h);
+        if (alive) {
+          setHealth(h);
+          setHealthDown(false);
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (alive) setHealthDown(true);
+      });
     return () => {
       alive = false;
     };
@@ -86,6 +92,11 @@ export default function PdaxPage() {
                 dot
               >
                 {health.status}
+              </Badge>
+            )}
+            {healthDown && !health && (
+              <Badge tone="magenta" dot>
+                health unreachable
               </Badge>
             )}
             {env ? (
