@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArtifactViewer } from "@/components/ui/artifact-viewer";
+import { StellarExpertLink } from "@/components/ui/stellar-link";
 import { getArtifact, openTraceStream } from "@/lib/api";
 import type { ArtifactResponse, TraceLine } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -321,14 +322,11 @@ function TracePageInner() {
                   "awaiting ERC-8004 attestation…"}
               </div>
               {artifactData?.proof_tx && (
-                <a
-                  href={`https://stellar.expert/explorer/testnet/tx/${artifactData.proof_tx}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 inline-block font-mono text-[10px] uppercase tracking-widest text-cyan hover:text-text"
-                >
-                  view on stellar.expert ▸
-                </a>
+                <StellarExpertLink
+                  kind="tx"
+                  id={artifactData.proof_tx}
+                  className="mt-3 inline-block"
+                />
               )}
             </Card>
           </div>
@@ -346,14 +344,7 @@ function TxRow({ label, hash }: { label: string; hash: string }) {
       </dt>
       <dd className="text-right flex-1">
         <div className="break-all">{hash}</div>
-        <a
-          href={`https://stellar.expert/explorer/testnet/tx/${hash}`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-block mt-1 text-[10px] uppercase tracking-widest text-cyan hover:text-text"
-        >
-          view on stellar.expert ▸
-        </a>
+        <StellarExpertLink kind="tx" id={hash} className="inline-block mt-1" />
       </dd>
     </div>
   );
