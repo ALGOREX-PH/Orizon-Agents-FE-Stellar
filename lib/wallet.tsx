@@ -27,8 +27,16 @@ import { defaultModules } from "@creit.tech/stellar-wallets-kit/modules/utils";
 import { FREIGHTER_ID } from "@creit.tech/stellar-wallets-kit/modules/freighter";
 import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
 
-const NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
-const HORIZON_TESTNET = "https://horizon-testnet.stellar.org";
+// Env-driven network config — falls back to Stellar testnet when unset.
+const NETWORK_PASSPHRASE =
+  process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE ||
+  "Test SDF Network ; September 2015";
+const HORIZON_URL =
+  process.env.NEXT_PUBLIC_HORIZON_URL || "https://horizon-testnet.stellar.org";
+// Friendly label for the passphrase — "TESTNET" for the default config.
+const NETWORK_NAME =
+  Object.entries(KitNetworks).find(([, v]) => v === NETWORK_PASSPHRASE)?.[0] ??
+  "CUSTOM";
 const STORAGE_KEY = "orizon.wallet.v2";
 
 type StoredSession = {
@@ -69,7 +77,7 @@ function ensureKitInit() {
   StellarWalletsKit.init({
     modules: defaultModules(),
     selectedWalletId: FREIGHTER_ID,
-    network: KitNetworks.TESTNET,
+    network: NETWORK_PASSPHRASE as KitNetworks,
   });
   kitInitialized = true;
 }
@@ -107,14 +115,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [balanceLoading, setBalanceLoading] = useState(false);
 
   const network = useMemo<NetworkDetails>(
-    () => ({ network: "TESTNET", networkPassphrase: NETWORK_PASSPHRASE }),
+    () => ({ network: NETWORK_NAME, networkPassphrase: NETWORK_PASSPHRASE }),
     [],
   );
 
   const fetchBalance = useCallback(async (g: string) => {
     setBalanceLoading(true);
     try {
-      const r = await fetch(`${HORIZON_TESTNET}/accounts/${g}`);
+      const r = await fetch(`${HORIZON_URL}/accounts/${g}`);
       if (r.status === 404) {
         // Unfunded account — friendbot needed.
         setXlmBalance("0");
