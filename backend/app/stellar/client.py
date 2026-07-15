@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
@@ -36,7 +37,7 @@ from ..config import settings
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractIds:
     agent_registry: str
     reputation_ledger: str
@@ -45,6 +46,7 @@ class ContractIds:
     asset_sac: str
 
 
+@lru_cache(maxsize=1)
 def contract_ids() -> ContractIds:
     return ContractIds(
         agent_registry=settings.stellar_agent_registry,
@@ -55,6 +57,7 @@ def contract_ids() -> ContractIds:
     )
 
 
+@lru_cache(maxsize=1)
 def network_passphrase() -> str:
     return settings.stellar_network_passphrase or Network.TESTNET_NETWORK_PASSPHRASE
 
@@ -193,7 +196,6 @@ def invoke_with_server_key(
         raise RuntimeError(f"submit failed: {sent.error_result_xdr}")
 
     # Poll briefly for final status.
-    import time
     for _ in range(30):
         status = server.get_transaction(sent.hash)
         if status.status in (GetTransactionStatus.SUCCESS, GetTransactionStatus.FAILED):
@@ -244,8 +246,6 @@ def build_invoke_xdr(
 
 def submit_signed_xdr(signed_xdr: str) -> dict[str, Any]:
     """Submit a user-signed (via Freighter) prepared transaction."""
-    import time
-
     from stellar_sdk import TransactionEnvelope
 
     server = _server()
