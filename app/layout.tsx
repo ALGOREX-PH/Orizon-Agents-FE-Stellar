@@ -5,6 +5,7 @@ import {
   Michroma,
   Share_Tech_Mono,
 } from "next/font/google";
+import { MotionConfig } from "framer-motion";
 import "./globals.css";
 import { WalletProvider } from "@/lib/wallet";
 
@@ -70,7 +71,9 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        <WalletProvider>{children}</WalletProvider>
+        <MotionConfig reducedMotion="user">
+          <WalletProvider>{children}</WalletProvider>
+        </MotionConfig>
       </body>
     </html>
   );
