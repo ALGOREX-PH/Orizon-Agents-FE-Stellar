@@ -13,9 +13,7 @@ import type {
   PdaxRampRecord,
   RampDirection,
 } from "@/lib/pdax-types";
-
-const inputCls =
-  "w-full bg-bg/60 border border-border px-3 py-2 text-sm font-mono outline-none focus:border-violet";
+import { inputCls, statusTone } from "@/lib/ui";
 
 const DEPOSIT_METHODS = [
   "instapay_upay_cashin",
@@ -23,13 +21,6 @@ const DEPOSIT_METHODS = [
   "grabpay_cashin",
   "ub_online_upay_cashin",
 ];
-
-function statusTone(s: string): "success" | "magenta" | "cyan" | "muted" {
-  if (s === "completed") return "success";
-  if (s === "failed") return "magenta";
-  if (s === "awaiting_payment") return "cyan";
-  return "muted";
-}
 
 /** PHP <-> USDCXLM ramp console: estimate + start on-ramp / off-ramp. */
 export function RampPanel() {
