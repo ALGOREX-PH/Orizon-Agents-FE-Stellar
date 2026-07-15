@@ -105,6 +105,42 @@ body {
   }
 }
 
+/* Logo — rising-sun mark */
+@keyframes sunRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes horizonShimmer {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.logo-sunrise {
+  animation: sunRise 1.2s ease-out both;
+}
+.logo-shimmer {
+  animation: horizonShimmer 3.6s ease-in-out infinite;
+}
+.logo-shimmer-delay {
+  animation-delay: 0.4s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-sunrise,
+  .logo-shimmer {
+    animation: none;
+  }
+}
+
 /* Glow card hover */
 .glow-card {
   transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
