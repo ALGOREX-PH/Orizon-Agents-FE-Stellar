@@ -22,8 +22,22 @@ export default function PdaxPage() {
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    getPdaxEnvironment().then(setEnv).catch((e) => setErr(String(e)));
-    getPdaxHealth().then(setHealth).catch(() => {});
+    let alive = true;
+    getPdaxEnvironment()
+      .then((e) => {
+        if (alive) setEnv(e);
+      })
+      .catch((e) => {
+        if (alive) setErr(String(e));
+      });
+    getPdaxHealth()
+      .then((h) => {
+        if (alive) setHealth(h);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const loadBalances = async () => {
