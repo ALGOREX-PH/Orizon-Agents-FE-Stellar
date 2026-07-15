@@ -8,7 +8,7 @@ export default function Loading() {
       aria-label="Loading"
     >
       <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-muted animate-pulse">
-        // loading console
+        {"// loading console"}
       </span>
       <div className="w-full max-w-md space-y-3">
         <Skeleton className="h-4 w-full" />

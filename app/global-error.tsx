@@ -41,7 +41,7 @@ export default function GlobalError({
             color: "#FF2E9A",
           }}
         >
-          // system fault
+          {"// system fault"}
         </p>
         <h1
           style={{

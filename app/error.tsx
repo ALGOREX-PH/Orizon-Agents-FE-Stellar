@@ -17,7 +17,7 @@ export default function Error({
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
       <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-magenta">
-        // system fault
+        {"// system fault"}
       </p>
       <h1 className="mt-4 font-display text-2xl tracking-[0.2em] text-text neon-text sm:text-3xl">
         SYSTEM FAULT
