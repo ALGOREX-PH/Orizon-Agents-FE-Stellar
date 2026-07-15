@@ -8,43 +8,26 @@ import {
   getPdaxEnvironment,
   getPdaxHealth,
 } from "@/lib/pdax";
-import type { PdaxBalance, PdaxEnvironment, PdaxHealth } from "@/lib/pdax-types";
+import type { PdaxBalance } from "@/lib/pdax-types";
+import { useFetch } from "@/lib/use-fetch";
 import { RampPanel } from "./_components/ramp-panel";
 import { PricePanel } from "./_components/price-panel";
 import { DepositPanel } from "./_components/deposit-panel";
 import { TransactionsPanel } from "./_components/transactions-panel";
 
 export default function PdaxPage() {
-  const [env, setEnv] = useState<PdaxEnvironment | null>(null);
-  const [health, setHealth] = useState<PdaxHealth | null>(null);
-  const [healthDown, setHealthDown] = useState(false);
+  const { data: env, error: envError } = useFetch(getPdaxEnvironment, []);
+  const { data: health, error: healthError } = useFetch(getPdaxHealth, []);
+  const healthDown = healthError !== null;
   const [balances, setBalances] = useState<PdaxBalance[] | null>(null);
   const [loadingBal, setLoadingBal] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // Surface the environment fetch failure in the shared error banner
+  // (a later balances refresh clears it, matching the previous behavior).
   useEffect(() => {
-    let alive = true;
-    getPdaxEnvironment()
-      .then((e) => {
-        if (alive) setEnv(e);
-      })
-      .catch((e) => {
-        if (alive) setErr(String(e));
-      });
-    getPdaxHealth()
-      .then((h) => {
-        if (alive) {
-          setHealth(h);
-          setHealthDown(false);
-        }
-      })
-      .catch(() => {
-        if (alive) setHealthDown(true);
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+    if (envError) setErr(envError);
+  }, [envError]);
 
   const loadBalances = async () => {
     setErr(null);
