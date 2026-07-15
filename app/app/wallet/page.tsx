@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { useWallet } from "@/lib/wallet";
+import { KVRow } from "@/components/ui/kv-row";
 import { StellarExpertLink, stellarExpertUrl } from "@/components/ui/stellar-link";
 import type { StellarNetworkInfo } from "@/lib/types";
 import { prettyName } from "@/lib/utils";
@@ -113,9 +114,9 @@ export default function WalletPage() {
           </div>
           {connected ? (
             <dl className="space-y-3 text-sm font-mono">
-              <Row k="address" v={address ?? ""} />
-              <Row k="network" v={network?.network ?? ""} />
-              <Row k="passphrase" v={network?.networkPassphrase ?? ""} />
+              <KVRow k="address" value={address ?? ""} />
+              <KVRow k="network" value={network?.network ?? ""} />
+              <KVRow k="passphrase" value={network?.networkPassphrase ?? ""} />
             </dl>
           ) : (
             <div className="text-sm text-muted">
@@ -136,9 +137,9 @@ export default function WalletPage() {
           )}
           {info ? (
             <dl className="space-y-3 text-sm font-mono">
-              <Row k="rpc" v={info.rpc_url} />
-              <Row k="admin" v={info.admin} />
-              <Row k="asset" v={`${info.asset} (${info.asset_sac.slice(0, 8)}…)`} />
+              <KVRow k="rpc" value={info.rpc_url} />
+              <KVRow k="admin" value={info.admin} />
+              <KVRow k="asset" value={`${info.asset} (${info.asset_sac.slice(0, 8)}…)`} />
             </dl>
           ) : (
             !error && <div className="text-sm text-muted">loading…</div>
@@ -178,15 +179,6 @@ export default function WalletPage() {
               ))}
         </div>
       </Card>
-    </div>
-  );
-}
-
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b border-border/40 pb-2 last:border-0">
-      <dt className="text-muted text-[10px] uppercase tracking-widest pt-1">{k}</dt>
-      <dd className="text-right break-all text-text">{v}</dd>
     </div>
   );
 }
