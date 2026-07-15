@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useStellarEvents, type FeedEvent } from "@/lib/stellar-events";
 
+const FEED_OPTIONS = { intervalMs: 5000, max: 60 };
+
 type StellarInfo = {
   network: string;
   contracts: Record<string, string>;
@@ -48,7 +50,7 @@ export default function EventsPage() {
 
   const { status, events, latestLedger, lastTickAt, error } = useStellarEvents(
     contractIds,
-    { intervalMs: 5000, max: 60 },
+    FEED_OPTIONS,
   );
 
   const ageSec =
