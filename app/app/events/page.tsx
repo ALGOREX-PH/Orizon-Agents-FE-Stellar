@@ -2,6 +2,7 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StellarExpertLink } from "@/components/ui/stellar-link";
 import { useStellarEvents, type FeedEvent } from "@/lib/stellar-events";
 import type { StellarNetworkInfo } from "@/lib/types";
 import { prettyName } from "@/lib/utils";
@@ -181,14 +182,9 @@ const EventRow = memo(function EventRow({
         <div className="font-mono text-[11px] text-muted break-all">
           {summarize(event.value)}
         </div>
-        <a
-          href={`https://stellar.expert/explorer/testnet/tx/${event.txHash}`}
-          target="_blank"
-          rel="noreferrer"
-          className="font-mono text-[10px] uppercase tracking-widest text-cyan hover:text-text whitespace-nowrap"
-        >
+        <StellarExpertLink kind="tx" id={event.txHash} className="whitespace-nowrap">
           tx ▸ {event.txHash.slice(0, 8)}…
-        </a>
+        </StellarExpertLink>
       </div>
     </li>
   );
