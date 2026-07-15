@@ -1,30 +1,14 @@
 "use client";
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getFlow } from "@/lib/api";
-import type { Flow } from "@/lib/types";
+import { useFetch } from "@/lib/use-fetch";
 
 export default function FlowPage() {
-  const [flow, setFlow] = useState<Flow | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    getFlow()
-      .then((f) => {
-        if (alive) setFlow(f);
-      })
-      .catch((e) => {
-        if (alive) setError(e instanceof Error ? e.message : "fetch failed");
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const { data: flow, error } = useFetch(getFlow, []);
 
   const nodeById = flow ? Object.fromEntries(flow.nodes.map((n) => [n.id, n])) : {};
 
