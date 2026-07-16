@@ -7,6 +7,7 @@ const cols = [
     l: [
       ["Console", "/app"],
       ["Agents", "/app/agents"],
+      ["Reputation", "/app/reputation"],
       ["Orchestrator", "/app/orchestrator"],
       ["Trace", "/app/trace"],
       ["Flow", "/app/flow"],

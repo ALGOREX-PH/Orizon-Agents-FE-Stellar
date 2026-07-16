@@ -26,7 +26,7 @@ All four Soroban contracts are live on **Stellar Testnet** (`Test SDF Network ; 
 | **PaymentEscrow** (x402) — the contract the FE invokes via signed XDR | [`CBJPTMAPMGODGZCZ2IMEQSRUX3WGUXNMKDTNN2KMJ3NFGYZ5OJ5525PI`](https://stellar.expert/explorer/testnet/contract/CBJPTMAPMGODGZCZ2IMEQSRUX3WGUXNMKDTNN2KMJ3NFGYZ5OJ5525PI) |
 | **AgentRegistry** — agent identity + price catalog                    | [`CAPHXWU53UZUZJGV7IAE57NNMH3YYB5MTWO6YA53KKMXSFVLOITBJ3GQ`](https://stellar.expert/explorer/testnet/contract/CAPHXWU53UZUZJGV7IAE57NNMH3YYB5MTWO6YA53KKMXSFVLOITBJ3GQ) |
 | **AttestationRegistry** — write-once workflow receipts                | [`CBYUZKOET43UXTBXZUJIBBJW5ODGD2J2AZVVXCR3QONGOCAHOXQQHEGK`](https://stellar.expert/explorer/testnet/contract/CBYUZKOET43UXTBXZUJIBBJW5ODGD2J2AZVVXCR3QONGOCAHOXQQHEGK) |
-| **ReputationLedger** — rolling-mean rating per agent                  | [`CDHDMVVERSNZWFJIVOBM34CYLXE4A7UACHD3A6ROI63EYJY43J63WXKV`](https://stellar.expert/explorer/testnet/contract/CDHDMVVERSNZWFJIVOBM34CYLXE4A7UACHD3A6ROI63EYJY43J63WXKV) |
+| **ReputationLedger** — decayed, value-weighted rating evidence per agent | [`CDCSOBEVZUPQZV5GV4D6KYHZCLNGW2KXY74RUHSZ3EZUXF34DPW422ZT`](https://stellar.expert/explorer/testnet/contract/CDCSOBEVZUPQZV5GV4D6KYHZCLNGW2KXY74RUHSZ3EZUXF34DPW422ZT) |
 | Asset SAC (native XLM) — settlement asset                             | [`CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`](https://stellar.expert/explorer/testnet/contract/CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC) |
 
 - **Source:** [`/contract`](./contract) in this repo (full Rust crates)
@@ -222,6 +222,7 @@ That's it. You'll land on the Trace page and watch the workflow run. When it fin
 - **You see the code, not a screenshot.** Coding jobs return real, runnable HTML you can preview, inspect and download.
 - **Every run leaves a paper trail.** Each workflow is sealed in `AttestationRegistry` as a write-once receipt. Tx hashes link out to `stellar.expert`.
 - **Your wallet stays in your control.** Private keys never leave Freighter. The only thing the backend signs is its own settlement tx.
+- **Reputation you can audit.** Every agent's score is decayed, value-weighted on-chain evidence — settled USDC, not clicks. Explore the live scores, the math, and the ledger on [`/app/reputation`](https://orizon-agents-fe-stellar.vercel.app/app/reputation).
 
 ## Screenshots
 
@@ -262,7 +263,7 @@ Contracts are live on **Stellar testnet** (Protocol 25+). The frontend reads the
 | `AgentRegistry` | lists every registered agent with its price + skills | [`CAPHXWU…J3GQ`](https://stellar.expert/explorer/testnet/contract/CAPHXWU53UZUZJGV7IAE57NNMH3YYB5MTWO6YA53KKMXSFVLOITBJ3GQ) |
 | `PaymentEscrow` (x402) | authorize once, charge as workflow runs | [`CBJPTMA…525PI`](https://stellar.expert/explorer/testnet/contract/CBJPTMAPMGODGZCZ2IMEQSRUX3WGUXNMKDTNN2KMJ3NFGYZ5OJ5525PI) |
 | `AttestationRegistry` | write-once receipt for every completed workflow | [`CBYUZKO…HEGK`](https://stellar.expert/explorer/testnet/contract/CBYUZKOET43UXTBXZUJIBBJW5ODGD2J2AZVVXCR3QONGOCAHOXQQHEGK) |
-| `ReputationLedger` | rolling-mean rating per agent | [`CDHDMVV…WXKV`](https://stellar.expert/explorer/testnet/contract/CDHDMVVERSNZWFJIVOBM34CYLXE4A7UACHD3A6ROI63EYJY43J63WXKV) |
+| `ReputationLedger` | decayed, value-weighted rating evidence per agent | [`CDCSOBEV…22ZT`](https://stellar.expert/explorer/testnet/contract/CDCSOBEVZUPQZV5GV4D6KYHZCLNGW2KXY74RUHSZ3EZUXF34DPW422ZT) |
 | Asset SAC (native XLM) | token the workflow pays in | [`CDLZFC3…CYSC`](https://stellar.expert/explorer/testnet/contract/CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC) |
 
 - **Network:** Testnet (`Test SDF Network ; September 2015`)
@@ -347,6 +348,7 @@ app/
     layout.tsx               # sidebar + topbar
     page.tsx                 # Overview (metrics, tasks)
     agents/page.tsx          # Agent registry listing
+    reputation/page.tsx      # reputation system — live scores, math, ledger
     orchestrator/page.tsx    # intent → plan → Authorize & Execute
     trace/page.tsx           # SSE stream + Artifact tab
     send/page.tsx            # plain XLM payment (White Belt)

@@ -1,0 +1,158 @@
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { StellarExpertLink } from "@/components/ui/stellar-link";
+import type { ReputationParams } from "@/lib/types";
+
+// deployed testnet id — fallback until /reputation/params loads
+const FALLBACK_CONTRACT_ID =
+  "CDCSOBEVZUPQZV5GV4D6KYHZCLNGW2KXY74RUHSZ3EZUXF34DPW422ZT";
+
+const METHODS = [
+  {
+    method: "submit",
+    signature:
+      "submit(caller, agent_id, job_id, rating_0_to_100, weight, payer, kind)",
+    notes:
+      'scorer-gated write, replay-guarded per (agent, job); kind is "auto" | "buyer" | "dispute"',
+  },
+  {
+    method: "rep_state",
+    signature: "rep_state(agent_id)",
+    notes: "decayed evidence state (sum_w, weight, count, disputed)",
+  },
+  {
+    method: "avg_bps",
+    signature: "avg_bps(agent_id)",
+    notes: "decayed raw mean, 0–10000",
+  },
+  {
+    method: "rep_bps",
+    signature: "rep_bps(agent_id, prior_bps, prior_weight)",
+    notes: "prior-smoothed mean computed on-chain",
+  },
+  {
+    method: "dispute_rate_bps",
+    signature: "dispute_rate_bps(agent_id)",
+    notes: "dispute share of an agent's evidence, 0–10000",
+  },
+  {
+    method: "set_scorer",
+    signature: "set_scorer(new_scorer)",
+    notes: "admin only",
+  },
+];
+
+const ERRORS = [
+  { name: "Unauthorized", code: 1 },
+  { name: "NotFound", code: 2 },
+  { name: "Replay", code: 7 },
+  { name: "OutOfRange", code: 100 },
+];
+
+/**
+ * ReputationLedger v2 reference card — contract id chip + explorer link, the
+ * method interface, error codes, and a constants strip driven by the
+ * /reputation/params response (em dashes while params is null).
+ */
+export function OnchainDetails({ params }: { params: ReputationParams | null }) {
+  const contractId = params?.contract_id ? params.contract_id : FALLBACK_CONTRACT_ID;
+  const network = params?.network ?? "testnet";
+  const constants = [
+    {
+      label: "epoch length",
+      value: params ? `${params.epoch_seconds / 86400} days` : null,
+    },
+    {
+      label: "retention per epoch",
+      value: params ? `${params.decay_bps_per_epoch / 100}%` : null,
+    },
+    {
+      label: "full-forget horizon",
+      value: params ? `${params.max_decay_epochs} epochs` : null,
+    },
+    {
+      label: "weight cap",
+      value: params ? `${params.max_rating_weight_usdc} USDC` : null,
+    },
+    {
+      label: "read cache TTL",
+      value: params ? `${params.read_ttl_seconds}s` : null,
+    },
+  ];
+
+  return (
+    <Card>
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="text-lg font-semibold tracking-tight">
+          ReputationLedger v2
+        </h2>
+        <span
+          title={contractId}
+          aria-label={contractId}
+          className="clip-cyber-sm border border-border bg-bg/60 px-2 py-0.5 font-mono text-[10px] tracking-widest text-muted"
+        >
+          {contractId.slice(0, 8)}…{contractId.slice(-4)}
+        </span>
+        <StellarExpertLink kind="contract" id={contractId} network={network} />
+      </div>
+
+      <div className="mt-5 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
+              <th scope="col" className="pb-3 pr-4 text-left">
+                method
+              </th>
+              <th scope="col" className="pb-3 pr-4 text-left">
+                signature
+              </th>
+              <th scope="col" className="pb-3 text-left">
+                notes
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {METHODS.map((row) => (
+              <tr key={row.method} className="border-b border-border/50 last:border-0">
+                <th
+                  scope="row"
+                  className="py-3 pr-4 text-left font-mono font-normal text-cyan"
+                >
+                  {row.method}
+                </th>
+                <td className="py-3 pr-4 font-mono text-xs text-text whitespace-nowrap">
+                  {row.signature}
+                </td>
+                <td className="py-3 text-muted">{row.notes}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
+          error codes
+        </span>
+        {ERRORS.map((e) => (
+          <Badge key={e.name} tone="magenta">
+            {e.name} = {e.code}
+          </Badge>
+        ))}
+      </div>
+
+      <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-border/50 pt-4 sm:grid-cols-3 lg:grid-cols-5">
+        {constants.map((c) => (
+          <div key={c.label}>
+            <dt className="text-[10px] uppercase tracking-widest text-muted">
+              {c.label}
+            </dt>
+            <dd className="mt-1 font-mono text-sm text-text">
+              {c.value ?? "—"}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </Card>
+  );
+}

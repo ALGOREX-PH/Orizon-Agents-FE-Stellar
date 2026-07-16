@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
+import { ReputationBadge } from "@/components/ui/reputation-badge";
 import { TxStatus, type TxState } from "@/components/ui/tx-status";
 import { buildAuthorize, decompose, execute, submitSigned } from "@/lib/api";
 import { useWallet } from "@/lib/wallet";
@@ -236,12 +237,20 @@ export default function OrchestratorPage() {
                     initial={{ opacity: 0, x: -12 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.35, delay: i * 0.06 }}
-                    className="clip-cyber-sm border border-border bg-bg/60 p-4 flex items-center gap-4"
+                    className="clip-cyber-sm border border-border bg-bg/60 p-4 flex flex-wrap items-center gap-4"
                   >
                     <div className="font-mono text-xs text-muted w-8">
                       {String(i + 1).padStart(2, "0")}
                     </div>
-                    <Badge tone="violet">{s.agent_name ?? s.agent_id}</Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone="violet">{s.agent_name ?? s.agent_id}</Badge>
+                      {s.rep_bps != null && (
+                        <ReputationBadge
+                          bps={s.rep_bps}
+                          source={s.rep_source ?? "prior"}
+                        />
+                      )}
+                    </div>
                     <span className="text-sm text-muted">→</span>
                     <div className="flex-1 text-sm">{s.rationale}</div>
                     <div className="font-mono text-xs text-cyan">

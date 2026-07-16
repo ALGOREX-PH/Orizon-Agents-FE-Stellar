@@ -5,8 +5,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { listAgents } from "@/lib/api";
+import { ReputationBadge } from "@/components/ui/reputation-badge";
+import { listAgents, listReputation } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
+import type { Agent } from "@/lib/types";
 
 const statusTone = {
   online: "cyan" as const,
@@ -16,6 +18,8 @@ const statusTone = {
 
 export default function AgentsPage() {
   const { data: agents, error } = useFetch(listAgents, []);
+  // On-chain reputation is best-effort: on error we silently keep seeded values.
+  const { data: repBatch } = useFetch(listReputation, []);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "online" | "idle" | "offline">("all");
 
@@ -28,6 +32,24 @@ export default function AgentsPage() {
       return matchesQ && matchesStatus;
     });
   }, [agents, q, filter]);
+
+  const renderReputation = (a: Agent) => {
+    const live = repBatch?.reputations[a.id];
+    if (live && live.source === "onchain") {
+      return (
+        <ReputationBadge
+          bps={live.smoothed_bps}
+          source="onchain"
+          count={live.count}
+          disputeRateBps={live.dispute_rate_bps}
+          floorBps={repBatch?.floor_bps}
+        />
+      );
+    }
+    return (
+      <ReputationBadge bps={a.rep * 2000} source="prior" floorBps={repBatch?.floor_bps} />
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -137,7 +159,7 @@ export default function AgentsPage() {
                   <td className="py-3 text-right font-mono text-cyan">
                     {a.price.toFixed(3)}
                   </td>
-                  <td className="py-3 text-right font-mono">{a.rep.toFixed(2)}</td>
+                  <td className="py-3 text-right">{renderReputation(a)}</td>
                   <td className="py-3 text-right font-mono text-xs text-muted">
                     {a.runs.toLocaleString()}
                   </td>

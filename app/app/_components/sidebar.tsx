@@ -32,6 +32,20 @@ const items = [
     ),
   },
   {
+    href: "/app/reputation",
+    label: "Reputation",
+    icon: (
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+        <path
+          d="M10 2l2.35 4.76 5.25.76-3.8 3.7.9 5.23L10 14l-4.7 2.45.9-5.23-3.8-3.7 5.25-.76L10 2z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+  },
+  {
     href: "/app/orchestrator",
     label: "Orchestrator",
     icon: (

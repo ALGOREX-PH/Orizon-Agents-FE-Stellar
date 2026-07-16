@@ -8,7 +8,13 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { decompose, listAgents } from "./api";
+import {
+  decompose,
+  getReputation,
+  getReputationParams,
+  listAgents,
+  listReputation,
+} from "./api";
 
 type FetchMockResponse = {
   ok: boolean;
@@ -54,6 +60,98 @@ describe("get (via listAgents)", () => {
     fetchMock.mockRejectedValueOnce(new Error("network down"));
 
     await expect(listAgents()).rejects.toThrow("network down");
+  });
+});
+
+const repInfo = {
+  agent_id: "agt_01h8",
+  smoothed_bps: 7000,
+  lower_bound_bps: 5677,
+  avg_bps: 0,
+  count: 0,
+  weight: 0,
+  disputed: 0,
+  dispute_rate_bps: 0,
+  source: "prior",
+};
+
+describe("listReputation", () => {
+  it("hits the batch reputation endpoint and resolves the parsed batch", async () => {
+    const batch = {
+      reputations: { agt_01h8: repInfo },
+      floor_bps: 5500,
+      prior_bps: 7000,
+    };
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, batch));
+
+    await expect(listReputation()).resolves.toEqual(batch);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith("/api/stellar/reputation", {
+      cache: "no-store",
+    });
+  });
+
+  it("rejects on a non-OK response with method, path and status in the message", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(502, { detail: "horizon down" }));
+
+    await expect(listReputation()).rejects.toThrow("GET /stellar/reputation → 502");
+  });
+});
+
+describe("getReputation", () => {
+  it("hits the per-agent reputation endpoint and resolves the parsed object", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, repInfo));
+
+    await expect(getReputation("agt_01h8")).resolves.toEqual(repInfo);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith("/api/stellar/reputation/agt_01h8", {
+      cache: "no-store",
+    });
+  });
+
+  it("rejects on a non-OK response with method, path and status in the message", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(404, { detail: "unknown agent" }));
+
+    await expect(getReputation("agt_nope")).rejects.toThrow(
+      "GET /stellar/reputation/agt_nope → 404",
+    );
+  });
+});
+
+describe("getReputationParams", () => {
+  it("hits the params endpoint and resolves the parsed object", async () => {
+    const params = {
+      enabled: true,
+      prior_bps: 7000,
+      prior_weight_usdc: 12,
+      floor_bps: 5500,
+      max_rating_weight_usdc: 100,
+      read_ttl_seconds: 15,
+      wilson_z: 1,
+      epoch_seconds: 604_800,
+      decay_bps_per_epoch: 9250,
+      max_decay_epochs: 96,
+      contract_id: "CDCSOBEVZUPQZV5GV4D6KYHZCLNGW2KXY74RUHSZ3EZUXF34DPW422ZT",
+      network: "testnet",
+    };
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, params));
+
+    await expect(getReputationParams()).resolves.toEqual(params);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith("/api/stellar/reputation/params", {
+      cache: "no-store",
+    });
+  });
+
+  it("rejects on a non-OK response with method, path and status in the message", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(503, { detail: "rpc down" }));
+
+    await expect(getReputationParams()).rejects.toThrow(
+      "GET /stellar/reputation/params → 503",
+    );
   });
 });
 
