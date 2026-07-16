@@ -1,6 +1,5 @@
 "use client";
 import { m } from "framer-motion";
-import { SectionHeading } from "@/components/ui/section-heading";
 
 type Stage = {
   title: string;
@@ -46,12 +45,23 @@ const STAGES: Stage[] = [
  */
 export function PipelineDiagram() {
   return (
-    <section className="space-y-8">
-      <SectionHeading
-        eyebrow="reputation pipeline"
-        title="How a score is born"
-        subtitle="Every rating starts as settled USDC and ends as a conservative routing score."
-      />
+    <section className="space-y-4" aria-labelledby="rep-pipeline-heading">
+      <div>
+        <p className="mb-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.3em] text-cyan">
+          <span aria-hidden="true" className="h-px w-8 bg-cyan/60" />
+          reputation pipeline
+        </p>
+        <h2
+          id="rep-pipeline-heading"
+          className="text-lg font-semibold tracking-tight"
+        >
+          How a score is born
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          Every rating starts as settled USDC and ends as a conservative
+          routing score.
+        </p>
+      </div>
       <ol className="grid gap-4 md:grid-cols-3">
         {STAGES.map((s, i) => (
           <m.li
