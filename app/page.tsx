@@ -3,6 +3,7 @@ import { Hero } from "./(marketing)/_components/hero";
 import { Problem } from "./(marketing)/_components/problem";
 import { Solution } from "./(marketing)/_components/solution";
 import { Architecture } from "./(marketing)/_components/architecture";
+import { Reputation } from "./(marketing)/_components/reputation";
 import { UseCases } from "./(marketing)/_components/use-cases";
 import { Roadmap } from "./(marketing)/_components/roadmap";
 import { Personas } from "./(marketing)/_components/personas";
@@ -34,6 +35,7 @@ export default function Home() {
       <Problem />
       <Solution />
       <Architecture />
+      <Reputation />
       <UseCases />
       <Roadmap />
       <Personas />
