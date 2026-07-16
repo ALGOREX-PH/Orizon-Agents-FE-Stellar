@@ -105,6 +105,23 @@ export type ReputationBatch = {
   prior_bps: number;
 };
 
+/** Response of GET /api/stellar/reputation/params — the full parameter set
+ * of the reputation system (routing constants + on-chain decay constants). */
+export type ReputationParams = {
+  enabled: boolean;
+  prior_bps: number;
+  prior_weight_usdc: number;
+  floor_bps: number;
+  max_rating_weight_usdc: number;
+  read_ttl_seconds: number;
+  wilson_z: number;
+  epoch_seconds: number;
+  decay_bps_per_epoch: number;
+  max_decay_epochs: number;
+  contract_id: string;
+  network: string;
+};
+
 /** Response of GET /api/stellar/network — network meta + deployed contract ids. */
 export type StellarNetworkInfo = {
   network: string;
