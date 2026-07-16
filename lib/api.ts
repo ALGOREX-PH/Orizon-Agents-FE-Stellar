@@ -6,6 +6,7 @@ import type {
   Overview,
   ReputationBatch,
   ReputationInfo,
+  ReputationParams,
   Task,
   TraceLine,
 } from "./types";
@@ -75,6 +76,8 @@ export const buildAuthorize = (body: {
   );
 
 export const listReputation = () => get<ReputationBatch>("/stellar/reputation");
+export const getReputationParams = () =>
+  get<ReputationParams>("/stellar/reputation/params");
 export const getReputation = (agentId: string) =>
   get<ReputationInfo>(`/stellar/reputation/${agentId}`);
 
