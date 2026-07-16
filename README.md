@@ -347,6 +347,7 @@ app/
     layout.tsx               # sidebar + topbar
     page.tsx                 # Overview (metrics, tasks)
     agents/page.tsx          # Agent registry listing
+    reputation/page.tsx      # reputation system — live scores, math, ledger
     orchestrator/page.tsx    # intent → plan → Authorize & Execute
     trace/page.tsx           # SSE stream + Artifact tab
     send/page.tsx            # plain XLM payment (White Belt)
