@@ -92,7 +92,7 @@ export function Reputation() {
           >
             <Card aria-hidden="true" className="h-full">
               <div className="mb-6 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-                <span>// reputation ledger — routing view</span>
+                <span>{"// reputation ledger — routing view"}</span>
                 <span>floor ★ 2.75</span>
               </div>
               <div>
