@@ -8,7 +8,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { decompose, listAgents } from "./api";
+import { decompose, getReputation, listAgents, listReputation } from "./api";
 
 type FetchMockResponse = {
   ok: boolean;
@@ -54,6 +54,63 @@ describe("get (via listAgents)", () => {
     fetchMock.mockRejectedValueOnce(new Error("network down"));
 
     await expect(listAgents()).rejects.toThrow("network down");
+  });
+});
+
+const repInfo = {
+  agent_id: "agt_01h8",
+  smoothed_bps: 7000,
+  lower_bound_bps: 5677,
+  avg_bps: 0,
+  count: 0,
+  weight: 0,
+  disputed: 0,
+  dispute_rate_bps: 0,
+  source: "prior",
+};
+
+describe("listReputation", () => {
+  it("hits the batch reputation endpoint and resolves the parsed batch", async () => {
+    const batch = {
+      reputations: { agt_01h8: repInfo },
+      floor_bps: 5500,
+      prior_bps: 7000,
+    };
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, batch));
+
+    await expect(listReputation()).resolves.toEqual(batch);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith("/api/stellar/reputation", {
+      cache: "no-store",
+    });
+  });
+
+  it("rejects on a non-OK response with method, path and status in the message", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(502, { detail: "horizon down" }));
+
+    await expect(listReputation()).rejects.toThrow("GET /stellar/reputation → 502");
+  });
+});
+
+describe("getReputation", () => {
+  it("hits the per-agent reputation endpoint and resolves the parsed object", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, repInfo));
+
+    await expect(getReputation("agt_01h8")).resolves.toEqual(repInfo);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith("/api/stellar/reputation/agt_01h8", {
+      cache: "no-store",
+    });
+  });
+
+  it("rejects on a non-OK response with method, path and status in the message", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(404, { detail: "unknown agent" }));
+
+    await expect(getReputation("agt_nope")).rejects.toThrow(
+      "GET /stellar/reputation/agt_nope → 404",
+    );
   });
 });
 
