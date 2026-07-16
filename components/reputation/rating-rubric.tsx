@@ -1,0 +1,115 @@
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
+type RubricRow = {
+  signal: string;
+  rating: string;
+  why: string;
+  kind: "base" | "bonus" | "penalty";
+};
+
+const ROWS: RubricRow[] = [
+  {
+    signal: "step produced no output (timeout / crash)",
+    rating: "20/100",
+    why: "settled money for no delivered work",
+    kind: "base",
+  },
+  {
+    signal: "baked kit artifact (source: baked)",
+    rating: "95/100",
+    why: "deterministic, pre-validated by design",
+    kind: "base",
+  },
+  {
+    signal: "free-form base score",
+    rating: "70/100",
+    why: "worker returned output",
+    kind: "base",
+  },
+  {
+    signal: "+ artifact shipped",
+    rating: "+15",
+    why: "delivered a concrete artifact",
+    kind: "bonus",
+  },
+  {
+    signal: "+ clean critic pass (zero violations)",
+    rating: "+10",
+    why: "validation-gated bonus",
+    kind: "bonus",
+  },
+  {
+    signal: "− per critic violation",
+    rating: "−3 each (first 10 counted)",
+    why: "defects drag the score",
+    kind: "penalty",
+  },
+];
+
+const ratingTone: Record<RubricRow["kind"], string> = {
+  base: "text-text",
+  bonus: "text-cyan",
+  penalty: "text-magenta",
+};
+
+/**
+ * Synthetic rating rubric — the exact signal → score table the settler uses
+ * to grade a settled step, plus the evidence-weight footnote. Static mirror
+ * of the backend scoring rules.
+ */
+export function RatingRubric() {
+  return (
+    <Card>
+      <h2 className="text-lg font-semibold tracking-tight">
+        Synthetic rating rubric
+      </h2>
+      <p className="mt-1 font-mono text-[10px] uppercase tracking-widest text-muted">
+        how the settler scores a settled step
+      </p>
+      <div className="mt-5 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
+              <th scope="col" className="pb-3 pr-4 text-left">
+                signal
+              </th>
+              <th scope="col" className="pb-3 pr-4 text-left">
+                rating
+              </th>
+              <th scope="col" className="pb-3 text-left">
+                why
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {ROWS.map((r) => (
+              <tr key={r.signal} className="border-b border-border/50 last:border-0">
+                <th
+                  scope="row"
+                  className="py-3 pr-4 text-left font-normal text-text"
+                >
+                  {r.signal}
+                </th>
+                <td
+                  className={cn(
+                    "py-3 pr-4 font-mono whitespace-nowrap",
+                    ratingTone[r.kind],
+                  )}
+                >
+                  {r.rating}
+                </td>
+                <td className="py-3 text-muted">{r.why}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-4 font-mono text-xs text-muted">
+        weight = min(step price, 100 USDC) — a rating on a 0.054 USDC step
+        carries proportionally less evidence than one on an 18 USDC step.
+        ratings clamp to 0–100.
+      </p>
+    </Card>
+  );
+}
