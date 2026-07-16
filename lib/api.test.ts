@@ -8,7 +8,13 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { decompose, getReputation, listAgents, listReputation } from "./api";
+import {
+  decompose,
+  getReputation,
+  getReputationParams,
+  listAgents,
+  listReputation,
+} from "./api";
 
 type FetchMockResponse = {
   ok: boolean;
@@ -110,6 +116,41 @@ describe("getReputation", () => {
 
     await expect(getReputation("agt_nope")).rejects.toThrow(
       "GET /stellar/reputation/agt_nope → 404",
+    );
+  });
+});
+
+describe("getReputationParams", () => {
+  it("hits the params endpoint and resolves the parsed object", async () => {
+    const params = {
+      enabled: true,
+      prior_bps: 7000,
+      prior_weight_usdc: 12,
+      floor_bps: 5500,
+      max_rating_weight_usdc: 100,
+      read_ttl_seconds: 15,
+      wilson_z: 1,
+      epoch_seconds: 604_800,
+      decay_bps_per_epoch: 9250,
+      max_decay_epochs: 96,
+      contract_id: "CDCSOBEVZUPQZV5GV4D6KYHZCLNGW2KXY74RUHSZ3EZUXF34DPW422ZT",
+      network: "testnet",
+    };
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, params));
+
+    await expect(getReputationParams()).resolves.toEqual(params);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith("/api/stellar/reputation/params", {
+      cache: "no-store",
+    });
+  });
+
+  it("rejects on a non-OK response with method, path and status in the message", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(503, { detail: "rpc down" }));
+
+    await expect(getReputationParams()).rejects.toThrow(
+      "GET /stellar/reputation/params → 503",
     );
   });
 });
