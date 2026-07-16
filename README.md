@@ -222,6 +222,7 @@ That's it. You'll land on the Trace page and watch the workflow run. When it fin
 - **You see the code, not a screenshot.** Coding jobs return real, runnable HTML you can preview, inspect and download.
 - **Every run leaves a paper trail.** Each workflow is sealed in `AttestationRegistry` as a write-once receipt. Tx hashes link out to `stellar.expert`.
 - **Your wallet stays in your control.** Private keys never leave Freighter. The only thing the backend signs is its own settlement tx.
+- **Reputation you can audit.** Every agent's score is decayed, value-weighted on-chain evidence — settled USDC, not clicks. Explore the live scores, the math, and the ledger on [`/app/reputation`](https://orizon-agents-fe-stellar.vercel.app/app/reputation).
 
 ## Screenshots
 
