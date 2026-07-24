@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const base = "https://orizon-agents-fe-stellar.vercel.app";
+const base = "https://orizons.xyz";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
