@@ -11,6 +11,18 @@
  * classify falls through to `unknown` and the original message is preserved.
  */
 
+// Network-aware remediation copy — friendbot only exists on testnet, so the
+// advice must change on mainnet. Reads the same env var wallet.tsx uses
+// (kept inline so this module stays dependency-free for tests).
+const IS_MAINNET =
+  (process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE ||
+    "Test SDF Network ; September 2015") ===
+  "Public Global Stellar Network ; September 2015";
+const NETWORK_LABEL = IS_MAINNET ? "Stellar Public network" : "Stellar Test Net";
+const TOP_UP_ADVICE = IS_MAINNET
+  ? "Fund the wallet with XLM and retry."
+  : "Top up via Friendbot and try again.";
+
 export type WalletErrorKind =
   | "wallet_not_found"
   | "user_rejected"
@@ -76,8 +88,7 @@ export function classifyError(e: unknown): FriendlyError {
       return {
         kind: "insufficient_balance",
         title: "Insufficient XLM balance",
-        detail:
-          "Your wallet doesn't have enough XLM to cover this payment plus the network fee. Top up via Friendbot and try again.",
+        detail: `Your wallet doesn't have enough XLM to cover this payment plus the network fee. ${TOP_UP_ADVICE}`,
         raw: enrichedRaw,
       };
     }
@@ -85,8 +96,9 @@ export function classifyError(e: unknown): FriendlyError {
       return {
         kind: "unknown",
         title: "Destination account doesn't exist",
-        detail:
-          "The destination G-address has never been funded on testnet. Plain payments only work to already-funded accounts. Either fund the destination via friendbot.stellar.org first, or send to a known-funded address (e.g. the contracts admin).",
+        detail: IS_MAINNET
+          ? "The destination G-address has never been funded. Plain payments only work to already-funded accounts. Fund the destination with XLM first, or send to a known-funded address (e.g. the contracts admin)."
+          : "The destination G-address has never been funded on testnet. Plain payments only work to already-funded accounts. Either fund the destination via friendbot.stellar.org first, or send to a known-funded address (e.g. the contracts admin).",
         raw: enrichedRaw,
       };
     }
@@ -94,8 +106,7 @@ export function classifyError(e: unknown): FriendlyError {
       return {
         kind: "user_rejected",
         title: "Bad signature",
-        detail:
-          "The wallet signed for a different account or network. Double-check the wallet is on Test Net and the connected address matches the source.",
+        detail: `The wallet signed for a different account or network. Double-check the wallet is on ${NETWORK_LABEL} and the connected address matches the source.`,
         raw: enrichedRaw,
       };
     }
@@ -121,8 +132,9 @@ export function classifyError(e: unknown): FriendlyError {
       return {
         kind: "insufficient_balance",
         title: "Destination below reserve",
-        detail:
-          "The destination is below the Stellar minimum reserve. On testnet, fund it with at least 1 XLM via friendbot first.",
+        detail: IS_MAINNET
+          ? "The destination is below the Stellar minimum reserve. Fund it with at least 1 XLM first."
+          : "The destination is below the Stellar minimum reserve. On testnet, fund it with at least 1 XLM via friendbot first.",
         raw: enrichedRaw,
       };
     }
@@ -162,8 +174,7 @@ export function classifyError(e: unknown): FriendlyError {
     return {
       kind: "insufficient_balance",
       title: "Insufficient XLM balance",
-      detail:
-        "Your wallet doesn't have enough XLM to cover this payment plus the network fee. Top up via Friendbot and try again.",
+      detail: `Your wallet doesn't have enough XLM to cover this payment plus the network fee. ${TOP_UP_ADVICE}`,
       raw,
     };
   }
@@ -172,8 +183,7 @@ export function classifyError(e: unknown): FriendlyError {
     return {
       kind: "wrong_network",
       title: "Wrong network",
-      detail:
-        "Your wallet is connected to the wrong network. Switch to Stellar Test Net in your wallet extension.",
+      detail: `Your wallet is connected to the wrong network. Switch to ${NETWORK_LABEL} in your wallet extension.`,
       raw,
     };
   }
