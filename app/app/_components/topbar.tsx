@@ -3,7 +3,11 @@ import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { useWallet } from "@/lib/wallet";
+import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
 import { useMobileNav } from "./mobile-nav-context";
+
+// Display label for the configured network — "mainnet" | "testnet".
+const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 const titles: Record<string, { t: string; b: string[] }> = {
   "/app": { t: "Overview", b: ["console", "overview"] },
@@ -58,7 +62,7 @@ export function Topbar() {
         {connected && (
           <div
             className="hidden sm:flex clip-cyber-sm border border-cyan/40 bg-cyan/5 h-8 px-3 items-center gap-2 font-mono text-[11px] text-cyan"
-            title="native XLM balance · testnet"
+            title={`native XLM balance · ${NETWORK_LABEL}`}
           >
             <span className="opacity-60">◈</span>
             <span className="text-text">
