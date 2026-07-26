@@ -6,7 +6,11 @@ import { Logo } from "@/components/ui/logo";
 import { getOverview } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
 import { cn } from "@/lib/utils";
+import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
 import { useMobileNav } from "./mobile-nav-context";
+
+// Display label for the configured network — "mainnet" | "testnet".
+const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 const items = [
   {
@@ -231,7 +235,7 @@ export function Sidebar() {
           </div>
           <div className="flex-1">
             <div className="text-xs">operator</div>
-            <div className="font-mono text-[10px] text-muted">testnet</div>
+            <div className="font-mono text-[10px] text-muted">{NETWORK_LABEL}</div>
           </div>
         </div>
       </div>
