@@ -1,11 +1,18 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { StellarExpertLink } from "@/components/ui/stellar-link";
+import {
+  StellarExpertLink,
+  defaultExplorerNetwork,
+} from "@/components/ui/stellar-link";
 import type { ReputationParams } from "@/lib/types";
 
-// deployed testnet id — fallback until /reputation/params loads
+// deployed ledger ids — fallback until /reputation/params loads
+const FALLBACK_CONTRACT_IDS = {
+  public: "CDFWQJY72GPH7PEQVFGBDZESZNVRF6LQLVWU42CFMWPGRME5RWN5AXSX",
+  testnet: "CDCSOBEVZUPQZV5GV4D6KYHZCLNGW2KXY74RUHSZ3EZUXF34DPW422ZT",
+} as const;
 const FALLBACK_CONTRACT_ID =
-  "CDCSOBEVZUPQZV5GV4D6KYHZCLNGW2KXY74RUHSZ3EZUXF34DPW422ZT";
+  FALLBACK_CONTRACT_IDS[defaultExplorerNetwork] ?? FALLBACK_CONTRACT_IDS.testnet;
 
 const METHODS = [
   {
@@ -56,7 +63,7 @@ const ERRORS = [
  */
 export function OnchainDetails({ params }: { params: ReputationParams | null }) {
   const contractId = params?.contract_id ? params.contract_id : FALLBACK_CONTRACT_ID;
-  const network = params?.network ?? "testnet";
+  const network = params?.network ?? defaultExplorerNetwork;
   const constants = [
     {
       label: "epoch length",
