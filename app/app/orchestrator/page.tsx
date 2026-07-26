@@ -362,7 +362,6 @@ export default function OrchestratorPage() {
         state={txState}
         hash={authorizeHash ?? undefined}
         error={friendlyError}
-        network="testnet"
       />
     </div>
   );
