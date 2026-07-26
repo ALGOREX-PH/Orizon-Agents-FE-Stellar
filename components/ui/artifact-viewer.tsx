@@ -48,7 +48,8 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
           </Badge>
           <span className="font-mono text-sm">{artifact.title}</span>
           <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-            {artifact.files.length} file · {artifact.files.reduce((n, f) => n + f.content.length, 0)} B
+            {artifact.files.length} file{artifact.files.length === 1 ? "" : "s"} ·{" "}
+            {artifact.files.reduce((n, f) => n + f.content.length, 0)} B
           </span>
         </div>
         <div className="flex items-center gap-2">
