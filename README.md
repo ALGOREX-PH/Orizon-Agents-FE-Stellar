@@ -33,6 +33,21 @@ All four Soroban contracts are live on **Stellar Testnet** (`Test SDF Network ; 
 - **Admin:** `GA7AI5TAJEZA27I666DSJC4MUJYBEWUYNNZWPU7R2ONA7IZQVO6R5OQV`
 - **RPC:** `https://soroban-testnet.stellar.org`
 
+## 📜 Deployed contracts (Stellar mainnet)
+
+The same four Soroban contracts are also live on **Stellar Mainnet** (`Public Global Stellar Network ; September 2015`). Click any address to inspect it on `stellar.expert`:
+
+| contract | mainnet contract id |
+| --- | --- |
+| **PaymentEscrow** (x402) — the contract the FE invokes via signed XDR | [`CBJCQBA47Q3EQ7HC46GAWJPVM7KMD5KAEI5KG4FPYJFKR3NYB4QR5CNF`](https://stellar.expert/explorer/public/contract/CBJCQBA47Q3EQ7HC46GAWJPVM7KMD5KAEI5KG4FPYJFKR3NYB4QR5CNF) |
+| **AgentRegistry** — agent identity + price catalog                    | [`CBTJ3BXTMTA2PQLRTSAZHEWQRTBMNHYCOKY5WOIYAH36LT4HTN63LTD4`](https://stellar.expert/explorer/public/contract/CBTJ3BXTMTA2PQLRTSAZHEWQRTBMNHYCOKY5WOIYAH36LT4HTN63LTD4) |
+| **AttestationRegistry** — write-once workflow receipts                | [`CBLV6QGFCMXBXHT62JZ7YH22NXW7MVBGV6TGOGX3OHY46GQGPYCTAAK4`](https://stellar.expert/explorer/public/contract/CBLV6QGFCMXBXHT62JZ7YH22NXW7MVBGV6TGOGX3OHY46GQGPYCTAAK4) |
+| **ReputationLedger** — decayed, value-weighted rating evidence per agent | [`CDFWQJY72GPH7PEQVFGBDZESZNVRF6LQLVWU42CFMWPGRME5RWN5AXSX`](https://stellar.expert/explorer/public/contract/CDFWQJY72GPH7PEQVFGBDZESZNVRF6LQLVWU42CFMWPGRME5RWN5AXSX) |
+| Asset SAC (native XLM) — settlement asset                             | [`CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA`](https://stellar.expert/explorer/public/contract/CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA) |
+
+- **Source:** [`/contract`](./contract) in this repo (full Rust crates)
+- **Admin:** `GA7AI5TAJEZA27I666DSJC4MUJYBEWUYNNZWPU7R2ONA7IZQVO6R5OQV`
+
 ---
 
 ## What is Orizon?
