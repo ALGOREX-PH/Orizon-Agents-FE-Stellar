@@ -2,12 +2,15 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { StellarExpertLink } from "@/components/ui/stellar-link";
+import { StellarExpertLink, defaultExplorerNetwork } from "@/components/ui/stellar-link";
 import { useStellarEvents, type FeedEvent } from "@/lib/stellar-events";
 import type { StellarNetworkInfo } from "@/lib/types";
 import { prettyName } from "@/lib/utils";
 
 const FEED_OPTIONS = { intervalMs: 5000, max: 60 };
+
+// Display label for the configured network — "mainnet" | "testnet".
+const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 type StellarInfo = Pick<StellarNetworkInfo, "network" | "contracts">;
 
@@ -63,7 +66,7 @@ export default function EventsPage() {
           <h1 className="text-3xl font-semibold tracking-tight">Events</h1>
           <p className="mt-1 text-sm text-muted">
             Live Soroban contract events for Orizon's four contracts. Polling{" "}
-            <code className="text-cyan">getEvents</code> from testnet RPC every 5 s.
+            <code className="text-cyan">getEvents</code> from {NETWORK_LABEL} RPC every 5 s.
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
