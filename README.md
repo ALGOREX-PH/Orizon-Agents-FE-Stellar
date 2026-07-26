@@ -148,17 +148,17 @@ npm test
 
 | Orange Belt requirement | Where |
 | --- | --- |
-| **3+ tests passing** | [`lib/wallet-errors.test.ts`](./lib/wallet-errors.test.ts) — 5 tests, see screenshot below |
+| **3+ tests passing** | 31 tests across 4 files — [`lib/wallet-errors.test.ts`](./lib/wallet-errors.test.ts), [`lib/api.test.ts`](./lib/api.test.ts), [`lib/reputation-math.test.ts`](./lib/reputation-math.test.ts), [`components/ui/stellar-link.test.ts`](./components/ui/stellar-link.test.ts) |
 | README with complete docs | this file (White-Belt + Yellow-Belt + Orange-Belt sections) |
 | **Demo video (1 min)** | [▸ watch on YouTube](https://youtu.be/E4EYx-RoxpY) — full intent → wallet → on-chain settlement flow |
 | Live deploy | https://orizon-agents-fe-stellar.vercel.app |
 | 3+ meaningful commits | `git log --oneline | head -20` — well over 3 |
 
-**Test output (`npm test`):**
+**Test output (`npm test`)** — Orange-Belt-era screenshot; the suite has since grown to 31 tests across 4 files:
 
-![5 tests passing in Vitest](./public/tests-passing.png)
+![tests passing in Vitest](./public/tests-passing.png)
 
-**What the tests cover:**
+**What the wallet-error tests cover:**
 
 - Freighter "User declined access" → `user_rejected`
 - Horizon `tx_insufficient_balance` → `insufficient_balance` (with friendly copy)
