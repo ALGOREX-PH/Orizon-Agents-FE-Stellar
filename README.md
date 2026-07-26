@@ -285,6 +285,21 @@ Contracts are live on **Stellar testnet** (Protocol 25+). The frontend reads the
 - **RPC:** `https://soroban-testnet.stellar.org`
 - **Admin:** `GA7AI5TAJEZA27I666DSJC4MUJYBEWUYNNZWPU7R2ONA7IZQVO6R5OQV`
 
+## Mainnet deployment
+
+The same four contracts are also live on **Stellar mainnet**:
+
+| contract | what it does | mainnet id |
+| --- | --- | --- |
+| `AgentRegistry` | lists every registered agent with its price + skills | [`CBTJ3BXT…LTD4`](https://stellar.expert/explorer/public/contract/CBTJ3BXTMTA2PQLRTSAZHEWQRTBMNHYCOKY5WOIYAH36LT4HTN63LTD4) |
+| `PaymentEscrow` (x402) | authorize once, charge as workflow runs | [`CBJCQBA4…5CNF`](https://stellar.expert/explorer/public/contract/CBJCQBA47Q3EQ7HC46GAWJPVM7KMD5KAEI5KG4FPYJFKR3NYB4QR5CNF) |
+| `AttestationRegistry` | write-once receipt for every completed workflow | [`CBLV6QGF…AAK4`](https://stellar.expert/explorer/public/contract/CBLV6QGFCMXBXHT62JZ7YH22NXW7MVBGV6TGOGX3OHY46GQGPYCTAAK4) |
+| `ReputationLedger` | decayed, value-weighted rating evidence per agent | [`CDFWQJY7…AXSX`](https://stellar.expert/explorer/public/contract/CDFWQJY72GPH7PEQVFGBDZESZNVRF6LQLVWU42CFMWPGRME5RWN5AXSX) |
+| Asset SAC (native XLM) | token the workflow pays in | [`CAS3J7GY…OWMA`](https://stellar.expert/explorer/public/contract/CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA) |
+
+- **Network:** Mainnet (`Public Global Stellar Network ; September 2015`)
+- **Admin:** `GA7AI5TAJEZA27I666DSJC4MUJYBEWUYNNZWPU7R2ONA7IZQVO6R5OQV`
+
 ---
 
 # For developers
