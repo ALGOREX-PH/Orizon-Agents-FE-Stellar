@@ -1,5 +1,9 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
+import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
+
+// Display label for the configured network — "mainnet" | "testnet".
+const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 const cols = [
   {
@@ -85,7 +89,7 @@ export function Footer() {
 
         <div className="mt-14 flex flex-col gap-3 border-t border-border pt-6 font-mono text-[10px] uppercase tracking-[0.25em] text-muted md:flex-row md:items-center md:justify-between">
           <span>© {new Date().getFullYear()} Orizon Agents — all rights reserved</span>
-          <span>built on stellar testnet · mit licensed</span>
+          <span>built on stellar {NETWORK_LABEL} · mit licensed</span>
         </div>
       </div>
     </footer>
