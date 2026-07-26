@@ -5,9 +5,21 @@ import { Card } from "@/components/ui/card";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
+import {
+  defaultExplorerNetwork,
+  stellarExpertUrl,
+} from "@/components/ui/stellar-link";
 
-const LEDGER_CONTRACT_URL =
-  "https://stellar.expert/explorer/testnet/contract/CDCSOBEVZUPQZV5GV4D6KYHZCLNGW2KXY74RUHSZ3EZUXF34DPW422ZT";
+// deployed ledger ids per network — link follows the build's passphrase env
+const LEDGER_CONTRACT_IDS = {
+  public: "CDFWQJY72GPH7PEQVFGBDZESZNVRF6LQLVWU42CFMWPGRME5RWN5AXSX",
+  testnet: "CDCSOBEVZUPQZV5GV4D6KYHZCLNGW2KXY74RUHSZ3EZUXF34DPW422ZT",
+} as const;
+const LEDGER_CONTRACT_URL = stellarExpertUrl(
+  "contract",
+  LEDGER_CONTRACT_IDS[defaultExplorerNetwork] ?? LEDGER_CONTRACT_IDS.testnet,
+  defaultExplorerNetwork,
+);
 
 const stats = [
   { value: "★ 3.50", label: "newcomer prior", note: "cheap pseudonyms priced in" },
