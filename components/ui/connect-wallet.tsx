@@ -1,5 +1,5 @@
 "use client";
-import { useWallet } from "@/lib/wallet";
+import { NETWORK_NAME, useWallet } from "@/lib/wallet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,8 @@ export function ConnectWallet({
 
   if (connected && address) {
     const wrongNet =
-      network?.network && !network.network.toUpperCase().includes("TEST");
+      network?.network &&
+      network.network.toUpperCase() !== NETWORK_NAME.toUpperCase();
     return (
       <div className={cn("flex items-center gap-2", className)}>
         {walletName && (
