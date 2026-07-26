@@ -2,11 +2,22 @@ import { cn } from "@/lib/utils";
 
 export type StellarExpertKind = "tx" | "account" | "contract";
 
+/**
+ * Explorer segment resolved from the wallet network env (same var wallet.tsx
+ * reads): the public passphrase → "public", anything else → "testnet".
+ */
+export const defaultExplorerNetwork =
+  (process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE ||
+    "Test SDF Network ; September 2015") ===
+  "Public Global Stellar Network ; September 2015"
+    ? "public"
+    : "testnet";
+
 /** Canonical stellar.expert explorer URL for a tx / account / contract. */
 export function stellarExpertUrl(
   kind: StellarExpertKind,
   id: string,
-  network: string = "testnet",
+  network: string = defaultExplorerNetwork,
 ): string {
   return `https://stellar.expert/explorer/${network}/${kind}/${id}`;
 }
@@ -19,7 +30,7 @@ export function stellarExpertUrl(
 export function StellarExpertLink({
   kind,
   id,
-  network = "testnet",
+  network = defaultExplorerNetwork,
   className,
   children,
 }: {
