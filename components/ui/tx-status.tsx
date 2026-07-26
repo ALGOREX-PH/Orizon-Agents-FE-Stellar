@@ -14,7 +14,10 @@
 
 import { Card } from "@/components/ui/card";
 import { KVRow } from "@/components/ui/kv-row";
-import { StellarExpertLink } from "@/components/ui/stellar-link";
+import {
+  StellarExpertLink,
+  defaultExplorerNetwork,
+} from "@/components/ui/stellar-link";
 import type { FriendlyError } from "@/lib/wallet-errors";
 
 export type TxState =
@@ -51,7 +54,7 @@ export function TxStatus({
   destination,
   memo,
   error,
-  network = "testnet",
+  network = defaultExplorerNetwork,
   className,
 }: {
   state: TxState;
@@ -169,7 +172,7 @@ function SuccessCard({
           className="clip-cyber-sm border border-cyan/60 bg-cyan/10 px-3 py-2 hover:bg-cyan/20 hover:text-cyan transition"
         />
         <a
-          href={`https://horizon-${network === "testnet" ? "testnet" : ""}.stellar.org/transactions/${hash}`}
+          href={`https://horizon${network === "public" ? "" : "-testnet"}.stellar.org/transactions/${hash}`}
           target="_blank"
           rel="noreferrer"
           className="clip-cyber-sm border border-border px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-muted hover:text-text hover:border-violet/60 transition"

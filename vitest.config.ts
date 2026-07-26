@@ -7,6 +7,9 @@ export default defineConfig({
       "@": path.resolve(__dirname, "."),
     },
   },
+  // tsconfig sets jsx: "preserve" for Next's compiler; vitest's transform
+  // needs JSX compiled so tests can import .tsx modules.
+  oxc: { jsx: { runtime: "automatic" } },
   test: {
     environment: "node",
     include: ["**/*.test.ts", "**/*.test.tsx"],

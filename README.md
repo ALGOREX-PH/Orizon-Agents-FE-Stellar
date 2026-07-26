@@ -1,6 +1,6 @@
 # Orizon Agents
 
-[![CI](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml/badge.svg)](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml) [![tests](https://img.shields.io/badge/tests-5%20passing-brightgreen)](./lib/wallet-errors.test.ts) [![Stellar Testnet](https://img.shields.io/badge/Stellar-Testnet-cyan)](https://stellar.expert/explorer/testnet/contract/CBJPTMAPMGODGZCZ2IMEQSRUX3WGUXNMKDTNN2KMJ3NFGYZ5OJ5525PI)
+[![CI](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml/badge.svg)](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml) [![tests](https://img.shields.io/badge/tests-31%20passing-brightgreen)](./lib) [![Stellar Testnet](https://img.shields.io/badge/Stellar-Testnet-cyan)](https://stellar.expert/explorer/testnet/contract/CBJPTMAPMGODGZCZ2IMEQSRUX3WGUXNMKDTNN2KMJ3NFGYZ5OJ5525PI)
 
 
 > **Type what you want. A team of AI agents builds it, pays each other on Stellar, and hands you the result — in seconds.**
@@ -11,11 +11,11 @@
 | --- | --- | --- |
 | 🌐 **Frontend** (Vercel) | **https://orizon-agents-fe-stellar.vercel.app** | this repo |
 | ⚙️ **Backend** (Render) | **https://orizon-agents-be-stellar.onrender.com** | [Backend repo](https://github.com/ALGOREX-PH/Orizon-Agents-BE-Stellar) |
-| 🔗 **Soroban contracts** (4 on testnet) | **PaymentEscrow:** [`CBJPTMAP…525PI`](https://stellar.expert/explorer/testnet/contract/CBJPTMAPMGODGZCZ2IMEQSRUX3WGUXNMKDTNN2KMJ3NFGYZ5OJ5525PI) — see [all 4 contracts ↓](#-deployed-contracts-stellar-testnet) | [Contracts repo](https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar) |
+| 🔗 **Soroban contracts** (4 · live on mainnet + testnet) | **PaymentEscrow:** [`CBJCQBA4…R5CNF`](https://stellar.expert/explorer/public/contract/CBJCQBA47Q3EQ7HC46GAWJPVM7KMD5KAEI5KG4FPYJFKR3NYB4QR5CNF) — see [all contracts ↓](#-deployed-contracts-stellar-mainnet) | [Contracts repo](https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar) |
 
-**▸ Try it in 30 seconds:** [open the dApp](https://orizon-agents-fe-stellar.vercel.app/app/orchestrator) → connect [Freighter](https://freighter.app) on **Test Net** → type `code a calculator web app` → click **Authorize & Execute**.
+**▸ Try it in 30 seconds:** [open the dApp](https://orizon-agents-fe-stellar.vercel.app/app/orchestrator) → connect [Freighter](https://freighter.app) on **Mainnet** → type `code a calculator web app` → click **Authorize & Execute**.
 
-You'll watch the workflow stream live, end with two real testnet transactions (charge + seal) linked to `stellar.expert`, and see an interactive calculator render inside a sandboxed iframe.
+You'll watch the workflow stream live, end with two real on-chain transactions (charge + seal) linked to `stellar.expert`, and see an interactive calculator render inside a sandboxed iframe.
 
 ## 📜 Deployed contracts (Stellar testnet)
 
@@ -32,6 +32,21 @@ All four Soroban contracts are live on **Stellar Testnet** (`Test SDF Network ; 
 - **Source:** [`/contract`](./contract) in this repo (full Rust crates)
 - **Admin:** `GA7AI5TAJEZA27I666DSJC4MUJYBEWUYNNZWPU7R2ONA7IZQVO6R5OQV`
 - **RPC:** `https://soroban-testnet.stellar.org`
+
+## 📜 Deployed contracts (Stellar mainnet)
+
+The same four Soroban contracts are also live on **Stellar Mainnet** (`Public Global Stellar Network ; September 2015`). Click any address to inspect it on `stellar.expert`:
+
+| contract | mainnet contract id |
+| --- | --- |
+| **PaymentEscrow** (x402) — the contract the FE invokes via signed XDR | [`CBJCQBA47Q3EQ7HC46GAWJPVM7KMD5KAEI5KG4FPYJFKR3NYB4QR5CNF`](https://stellar.expert/explorer/public/contract/CBJCQBA47Q3EQ7HC46GAWJPVM7KMD5KAEI5KG4FPYJFKR3NYB4QR5CNF) |
+| **AgentRegistry** — agent identity + price catalog                    | [`CBTJ3BXTMTA2PQLRTSAZHEWQRTBMNHYCOKY5WOIYAH36LT4HTN63LTD4`](https://stellar.expert/explorer/public/contract/CBTJ3BXTMTA2PQLRTSAZHEWQRTBMNHYCOKY5WOIYAH36LT4HTN63LTD4) |
+| **AttestationRegistry** — write-once workflow receipts                | [`CBLV6QGFCMXBXHT62JZ7YH22NXW7MVBGV6TGOGX3OHY46GQGPYCTAAK4`](https://stellar.expert/explorer/public/contract/CBLV6QGFCMXBXHT62JZ7YH22NXW7MVBGV6TGOGX3OHY46GQGPYCTAAK4) |
+| **ReputationLedger** — decayed, value-weighted rating evidence per agent | [`CDFWQJY72GPH7PEQVFGBDZESZNVRF6LQLVWU42CFMWPGRME5RWN5AXSX`](https://stellar.expert/explorer/public/contract/CDFWQJY72GPH7PEQVFGBDZESZNVRF6LQLVWU42CFMWPGRME5RWN5AXSX) |
+| Asset SAC (native XLM) — settlement asset                             | [`CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA`](https://stellar.expert/explorer/public/contract/CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA) |
+
+- **Source:** [`/contract`](./contract) in this repo (full Rust crates)
+- **Admin:** `GA7AI5TAJEZA27I666DSJC4MUJYBEWUYNNZWPU7R2ONA7IZQVO6R5OQV`
 
 ---
 
@@ -133,17 +148,17 @@ npm test
 
 | Orange Belt requirement | Where |
 | --- | --- |
-| **3+ tests passing** | [`lib/wallet-errors.test.ts`](./lib/wallet-errors.test.ts) — 5 tests, see screenshot below |
+| **3+ tests passing** | 31 tests across 4 files — [`lib/wallet-errors.test.ts`](./lib/wallet-errors.test.ts), [`lib/api.test.ts`](./lib/api.test.ts), [`lib/reputation-math.test.ts`](./lib/reputation-math.test.ts), [`components/ui/stellar-link.test.ts`](./components/ui/stellar-link.test.ts) |
 | README with complete docs | this file (White-Belt + Yellow-Belt + Orange-Belt sections) |
 | **Demo video (1 min)** | [▸ watch on YouTube](https://youtu.be/E4EYx-RoxpY) — full intent → wallet → on-chain settlement flow |
 | Live deploy | https://orizon-agents-fe-stellar.vercel.app |
 | 3+ meaningful commits | `git log --oneline | head -20` — well over 3 |
 
-**Test output (`npm test`):**
+**Test output (`npm test`)** — Orange-Belt-era screenshot; the suite has since grown to 31 tests across 4 files:
 
-![5 tests passing in Vitest](./public/tests-passing.png)
+![tests passing in Vitest](./public/tests-passing.png)
 
-**What the tests cover:**
+**What the wallet-error tests cover:**
 
 - Freighter "User declined access" → `user_rejected`
 - Horizon `tx_insufficient_balance` → `insufficient_balance` (with friendly copy)
@@ -268,6 +283,21 @@ Contracts are live on **Stellar testnet** (Protocol 25+). The frontend reads the
 
 - **Network:** Testnet (`Test SDF Network ; September 2015`)
 - **RPC:** `https://soroban-testnet.stellar.org`
+- **Admin:** `GA7AI5TAJEZA27I666DSJC4MUJYBEWUYNNZWPU7R2ONA7IZQVO6R5OQV`
+
+## Mainnet deployment
+
+The same four contracts are also live on **Stellar mainnet**:
+
+| contract | what it does | mainnet id |
+| --- | --- | --- |
+| `AgentRegistry` | lists every registered agent with its price + skills | [`CBTJ3BXT…LTD4`](https://stellar.expert/explorer/public/contract/CBTJ3BXTMTA2PQLRTSAZHEWQRTBMNHYCOKY5WOIYAH36LT4HTN63LTD4) |
+| `PaymentEscrow` (x402) | authorize once, charge as workflow runs | [`CBJCQBA4…5CNF`](https://stellar.expert/explorer/public/contract/CBJCQBA47Q3EQ7HC46GAWJPVM7KMD5KAEI5KG4FPYJFKR3NYB4QR5CNF) |
+| `AttestationRegistry` | write-once receipt for every completed workflow | [`CBLV6QGF…AAK4`](https://stellar.expert/explorer/public/contract/CBLV6QGFCMXBXHT62JZ7YH22NXW7MVBGV6TGOGX3OHY46GQGPYCTAAK4) |
+| `ReputationLedger` | decayed, value-weighted rating evidence per agent | [`CDFWQJY7…AXSX`](https://stellar.expert/explorer/public/contract/CDFWQJY72GPH7PEQVFGBDZESZNVRF6LQLVWU42CFMWPGRME5RWN5AXSX) |
+| Asset SAC (native XLM) | token the workflow pays in | [`CAS3J7GY…OWMA`](https://stellar.expert/explorer/public/contract/CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA) |
+
+- **Network:** Mainnet (`Public Global Stellar Network ; September 2015`)
 - **Admin:** `GA7AI5TAJEZA27I666DSJC4MUJYBEWUYNNZWPU7R2ONA7IZQVO6R5OQV`
 
 ---

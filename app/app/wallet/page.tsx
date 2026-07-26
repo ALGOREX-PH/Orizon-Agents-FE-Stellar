@@ -3,11 +3,18 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
-import { useWallet } from "@/lib/wallet";
+import { NETWORK_NAME, useWallet } from "@/lib/wallet";
 import { KVRow } from "@/components/ui/kv-row";
-import { StellarExpertLink, stellarExpertUrl } from "@/components/ui/stellar-link";
+import {
+  StellarExpertLink,
+  defaultExplorerNetwork,
+  stellarExpertUrl,
+} from "@/components/ui/stellar-link";
 import type { StellarNetworkInfo } from "@/lib/types";
 import { prettyName } from "@/lib/utils";
+
+// Display label for the configured network — "mainnet" | "testnet".
+const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 export default function WalletPage() {
   const { connected, address, network, xlmBalance, balanceLoading, refreshBalance } =
@@ -45,7 +52,7 @@ export default function WalletPage() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Wallet</h1>
           <p className="mt-1 text-sm text-muted">
-            Freighter → Stellar testnet. Sign Orizon contract calls with your key.
+            Freighter → Stellar {NETWORK_LABEL}. Sign Orizon contract calls with your key.
           </p>
         </div>
         <ConnectWallet size="md" />
@@ -75,19 +82,21 @@ export default function WalletPage() {
               </div>
               <div className="mt-2 font-mono text-[11px] text-muted">
                 {address ? `${address.slice(0, 6)}…${address.slice(-6)}` : ""} ·{" "}
-                {network?.network ?? "testnet"}
+                {network?.network ?? NETWORK_NAME}
               </div>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
-              <a
-                href="https://friendbot.stellar.org"
-                target="_blank"
-                rel="noreferrer"
-                className="clip-cyber-sm border border-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted hover:text-text hover:border-cyan/60 transition"
-                title="Fund this account with testnet XLM via Friendbot"
-              >
-                ▸ fund testnet
-              </a>
+              {defaultExplorerNetwork !== "public" && (
+                <a
+                  href="https://friendbot.stellar.org"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="clip-cyber-sm border border-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted hover:text-text hover:border-cyan/60 transition"
+                  title="Fund this account with testnet XLM via Friendbot"
+                >
+                  ▸ fund testnet
+                </a>
+              )}
               {address && (
                 <StellarExpertLink
                   kind="account"

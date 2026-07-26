@@ -8,11 +8,15 @@ import { Button } from "@/components/ui/button";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { ReputationBadge } from "@/components/ui/reputation-badge";
 import { TxStatus, type TxState } from "@/components/ui/tx-status";
+import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
 import { buildAuthorize, decompose, execute, submitSigned } from "@/lib/api";
 import { useWallet } from "@/lib/wallet";
 import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
 import type { DecomposeResponse } from "@/lib/types";
 import { FiatFund } from "./_components/fiat-fund";
+
+// Display label for the configured network — "mainnet" | "testnet".
+const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 function bytesToHex(v: unknown): string | null {
   // The backend returns the 16-byte auth_id as a base64-ish or list — normalize.
@@ -318,7 +322,7 @@ export default function OrchestratorPage() {
                         ▸ wallet required
                       </div>
                       <div className="text-sm">
-                        Connect Freighter (testnet) to pay with x402 on-chain, or run
+                        Connect Freighter ({NETWORK_LABEL}) to pay with x402 on-chain, or run
                         a simulated pass.
                       </div>
                     </div>
@@ -362,7 +366,6 @@ export default function OrchestratorPage() {
         state={txState}
         hash={authorizeHash ?? undefined}
         error={friendlyError}
-        network="testnet"
       />
     </div>
   );
