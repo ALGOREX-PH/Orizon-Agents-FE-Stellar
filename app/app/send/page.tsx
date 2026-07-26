@@ -287,7 +287,6 @@ export default function SendPage() {
         destination={lastSent?.destination}
         memo={lastSent?.memo}
         error={err}
-        network="testnet"
       />
     </div>
   );
