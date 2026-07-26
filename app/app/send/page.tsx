@@ -5,10 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { TxStatus, type TxState } from "@/components/ui/tx-status";
-import { useWallet } from "@/lib/wallet";
+import { HORIZON_URL, NETWORK_PASSPHRASE, useWallet } from "@/lib/wallet";
 import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
+import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
 
-const HORIZON_TESTNET = "https://horizon-testnet.stellar.org";
+// Display label for the configured network — "mainnet" | "testnet".
+const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 // stellar-sdk's BASE_FEE ("100" stroops) — inlined so the render path doesn't
 // need the SDK loaded.
 const BASE_FEE_STROOPS = "100";
@@ -72,15 +74,15 @@ export default function SendPage() {
       setTxState("building");
       // Lazy-load the (large) stellar-sdk on first send so it stays out of
       // the initial page bundle.
-      const { Asset, Horizon, Memo, Networks, Operation, TransactionBuilder } =
+      const { Asset, Horizon, Memo, Operation, TransactionBuilder } =
         await import("@stellar/stellar-sdk");
-      const server = new Horizon.Server(HORIZON_TESTNET);
+      const server = new Horizon.Server(HORIZON_URL);
       const account = await server.loadAccount(wallet.address);
 
       const memoTrimmed = memo.trim() ? trimMemo(memo.trim()) : "";
       const builder = new TransactionBuilder(account, {
         fee: BASE_FEE_STROOPS,
-        networkPassphrase: Networks.TESTNET,
+        networkPassphrase: NETWORK_PASSPHRASE,
       })
         .addOperation(
           Operation.payment({
@@ -95,11 +97,11 @@ export default function SendPage() {
 
       setTxState("signing");
       const signedXdr = await wallet.signXdr(tx.toXDR(), {
-        networkPassphrase: Networks.TESTNET,
+        networkPassphrase: NETWORK_PASSPHRASE,
       });
 
       setTxState("broadcasting");
-      const signedTx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
+      const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
       // Brief "pending" frame so users see the lifecycle stage explicitly.
       setTxState("pending");
       const result = await server.submitTransaction(signedTx);
@@ -134,7 +136,7 @@ export default function SendPage() {
           <h1 className="text-3xl font-semibold tracking-tight">Send XLM</h1>
           <p className="mt-1 text-sm text-muted">
             Plain Stellar payment — sign with any supported wallet, broadcast through
-            Horizon testnet.
+            Horizon {NETWORK_LABEL}.
           </p>
         </div>
         <ConnectWallet size="md" />
@@ -148,7 +150,7 @@ export default function SendPage() {
                 ▸ wallet required
               </div>
               <div className="text-sm">
-                Connect a Stellar wallet on <b className="text-text">Test Net</b> to
+                Connect a Stellar wallet on <b className="text-text">{NETWORK_LABEL}</b> to
                 send a payment.
               </div>
             </div>
@@ -164,7 +166,7 @@ export default function SendPage() {
               ▸ payment
             </div>
             <Badge tone="cyan" dot>
-              testnet
+              {NETWORK_LABEL}
             </Badge>
           </div>
 
