@@ -11,11 +11,11 @@
 | --- | --- | --- |
 | 🌐 **Frontend** (Vercel) | **https://orizon-agents-fe-stellar.vercel.app** | this repo |
 | ⚙️ **Backend** (Render) | **https://orizon-agents-be-stellar.onrender.com** | [Backend repo](https://github.com/ALGOREX-PH/Orizon-Agents-BE-Stellar) |
-| 🔗 **Soroban contracts** (4 on testnet) | **PaymentEscrow:** [`CBJPTMAP…525PI`](https://stellar.expert/explorer/testnet/contract/CBJPTMAPMGODGZCZ2IMEQSRUX3WGUXNMKDTNN2KMJ3NFGYZ5OJ5525PI) — see [all 4 contracts ↓](#-deployed-contracts-stellar-testnet) | [Contracts repo](https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar) |
+| 🔗 **Soroban contracts** (4 · live on mainnet + testnet) | **PaymentEscrow:** [`CBJCQBA4…R5CNF`](https://stellar.expert/explorer/public/contract/CBJCQBA47Q3EQ7HC46GAWJPVM7KMD5KAEI5KG4FPYJFKR3NYB4QR5CNF) — see [all contracts ↓](#-deployed-contracts-stellar-mainnet) | [Contracts repo](https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar) |
 
-**▸ Try it in 30 seconds:** [open the dApp](https://orizon-agents-fe-stellar.vercel.app/app/orchestrator) → connect [Freighter](https://freighter.app) on **Test Net** → type `code a calculator web app` → click **Authorize & Execute**.
+**▸ Try it in 30 seconds:** [open the dApp](https://orizon-agents-fe-stellar.vercel.app/app/orchestrator) → connect [Freighter](https://freighter.app) on **Mainnet** → type `code a calculator web app` → click **Authorize & Execute**.
 
-You'll watch the workflow stream live, end with two real testnet transactions (charge + seal) linked to `stellar.expert`, and see an interactive calculator render inside a sandboxed iframe.
+You'll watch the workflow stream live, end with two real on-chain transactions (charge + seal) linked to `stellar.expert`, and see an interactive calculator render inside a sandboxed iframe.
 
 ## 📜 Deployed contracts (Stellar testnet)
 
