@@ -13,18 +13,52 @@ import type {
 
 const base = "/api";
 
+const GET_TIMEOUT_MS = 30_000;
+// execute/decompose can be slow, so POSTs get a much longer leash.
+const POST_TIMEOUT_MS = 90_000;
+
+/**
+ * fetch with an AbortController deadline so a hung backend cannot stall
+ * loading states forever. Timeouts reject with a clear message; every
+ * other failure (network drop, non-OK status) propagates untouched.
+ */
+async function fetchWithTimeout(
+  method: "GET" | "POST",
+  path: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(`${base}${path}`, { ...init, signal: controller.signal });
+  } catch (err) {
+    if (controller.signal.aborted) {
+      throw new Error(`${method} ${path} → timeout after ${timeoutMs / 1000}s`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${base}${path}`, { cache: "no-store" });
+  const res = await fetchWithTimeout("GET", path, { cache: "no-store" }, GET_TIMEOUT_MS);
   if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
   return res.json();
 }
 
 async function post<T, B>(path: string, body: B): Promise<T> {
-  const res = await fetch(`${base}${path}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const res = await fetchWithTimeout(
+    "POST",
+    path,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    POST_TIMEOUT_MS,
+  );
   if (!res.ok) {
     let detail = "";
     try {
