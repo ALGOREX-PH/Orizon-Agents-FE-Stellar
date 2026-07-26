@@ -23,10 +23,11 @@ import type { Networks as KitNetworks } from "@creit.tech/stellar-wallets-kit";
 import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
 
 // Env-driven network config — falls back to Stellar testnet when unset.
-const NETWORK_PASSPHRASE =
+// Exported so tx-building pages and network guards stay on the same config.
+export const NETWORK_PASSPHRASE =
   process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE ||
   "Test SDF Network ; September 2015";
-const HORIZON_URL =
+export const HORIZON_URL =
   process.env.NEXT_PUBLIC_HORIZON_URL || "https://horizon-testnet.stellar.org";
 // Friendly label for the passphrase — "TESTNET" for the default config.
 // Mirrors the kit's `Networks` enum so the label resolves without pulling
@@ -38,7 +39,8 @@ const NETWORK_NAMES: Record<string, string> = {
   "Local Sandbox Stellar Network ; September 2022": "SANDBOX",
   "Standalone Network ; February 2017": "STANDALONE",
 };
-const NETWORK_NAME = NETWORK_NAMES[NETWORK_PASSPHRASE] ?? "CUSTOM";
+/** Expected wallet network name for this build — "TESTNET", "PUBLIC", … */
+export const NETWORK_NAME = NETWORK_NAMES[NETWORK_PASSPHRASE] ?? "CUSTOM";
 const STORAGE_KEY = "orizon.wallet.v2";
 
 type StoredSession = {
