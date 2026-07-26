@@ -132,6 +132,9 @@ export const submitSigned = (signedXdr: string) =>
  * Returns a disposer. onEvent is called for each trace line; onDone fires on
  * completion; onError fires if the stream drops mid-flight (falls back to
  * onDone when not provided, preserving the old behavior).
+ *
+ * Transient drops auto-reconnect up to 3 times (1s/2s/4s backoff) before
+ * surfacing the error; once `done` arrives no reconnect is attempted.
  */
 export function openTraceStream(
   taskId: string,
@@ -139,22 +142,51 @@ export function openTraceStream(
   onDone?: () => void,
   onError?: () => void,
 ): () => void {
-  const es = new EventSource(`${base}/trace/${taskId}/stream`);
-  es.addEventListener("trace", (e) => {
-    try {
-      const line = JSON.parse((e as MessageEvent).data) as TraceLine;
-      onEvent(line);
-    } catch {
-      /* ignore */
-    }
-  });
-  es.addEventListener("done", () => {
-    es.close();
-    onDone?.();
-  });
-  es.addEventListener("error", () => {
-    es.close();
-    (onError ?? onDone)?.();
-  });
-  return () => es.close();
+  const MAX_RECONNECTS = 3;
+  const BACKOFF_MS = [1_000, 2_000, 4_000];
+  let es: EventSource | null = null;
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  let attempts = 0;
+  let settled = false; // done received, terminally errored, or disposed
+
+  const connect = () => {
+    es = new EventSource(`${base}/trace/${taskId}/stream`);
+    es.addEventListener("trace", (e) => {
+      try {
+        const line = JSON.parse((e as MessageEvent).data) as TraceLine;
+        onEvent(line);
+      } catch {
+        /* ignore */
+      }
+    });
+    es.addEventListener("done", () => {
+      settled = true;
+      es?.close();
+      onDone?.();
+    });
+    es.addEventListener("error", () => {
+      es?.close();
+      if (settled) return;
+      if (attempts < MAX_RECONNECTS) {
+        const delay = BACKOFF_MS[attempts];
+        attempts += 1;
+        retryTimer = setTimeout(() => {
+          retryTimer = null;
+          connect();
+        }, delay);
+      } else {
+        settled = true;
+        (onError ?? onDone)?.();
+      }
+    });
+  };
+
+  connect();
+
+  return () => {
+    settled = true;
+    if (retryTimer !== null) clearTimeout(retryTimer);
+    retryTimer = null;
+    es?.close();
+  };
 }
