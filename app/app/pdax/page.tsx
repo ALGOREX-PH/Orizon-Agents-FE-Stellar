@@ -2,6 +2,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ErrorNote } from "@/components/ui/error-note";
 import { LoadingStatus, Skeleton } from "@/components/ui/skeleton";
 import {
   getPdaxBalances,
@@ -45,11 +46,7 @@ export default function PdaxPage() {
         </p>
       </div>
 
-      {err && (
-        <div className="border border-magenta/40 bg-magenta/10 px-4 py-3 text-xs font-mono text-magenta">
-          {err}
-        </div>
-      )}
+      {err && <ErrorNote className="bg-magenta/10">{err}</ErrorNote>}
 
       <Card>
         <div className="flex items-center justify-between">
