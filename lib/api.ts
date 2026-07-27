@@ -45,10 +45,42 @@ export async function fetchWithTimeout(
   }
 }
 
-async function get<T>(path: string): Promise<T> {
-  const res = await fetchWithTimeout("GET", path, { cache: "no-store" }, GET_TIMEOUT_MS);
-  if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
-  return res.json();
+// Several components fetch the same GET simultaneously on mount (/app fires
+// getOverview from both the sidebar and the page). Identical paths share one
+// request while it is in flight and for a short window after it resolves;
+// rejections are evicted immediately so retries always hit the network.
+export const GET_DEDUPE_MS = 1_000;
+
+type GetCacheEntry = { promise: Promise<unknown>; settledAt: number | null };
+const getCache = new Map<string, GetCacheEntry>();
+
+/** Drops all deduped GET entries — exposed for tests. */
+export function clearGetCache(): void {
+  getCache.clear();
+}
+
+function get<T>(path: string, parse?: (v: unknown) => T): Promise<T> {
+  const hit = getCache.get(path);
+  if (hit && (hit.settledAt === null || Date.now() - hit.settledAt < GET_DEDUPE_MS)) {
+    return hit.promise as Promise<T>;
+  }
+  const promise = (async () => {
+    const res = await fetchWithTimeout("GET", path, { cache: "no-store" }, GET_TIMEOUT_MS);
+    if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
+    const json: unknown = await res.json();
+    return parse ? parse(json) : (json as T);
+  })();
+  const entry: GetCacheEntry = { promise, settledAt: null };
+  getCache.set(path, entry);
+  promise.then(
+    () => {
+      entry.settledAt = Date.now();
+    },
+    () => {
+      if (getCache.get(path) === entry) getCache.delete(path);
+    },
+  );
+  return promise;
 }
 
 async function post<T, B>(path: string, body: B): Promise<T> {

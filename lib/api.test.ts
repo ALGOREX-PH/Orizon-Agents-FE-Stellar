@@ -9,6 +9,8 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  GET_DEDUPE_MS,
+  clearGetCache,
   decompose,
   getReputation,
   getReputationParams,
@@ -37,6 +39,9 @@ function jsonResponse(status: number, body: unknown): FetchMockResponse {
 
 afterEach(() => {
   fetchMock.mockReset();
+  // GETs dedupe per path for ~1s — flush so each test controls its fetches.
+  clearGetCache();
+  vi.restoreAllMocks();
 });
 
 describe("get (via listAgents)", () => {
@@ -158,6 +163,49 @@ describe("getReputationParams", () => {
     await expect(getReputationParams()).rejects.toThrow(
       "GET /stellar/reputation/params → 503",
     );
+  });
+});
+
+describe("get dedupe cache", () => {
+  it("shares one fetch across concurrent requests for the same path", async () => {
+    const agents = [{ id: "agt_01", name: "copywrite.v3" }];
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, agents));
+
+    const [a, b] = await Promise.all([listAgents(), listAgents()]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(a).toEqual(agents);
+    expect(b).toBe(a); // same underlying promise → same resolved value
+  });
+
+  it("reuses a resolved response inside the dedupe window and refetches after it", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    fetchMock.mockResolvedValue(jsonResponse(200, []));
+
+    await listAgents();
+    await listAgents();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    nowSpy.mockReturnValue(1_000_000 + GET_DEDUPE_MS + 1);
+    await listAgents();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("evicts rejected requests so the next call retries the network", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(500, { detail: "boom" }));
+    await expect(listAgents()).rejects.toThrow("GET /agents → 500");
+
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, []));
+    await expect(listAgents()).resolves.toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not dedupe across different paths", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(200, []));
+
+    await Promise.all([listAgents(), getReputationParams()]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 
