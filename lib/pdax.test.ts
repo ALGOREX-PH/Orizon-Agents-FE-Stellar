@@ -11,14 +11,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getPdaxBalances,
-  getPdaxBanks,
-  getPdaxOrder,
-  getPdaxOrders,
+  getPdaxCryptoTransactions,
+  getPdaxHealth,
   getPdaxPrice,
   getPdaxRamp,
-  getPdaxReference,
-  pdaxFiatWithdraw,
+  getPdaxRamps,
   pdaxFirmQuote,
+  pdaxFundingQuote,
   pdaxRampEstimate,
   pdaxReconcileRamp,
 } from "./pdax";
@@ -88,31 +87,19 @@ describe("query-string construction", () => {
     );
   });
 
-  it("drops undefined and empty-string params from the orders listing", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(200, { orders: [] }));
+  it("drops undefined and empty-string params from the transactions listing", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { transactions: [] }));
 
-    await getPdaxOrders({ page: 2, pageSize: 50, startDate: undefined, endDate: "" });
+    await getPdaxCryptoTransactions({ page: 2, pageSize: 50, identifier: undefined, txn_hash: "" });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/pdax/trade/orders?page=2&pageSize=50",
+      "/api/pdax/crypto/transactions?page=2&pageSize=50",
       expect.objectContaining({ cache: "no-store" }),
     );
   });
 });
 
 describe("path construction", () => {
-  it("interpolates the order id into the single-order path", async () => {
-    const order = { order_id: 42, status: "filled" };
-    fetchMock.mockResolvedValueOnce(jsonResponse(200, order));
-
-    await expect(getPdaxOrder(42)).resolves.toEqual(order);
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/pdax/trade/orders/42",
-      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
-    );
-  });
-
   it("interpolates the ramp id into the ramp lookup path", async () => {
     const ramp = { ramp_id: "rmp_9", status: "settled" };
     fetchMock.mockResolvedValueOnce(jsonResponse(200, ramp));
@@ -141,22 +128,6 @@ describe("POST endpoints", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
         signal: expect.any(AbortSignal),
-      }),
-    );
-  });
-
-  it("posts fiat withdrawals to /fiat/withdraw", async () => {
-    const body = { identifier: "user-1", amount: "500", bank: "BDO" };
-    const result = { id: "wd_1", status: "pending" };
-    fetchMock.mockResolvedValueOnce(jsonResponse(200, result));
-
-    await expect(pdaxFiatWithdraw(body)).resolves.toEqual(result);
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/pdax/fiat/withdraw",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify(body),
       }),
     );
   });
@@ -194,8 +165,8 @@ describe("error detail extraction", () => {
   it("surfaces the backend detail field on a GET failure", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(503, { detail: "pdax maintenance" }));
 
-    await expect(getPdaxReference()).rejects.toThrow(
-      "GET /reference → 503 — pdax maintenance",
+    await expect(getPdaxHealth()).rejects.toThrow(
+      "GET /health → 503 — pdax maintenance",
     );
   });
 
@@ -203,14 +174,14 @@ describe("error detail extraction", () => {
     const noise = "z".repeat(400);
     fetchMock.mockResolvedValueOnce(jsonResponse(500, { error: noise }));
 
-    const err = await getPdaxBanks().then(
+    const err = await getPdaxRamps().then(
       () => {
         throw new Error("expected rejection");
       },
       (e: unknown) => e as Error,
     );
 
-    expect(err.message).toContain("GET /reference/banks → 500 — ");
+    expect(err.message).toContain("GET /ramp → 500 — ");
     expect(err.message).toContain('{"error":"zzz');
     expect(err.message.split(" — ")[1].length).toBe(300);
   });
@@ -237,6 +208,6 @@ describe("error detail extraction", () => {
   it("propagates a network-level rejection untouched", async () => {
     fetchMock.mockRejectedValueOnce(new Error("socket hang up"));
 
-    await expect(pdaxFiatWithdraw({ identifier: "u" })).rejects.toThrow("socket hang up");
+    await expect(pdaxFundingQuote("10")).rejects.toThrow("socket hang up");
   });
 });
