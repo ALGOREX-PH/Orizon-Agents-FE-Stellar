@@ -7,6 +7,7 @@ import type {
   ReputationBatch,
   ReputationInfo,
   ReputationParams,
+  StellarNetworkInfo,
   Task,
   TraceLine,
 } from "./types";
@@ -100,6 +101,8 @@ export const getArtifact = (taskId: string) =>
   get<ArtifactResponse>(`/tasks/${taskId}/artifact`);
 
 // ── Stellar / x402 ──────────────────────────────────────────
+export const getStellarNetwork = () => get<StellarNetworkInfo>("/stellar/network");
+
 export const buildAuthorize = (body: {
   payer: string;
   agent_id: string;
