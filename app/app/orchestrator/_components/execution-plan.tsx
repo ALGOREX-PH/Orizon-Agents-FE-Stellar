@@ -1,13 +1,18 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { ReputationBadge } from "@/components/ui/reputation-badge";
+import { TxStatus, type TxState } from "@/components/ui/tx-status";
 import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
+import { buildAuthorize, execute, submitSigned } from "@/lib/api";
+import { useAsyncAction } from "@/lib/use-async-action";
 import { useWallet } from "@/lib/wallet";
+import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
 import type { DecomposeResponse } from "@/lib/types";
 import { FiatFund } from "./fiat-fund";
 
@@ -15,34 +20,115 @@ import { FiatFund } from "./fiat-fund";
 const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 /** Which stage of the on-chain authorize flow is running (for button copy). */
-export type ExecStep = "" | "sign" | "broadcast" | "execute";
+type ExecStep = "" | "sign" | "broadcast" | "execute";
 
-const stepLabel: Record<Exclude<ExecStep, "">, string> = {
+const STEP_LABEL: Record<Exclude<ExecStep, "">, string> = {
   sign: "◉ Freighter…",
   broadcast: "◉ Broadcasting…",
   execute: "◉ Launching…",
 };
 
+/** Normalize the 16-byte auth_id a tx returns (hex, base64, or byte list). */
+function bytesToHex(v: unknown): string | null {
+  if (typeof v === "string") {
+    if (/^[0-9a-f]{32}$/i.test(v)) return v.toLowerCase();
+    try {
+      const hex = Array.from(atob(v), (c) =>
+        c.charCodeAt(0).toString(16).padStart(2, "0"),
+      ).join("");
+      if (hex.length === 32) return hex;
+    } catch {
+      /* not base64 — fall through */
+    }
+  }
+  if (Array.isArray(v) && v.length === 16) {
+    return (v as number[]).map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  return null;
+}
+
 /**
- * The decomposed-plan card: step list, totals, and the execute controls
- * (simulate / fiat funding / on-chain authorize). Purely presentational —
- * the async flows live in the page; this owns only the fiat-panel toggle.
+ * The decomposed-plan card: step list, totals, and the execute flows
+ * (simulate / fiat funding / on-chain authorize). Mirrors the FiatFund
+ * pattern — self-contained state and actions, fed only by the plan.
+ * The task read token from execute responses is stored by lib/api.ts.
  */
-export function ExecutionPlan({
-  plan,
-  executing,
-  step,
-  onSimulate,
-  onAuthorize,
-}: {
-  plan: DecomposeResponse;
-  executing: boolean;
-  step: ExecStep;
-  onSimulate: () => void;
-  onAuthorize: () => void;
-}) {
+export function ExecutionPlan({ plan }: { plan: DecomposeResponse }) {
+  const router = useRouter();
   const wallet = useWallet();
   const [showFiat, setShowFiat] = useState(false);
+  const [step, setStep] = useState<ExecStep>("");
+  const [txState, setTxState] = useState<TxState>("idle");
+  const [friendlyError, setFriendlyError] = useState<FriendlyError | null>(null);
+  const [authorizeHash, setAuthorizeHash] = useState<string | null>(null);
+
+  /** Simulated path — no wallet required. */
+  const simulate = useAsyncAction(async () => {
+    const { task_id } = await execute(plan.plan_id);
+    router.push(`/app/trace?task=${task_id}`);
+  });
+
+  /** Real on-chain path: wallet signs authorize, backend charges + seals. */
+  const authorize = useAsyncAction(async (payer: string) => {
+    setFriendlyError(null);
+    setAuthorizeHash(null);
+    try {
+      setStep("sign");
+      setTxState("building");
+      const { xdr } = await buildAuthorize({
+        payer,
+        agent_id: "orizon_batch",
+        max_amount_usdc: plan.total_usdc || 0.001,
+        ttl_seconds: 600,
+      });
+
+      setTxState("signing");
+      const signedXdr = await wallet.signXdr(xdr);
+
+      setStep("broadcast");
+      setTxState("broadcasting");
+      const broadcast = await submitSigned(signedXdr);
+      if (broadcast.status !== "SUCCESS") {
+        throw new Error(
+          [`authorize tx ${broadcast.status}`, broadcast.diagnostic, broadcast.explorer]
+            .filter(Boolean)
+            .join(" · "),
+        );
+      }
+      const authHex = bytesToHex(broadcast.return_value);
+      if (!authHex) throw new Error("failed to read auth_id from tx result");
+
+      setAuthorizeHash(broadcast.hash);
+      setTxState("success");
+
+      setStep("execute");
+      const { task_id } = await execute(plan.plan_id, {
+        auth_id_hex: authHex,
+        payer,
+      });
+      router.push(`/app/trace?task=${task_id}`);
+    } catch (e) {
+      const friendly = classifyError(e);
+      setFriendlyError(friendly);
+      setTxState("failed");
+      setStep("");
+      throw new Error(friendly.detail);
+    }
+  });
+
+  const executing = simulate.pending || authorize.pending;
+  const error = simulate.error ?? authorize.error;
+
+  const onSimulate = () => {
+    authorize.reset();
+    void simulate.run();
+  };
+
+  const onAuthorize = () => {
+    if (!wallet.connected || !wallet.address) return;
+    simulate.reset();
+    void authorize.run(wallet.address);
+  };
 
   const fiatToggle = (
     <Button
@@ -154,11 +240,11 @@ export function ExecutionPlan({
                   disabled={executing}
                   size="md"
                 >
-                  {executing && step !== ""
-                    ? stepLabel[step]
-                    : executing
-                      ? "◉ Launching…"
-                      : "Authorize & Execute ▸"}
+                  {executing
+                    ? step
+                      ? STEP_LABEL[step]
+                      : "◉ Launching…"
+                    : "Authorize & Execute ▸"}
                 </Button>
               </div>
             </div>
@@ -189,6 +275,15 @@ export function ExecutionPlan({
           )}
         </m.div>
 
+        {error && (
+          <div
+            role="alert"
+            className="mt-4 clip-cyber-sm border border-magenta/40 bg-magenta/5 px-4 py-3 font-mono text-xs text-magenta"
+          >
+            {error}
+          </div>
+        )}
+
         {showFiat && (
           <div className="mt-4">
             <FiatFund
@@ -197,6 +292,12 @@ export function ExecutionPlan({
             />
           </div>
         )}
+
+        <TxStatus
+          state={txState}
+          hash={authorizeHash ?? undefined}
+          error={friendlyError}
+        />
       </Card>
     </m.div>
   );
