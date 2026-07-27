@@ -10,6 +10,7 @@ import {
   stellarExpertUrl,
 } from "@/components/ui/stellar-link";
 import { getStellarNetwork } from "@/lib/api";
+import { focusRing } from "@/lib/ui";
 import { useFetch } from "@/lib/use-fetch";
 import { prettyName } from "@/lib/utils";
 
@@ -90,7 +91,7 @@ export default function WalletPage() {
                   href="https://friendbot.stellar.org"
                   target="_blank"
                   rel="noreferrer"
-                  className="clip-cyber-sm border border-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted hover:text-text hover:border-cyan/60 transition"
+                  className={`clip-cyber-sm border border-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted hover:text-text hover:border-cyan/60 transition ${focusRing}`}
                   title="Fund this account with testnet XLM via Friendbot"
                 >
                   ▸ fund testnet
@@ -100,13 +101,13 @@ export default function WalletPage() {
                 <StellarExpertLink
                   kind="account"
                   id={address}
-                  className="clip-cyber-sm border border-border px-3 py-1.5 text-muted hover:border-violet/60 transition"
+                  className={`clip-cyber-sm border border-border px-3 py-1.5 text-muted hover:border-violet/60 transition ${focusRing}`}
                 />
               )}
               <button
                 onClick={() => refreshBalance()}
                 disabled={balanceLoading}
-                className="clip-cyber-sm border border-cyan/60 bg-cyan/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-cyan hover:bg-cyan/20 disabled:opacity-50 transition"
+                className={`clip-cyber-sm border border-cyan/60 bg-cyan/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-cyan hover:bg-cyan/20 disabled:opacity-50 transition ${focusRing}`}
               >
                 {balanceLoading ? "◉ refreshing…" : "↻ refresh"}
               </button>
@@ -167,7 +168,7 @@ export default function WalletPage() {
                   href={stellarExpertUrl("contract", id, info.network)}
                   target="_blank"
                   rel="noreferrer"
-                  className="clip-cyber-sm border border-border bg-bg/40 p-4 hover:border-violet/60 hover:bg-violet/5 transition"
+                  className={`clip-cyber-sm border border-border bg-bg/40 p-4 hover:border-violet/60 hover:bg-violet/5 transition ${focusRing}`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-semibold">{prettyName(name)}</span>
