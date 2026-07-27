@@ -1,9 +1,14 @@
 import Link from "next/link";
 import { ButtonLink } from "@/components/ui/button";
+import { focusRing } from "@/lib/ui";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+    // <main id="main"> keeps the root layout's skip link functional here.
+    <main
+      id="main"
+      className="flex min-h-screen flex-col items-center justify-center px-6 text-center"
+    >
       <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-cyan">
         {"// signal lost"}
       </p>
@@ -20,11 +25,11 @@ export default function NotFound() {
         </ButtonLink>
         <Link
           href="/app"
-          className="font-mono text-xs uppercase tracking-[0.18em] text-cyan hover:text-text transition-colors"
+          className={`font-mono text-xs uppercase tracking-[0.18em] text-cyan hover:text-text transition-colors ${focusRing}`}
         >
           Open console →
         </Link>
       </div>
-    </div>
+    </main>
   );
 }
