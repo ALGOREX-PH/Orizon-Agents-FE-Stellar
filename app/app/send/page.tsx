@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
+import { ErrorNote } from "@/components/ui/error-note";
 import { TxStatus, type TxState } from "@/components/ui/tx-status";
 import { HORIZON_URL, NETWORK_PASSPHRASE, useWallet } from "@/lib/wallet";
 import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
@@ -171,6 +172,13 @@ export default function SendPage() {
             </Badge>
           </div>
 
+          <form
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              void send();
+            }}
+          >
           <div className="space-y-4">
             <div>
               <label
@@ -187,6 +195,8 @@ export default function SendPage() {
                 spellCheck={false}
                 autoComplete="off"
                 disabled={submitting}
+                aria-invalid={Boolean(validation?.startsWith("destination"))}
+                aria-describedby={validation ? "send-validation" : undefined}
                 className={`mt-1.5 w-full bg-bg/60 border border-input p-3 font-mono text-sm placeholder:text-muted focus:border-violet transition disabled:opacity-50 ${focusRing}`}
               />
             </div>
@@ -250,23 +260,28 @@ export default function SendPage() {
           </div>
 
           <div className="mt-6 flex items-center justify-between flex-wrap gap-3">
-            <div className="font-mono text-[11px] text-muted">
-              {validation ? (
-                <span className="text-magenta">⚠ {validation}</span>
-              ) : (
-                <span>ready · base fee {BASE_FEE_STROOPS} stroops · timeout 60s</span>
-              )}
-            </div>
+            {validation ? (
+              <ErrorNote
+                id="send-validation"
+                className="border-0 bg-transparent p-0 text-[11px]"
+              >
+                ⚠ {validation}
+              </ErrorNote>
+            ) : (
+              <div className="font-mono text-[11px] text-muted">
+                ready · base fee {BASE_FEE_STROOPS} stroops · timeout 60s
+              </div>
+            )}
             <div className="flex gap-2">
               {(txState === "success" || txState === "failed") && (
-                <Button variant="outline" size="md" onClick={reset}>
+                <Button variant="outline" size="md" type="button" onClick={reset}>
                   reset
                 </Button>
               )}
               <Button
                 variant="cyan"
                 size="md"
-                onClick={send}
+                type="submit"
                 disabled={Boolean(validation) || submitting}
               >
                 {submitting
@@ -281,6 +296,7 @@ export default function SendPage() {
               </Button>
             </div>
           </div>
+          </form>
         </Card>
       )}
 
