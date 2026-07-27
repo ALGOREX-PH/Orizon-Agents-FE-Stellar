@@ -3,8 +3,10 @@ import { memo, useMemo } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ErrorNote } from "@/components/ui/error-note";
 import { StellarExpertLink, defaultExplorerNetwork } from "@/components/ui/stellar-link";
 import { getStellarNetwork } from "@/lib/api";
+import { focusRing } from "@/lib/ui";
 import { useFetch } from "@/lib/use-fetch";
 import { useStellarEvents, type FeedEvent } from "@/lib/stellar-events";
 import { prettyName } from "@/lib/utils";
@@ -81,18 +83,20 @@ export default function EventsPage() {
 
       {loadError && (
         <Card>
-          <div className="font-mono text-[11px] text-magenta">
+          <ErrorNote className="border-0 bg-transparent p-0 text-[11px]">
             backend offline — {loadError}
-          </div>
+          </ErrorNote>
         </Card>
       )}
 
       {error && (
         <Card>
-          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-magenta mb-2">
-            ▸ rpc error
-          </div>
-          <div className="font-mono text-[11px] text-magenta break-all">{error}</div>
+          <ErrorNote className="border-0 bg-transparent p-0">
+            <div className="text-[10px] uppercase tracking-[0.25em] mb-2">
+              ▸ rpc error
+            </div>
+            <div className="text-[11px] break-all">{error}</div>
+          </ErrorNote>
         </Card>
       )}
 
@@ -124,7 +128,10 @@ export default function EventsPage() {
           <div className="space-y-2">
             <div className="text-sm text-muted">
               No events yet. Run a workflow on{" "}
-              <Link href="/app/orchestrator" className="text-cyan hover:underline">
+              <Link
+                href="/app/orchestrator"
+                className={`text-cyan hover:underline ${focusRing}`}
+              >
                 /app/orchestrator
               </Link>{" "}
               — it'll publish <code className="text-cyan">charge</code> and{" "}
@@ -186,7 +193,11 @@ const EventRow = memo(function EventRow({
         <div className="font-mono text-[11px] text-muted break-all">
           {summarize(event.value)}
         </div>
-        <StellarExpertLink kind="tx" id={event.txHash} className="whitespace-nowrap">
+        <StellarExpertLink
+          kind="tx"
+          id={event.txHash}
+          className={`whitespace-nowrap ${focusRing}`}
+        >
           tx ▸ {event.txHash.slice(0, 8)}…
         </StellarExpertLink>
       </div>
