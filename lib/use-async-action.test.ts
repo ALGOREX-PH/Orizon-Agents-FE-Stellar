@@ -7,9 +7,13 @@
  * money-panel UIs), data retention across failures, and `reset`.
  */
 
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { toMessage, useAsyncAction } from "./use-async-action";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 // @testing-library/react's act() requires this flag in a bare jsdom env.
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
@@ -160,6 +164,92 @@ describe("useAsyncAction", () => {
     expect(result.current.data).toBeNull();
     expect(result.current.error).toBeNull();
     expect(result.current.pending).toBe(false);
+  });
+
+  it("lets the latest run win when runs settle out of order", async () => {
+    const d1 = deferred<string>();
+    const d2 = deferred<string>();
+    const queue = [d1.promise, d2.promise];
+    const { result } = renderHook(() => useAsyncAction(() => queue.shift()!));
+
+    let p1: Promise<string | undefined>;
+    let p2: Promise<string | undefined>;
+    act(() => {
+      p1 = result.current.run();
+    });
+    act(() => {
+      p2 = result.current.run();
+    });
+
+    // The newer run settles first and commits its result.
+    await act(async () => {
+      d2.resolve("newer");
+      await p2;
+    });
+    expect(result.current.data).toBe("newer");
+    expect(result.current.pending).toBe(false);
+
+    // The slower older run settles later — it must not clobber the state,
+    // though its own promise still resolves to its own value.
+    await act(async () => {
+      d1.resolve("older");
+      await p1;
+    });
+    expect(result.current.data).toBe("newer");
+    expect(result.current.pending).toBe(false);
+    await expect(p1!).resolves.toBe("older");
+  });
+
+  it("discards a stale run's rejection once a newer run has started", async () => {
+    const d1 = deferred<string>();
+    const d2 = deferred<string>();
+    const queue = [d1.promise, d2.promise];
+    const { result } = renderHook(() => useAsyncAction(() => queue.shift()!));
+
+    let p1: Promise<string | undefined>;
+    let p2: Promise<string | undefined>;
+    act(() => {
+      p1 = result.current.run();
+    });
+    act(() => {
+      p2 = result.current.run();
+    });
+
+    await act(async () => {
+      d2.resolve("newer");
+      await p2;
+    });
+    await act(async () => {
+      d1.reject(new Error("stale failure"));
+      await p1;
+    });
+    expect(result.current.error).toBeNull();
+    expect(result.current.data).toBe("newer");
+  });
+
+  it("ignores settles after unmount — no state updates, no act warnings", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const late = deferred<string>();
+    const resolving = renderHook(() => useAsyncAction(() => late.promise));
+    act(() => {
+      void resolving.result.current.run();
+    });
+    resolving.unmount();
+    late.resolve("too late");
+
+    const failing = deferred<string>();
+    const rejecting = renderHook(() => useAsyncAction(() => failing.promise));
+    act(() => {
+      void rejecting.result.current.run();
+    });
+    rejecting.unmount();
+    failing.reject(new Error("too late to fail"));
+
+    // Flush both settlements outside act — the guards must swallow them
+    // without touching state (would otherwise trigger act warnings).
+    await new Promise((r) => setTimeout(r, 0));
+    expect(errSpy).not.toHaveBeenCalled();
   });
 
   it("calls the latest fn on each run (no stale closure)", async () => {
