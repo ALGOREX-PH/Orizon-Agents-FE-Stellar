@@ -12,6 +12,7 @@ import {
   GET_DEDUPE_MS,
   clearGetCache,
   decompose,
+  getOverview,
   getReputation,
   getReputationParams,
   listAgents,
@@ -163,6 +164,42 @@ describe("getReputationParams", () => {
     await expect(getReputationParams()).rejects.toThrow(
       "GET /stellar/reputation/params → 503",
     );
+  });
+});
+
+describe("response guards", () => {
+  it("rejects a malformed overview payload as a normal request error", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { agents_online: 1, throughput: "not-an-array" }),
+    );
+
+    await expect(getOverview()).rejects.toThrow(
+      "malformed response from /metrics/overview",
+    );
+  });
+
+  it("rejects a malformed decompose payload as a normal request error", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { plan_id: "pln_1", steps: [], total_usdc: "0.03" }),
+    );
+
+    await expect(decompose("x")).rejects.toThrow(
+      "malformed response from /orchestrator/decompose",
+    );
+  });
+
+  it("resolves a well-formed guarded payload untouched", async () => {
+    const overview = {
+      agents_online: 12,
+      tasks_per_sec: 0.4,
+      avg_completion: 0.97,
+      avg_trust: 4.6,
+      throughput: [1, 2, 3],
+      skills: [{ name: "code", pct: 62, tone: "violet" }],
+    };
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, overview));
+
+    await expect(getOverview()).resolves.toEqual(overview);
   });
 });
 

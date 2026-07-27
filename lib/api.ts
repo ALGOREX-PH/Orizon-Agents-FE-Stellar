@@ -1,3 +1,11 @@
+import {
+  isArtifactResponse,
+  isDecomposeResponse,
+  isOverview,
+  isReputationBatch,
+  isStellarNetworkInfo,
+  isTaskList,
+} from "./guards";
 import type {
   Agent,
   ArtifactResponse,
@@ -83,7 +91,11 @@ function get<T>(path: string, parse?: (v: unknown) => T): Promise<T> {
   return promise;
 }
 
-async function post<T, B>(path: string, body: B): Promise<T> {
+async function post<T, B>(
+  path: string,
+  body: B,
+  parse?: (v: unknown) => T,
+): Promise<T> {
   const res = await fetchWithTimeout(
     "POST",
     path,
@@ -108,17 +120,36 @@ async function post<T, B>(path: string, body: B): Promise<T> {
     }
     throw new Error(`POST ${path} → ${res.status}${detail}`);
   }
-  return res.json();
+  const json: unknown = await res.json();
+  return parse ? parse(json) : (json as T);
+}
+
+/**
+ * Wraps a runtime guard into a parse fn for `get`/`post`: a payload that
+ * fails the guard rejects like any other request error and surfaces in the
+ * page's normal error state, instead of crashing mid-render on
+ * `undefined.toFixed(...)`.
+ */
+function ensure<T>(path: string, guard: (v: unknown) => v is T): (v: unknown) => T {
+  return (v) => {
+    if (!guard(v)) throw new Error(`malformed response from ${path}`);
+    return v;
+  };
 }
 
 export const listAgents = () => get<Agent[]>("/agents");
-export const listTasks = () => get<Task[]>("/tasks");
-export const getOverview = () => get<Overview>("/metrics/overview");
+export const listTasks = () => get<Task[]>("/tasks", ensure("/tasks", isTaskList));
+export const getOverview = () =>
+  get<Overview>("/metrics/overview", ensure("/metrics/overview", isOverview));
 export const getFlow = () => get<Flow>("/flow/default");
 export const getTrace = (taskId: string) => get<TraceLine[]>(`/trace/${taskId}`);
 
 export const decompose = (intent: string) =>
-  post<DecomposeResponse, { intent: string }>("/orchestrator/decompose", { intent });
+  post<DecomposeResponse, { intent: string }>(
+    "/orchestrator/decompose",
+    { intent },
+    ensure("/orchestrator/decompose", isDecomposeResponse),
+  );
 
 export const execute = (
   planId: string,
@@ -130,10 +161,17 @@ export const execute = (
   );
 
 export const getArtifact = (taskId: string) =>
-  get<ArtifactResponse>(`/tasks/${taskId}/artifact`);
+  get<ArtifactResponse>(
+    `/tasks/${taskId}/artifact`,
+    ensure(`/tasks/${taskId}/artifact`, isArtifactResponse),
+  );
 
 // ── Stellar / x402 ──────────────────────────────────────────
-export const getStellarNetwork = () => get<StellarNetworkInfo>("/stellar/network");
+export const getStellarNetwork = () =>
+  get<StellarNetworkInfo>(
+    "/stellar/network",
+    ensure("/stellar/network", isStellarNetworkInfo),
+  );
 
 export const buildAuthorize = (body: {
   payer: string;
@@ -146,7 +184,11 @@ export const buildAuthorize = (body: {
     body,
   );
 
-export const listReputation = () => get<ReputationBatch>("/stellar/reputation");
+export const listReputation = () =>
+  get<ReputationBatch>(
+    "/stellar/reputation",
+    ensure("/stellar/reputation", isReputationBatch),
+  );
 export const getReputationParams = () =>
   get<ReputationParams>("/stellar/reputation/params");
 export const getReputation = (agentId: string) =>
