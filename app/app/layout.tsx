@@ -1,7 +1,19 @@
+import type { Metadata } from "next";
 import { Sidebar } from "./_components/sidebar";
 import { Topbar } from "./_components/topbar";
 import { GridBg } from "@/components/ui/grid-bg";
 import { MobileNavProvider } from "./_components/mobile-nav-context";
+
+export const metadata: Metadata = {
+  title: {
+    default: "Console — Orizon Agents",
+    template: "%s · Orizon Agents",
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function AppLayout({
   children,
