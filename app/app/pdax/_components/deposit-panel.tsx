@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ErrorNote } from "@/components/ui/error-note";
 import { getPdaxCryptoDeposit } from "@/lib/pdax";
 import { inputCls } from "@/lib/ui";
 import { useAsyncAction } from "@/lib/use-async-action";
@@ -72,7 +73,9 @@ export function DepositPanel() {
         </Button>
       </div>
 
-      {err && <div className="mt-3 text-xs font-mono text-magenta">{err}</div>}
+      {err && (
+        <ErrorNote className="mt-3 border-0 bg-transparent p-0">{err}</ErrorNote>
+      )}
 
       {addr && (
         <div className="mt-4 border border-border bg-bg/40 p-4 space-y-2">

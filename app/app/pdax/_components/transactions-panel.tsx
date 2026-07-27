@@ -2,6 +2,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ErrorNote } from "@/components/ui/error-note";
 import { getPdaxCryptoTransactions } from "@/lib/pdax";
 import { statusTone } from "@/lib/ui";
 import { useAsyncAction } from "@/lib/use-async-action";
@@ -29,7 +30,9 @@ export function TransactionsPanel() {
         </Button>
       </div>
 
-      {err && <div className="mt-3 text-xs font-mono text-magenta">{err}</div>}
+      {err && (
+        <ErrorNote className="mt-3 border-0 bg-transparent p-0">{err}</ErrorNote>
+      )}
 
       <div className="mt-4 space-y-2">
         {txns === null && (

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ErrorNote } from "@/components/ui/error-note";
 import { getPdaxPrice, pdaxFirmQuote } from "@/lib/pdax";
 import type { PdaxSide } from "@/lib/pdax-types";
 import { inputCls } from "@/lib/ui";
@@ -82,7 +83,7 @@ export function PricePanel() {
       </div>
 
       {err && (
-        <div className="mt-3 text-xs font-mono text-magenta">{err}</div>
+        <ErrorNote className="mt-3 border-0 bg-transparent p-0">{err}</ErrorNote>
       )}
 
       {quote && (
