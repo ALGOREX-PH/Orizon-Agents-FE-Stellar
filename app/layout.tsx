@@ -23,11 +23,14 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
+// Decorative faces (logo wordmark, error headings, one tiny caption): loaded
+// on use rather than preloaded on every route.
 const displayFont = Michroma({
   subsets: ["latin"],
   weight: "400",
   variable: "--font-display",
   display: "swap",
+  preload: false,
 });
 
 const techMono = Share_Tech_Mono({
@@ -35,6 +38,7 @@ const techMono = Share_Tech_Mono({
   weight: "400",
   variable: "--font-techmono",
   display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
