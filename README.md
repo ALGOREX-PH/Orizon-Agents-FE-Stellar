@@ -1,6 +1,6 @@
 # Orizon Agents
 
-[![CI](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml/badge.svg)](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml) [![tests](https://img.shields.io/badge/tests-125%20passing-brightgreen)](./lib) [![Stellar Testnet](https://img.shields.io/badge/Stellar-Testnet-cyan)](https://stellar.expert/explorer/testnet/contract/CBJPTMAPMGODGZCZ2IMEQSRUX3WGUXNMKDTNN2KMJ3NFGYZ5OJ5525PI)
+[![CI](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml/badge.svg)](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml) [![tests](https://img.shields.io/badge/tests-151%20passing-brightgreen)](./lib) [![Stellar Testnet](https://img.shields.io/badge/Stellar-Testnet-cyan)](https://stellar.expert/explorer/testnet/contract/CBJPTMAPMGODGZCZ2IMEQSRUX3WGUXNMKDTNN2KMJ3NFGYZ5OJ5525PI)
 
 > **Type what you want. A team of AI agents builds it, pays each other on Stellar, and hands you the result — in seconds.**
 
@@ -147,13 +147,13 @@ npm test
 
 | Orange Belt requirement   | Where                                                                                                                                                                                                                                                                        |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **3+ tests passing**      | 125 tests across 14 files — [`lib/wallet-errors.test.ts`](./lib/wallet-errors.test.ts), [`lib/api.test.ts`](./lib/api.test.ts), [`lib/reputation-math.test.ts`](./lib/reputation-math.test.ts), [`components/ui/stellar-link.test.ts`](./components/ui/stellar-link.test.ts) |
+| **3+ tests passing**      | 151 unit tests across 15 files — [`lib/wallet-errors.test.ts`](./lib/wallet-errors.test.ts), [`lib/api.test.ts`](./lib/api.test.ts), [`lib/reputation-math.test.ts`](./lib/reputation-math.test.ts), [`components/ui/stellar-link.test.ts`](./components/ui/stellar-link.test.ts) |
 | README with complete docs | this file (White-Belt + Yellow-Belt + Orange-Belt sections)                                                                                                                                                                                                                  |
 | **Demo video (1 min)**    | [▸ watch on YouTube](https://youtu.be/E4EYx-RoxpY) — full intent → wallet → on-chain settlement flow                                                                                                                                                                         |
 | Live deploy               | https://orizon-agents-fe-stellar.vercel.app                                                                                                                                                                                                                                  |
 | 3+ meaningful commits     | `git log --oneline                                                                                                                                                                                                                                                           | head -20` — well over 3 |
 
-**Test output (`npm test`)** — Orange-Belt-era screenshot; the suite has since grown to 125 tests across 14 files:
+**Test output (`npm test`)** — Orange-Belt-era screenshot; the suite has since grown to 151 unit tests across 15 files:
 
 ![tests passing in Vitest](./docs/tests-passing.png)
 
@@ -172,7 +172,7 @@ Green Belt is about making the dApp ship-grade: cross-contract logic, CI, and mo
 | Green Belt requirement          | Where                                                                                                                                                                                                                                                         |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Inter-contract call** working | `PaymentEscrow.charge()` calls `AgentRegistry.owner_of()` + `Token.transfer()` — see [`contract/contract/payment-escrow/src/lib.rs:140`](./contract/contract/payment-escrow/src/lib.rs#L140) and [`:149`](./contract/contract/payment-escrow/src/lib.rs#L149) |
-| **CI/CD pipeline**              | GitHub Actions — [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs lint + tests + build on every push and PR. Status badge at the top of this README.                                                                                             |
+| **CI/CD pipeline**              | GitHub Actions — [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs typecheck, lint, format, coverage-gated tests, build, a bundle-size budget, and a Playwright E2E smoke job on every push and PR. Status badge at the top of this README.                                                                                             |
 | **Mobile responsive**           | App shell (sidebar collapses behind a hamburger drawer; main content reflows) — see screenshot below.                                                                                                                                                         |
 | **Custom token / pool**         | _Not applicable_ — workflow settles in **native XLM** via the Stellar Asset Contract (SAC) [`CDLZFC3S…CYSC`](https://stellar.expert/explorer/testnet/contract/CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC). No custom asset issued.              |
 | **Advanced event streaming**    | Already shipped in Yellow Belt — see `/app/events` polling RPC `getEvents` every 5 s, plus the BE's SSE trace stream.                                                                                                                                         |
@@ -195,7 +195,7 @@ Both are typed `contractclient` calls in [`contract/contract/payment-escrow/src/
 
 ### CI/CD
 
-Every push runs the GitHub Actions workflow above — `npm ci → lint → test → build`. The badge at the top of this README turns green when the latest run passes.
+Every push runs the GitHub Actions workflow above — `npm ci → typecheck → lint → format:check → test:coverage → build → bundle budget`, plus a parallel Playwright E2E smoke job. The badge at the top of this README turns green when the latest run passes.
 
 ![CI/CD passing](./docs/ci-passing.png)
 
