@@ -1,5 +1,5 @@
 "use client";
-import { NETWORK_NAME, useWallet } from "@/lib/wallet";
+import { useWallet } from "@/lib/wallet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,8 @@ export function ConnectWallet({
     address,
     walletName,
     network,
+    walletNetwork,
+    walletNetworkMismatch,
     connect,
     disconnect,
     loading,
@@ -27,9 +29,10 @@ export function ConnectWallet({
   } = useWallet();
 
   if (connected && address) {
-    const wrongNet =
-      network?.network &&
-      network.network.toUpperCase() !== NETWORK_NAME.toUpperCase();
+    // Compare what the wallet itself reported against this build's network.
+    // Unknown wallet network (unsupported getNetwork) → no false alarm.
+    const wrongNet = walletNetworkMismatch;
+    const netLabel = (walletNetwork?.network || network?.network || "stellar").toLowerCase();
     return (
       <div className={cn("flex items-center gap-2", className)}>
         {walletName && (
@@ -38,7 +41,7 @@ export function ConnectWallet({
           </span>
         )}
         <Badge tone={wrongNet ? "magenta" : "cyan"} dot>
-          {wrongNet ? "wrong net" : network?.network?.toLowerCase() || "stellar"}
+          {wrongNet ? "wrong net" : netLabel}
         </Badge>
         <button
           onClick={disconnect}
