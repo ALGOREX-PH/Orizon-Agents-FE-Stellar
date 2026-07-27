@@ -16,8 +16,9 @@ test.describe("marketing page", () => {
     // Hero heading — assert the landmark, not the exact copy.
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
-    // Top navigation is present.
-    await expect(page.locator("header nav")).toBeVisible();
+    // Top navigation is present (first() — a hidden mobile menu nav may
+    // also live in the header).
+    await expect(page.locator("header nav").first()).toBeVisible();
     await expect(
       page.getByRole("link", { name: /launch app/i }),
     ).toBeVisible();
