@@ -24,7 +24,11 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+    // <main id="main"> keeps the root layout's skip link functional here.
+    <main
+      id="main"
+      className="flex min-h-screen flex-col items-center justify-center px-6 text-center"
+    >
       <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-magenta">
         {"// system fault"}
       </p>
@@ -40,6 +44,6 @@ export default function Error({
           Try again
         </Button>
       </div>
-    </div>
+    </main>
   );
 }
