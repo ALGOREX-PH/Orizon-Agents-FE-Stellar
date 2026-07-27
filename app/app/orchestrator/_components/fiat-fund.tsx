@@ -48,18 +48,28 @@ export function FiatFund({
   const err = fundErr ?? quoteErr;
 
   // Server-authoritative funding quote: pesos that always cover the workflow
-  // (buffer + round-up applied backend-side).
+  // (buffer + round-up applied backend-side). The alive flag keeps a torn-down
+  // effect (unmount or usdcAmount change) from applying a stale response.
   useEffect(() => {
     if (!usdcAmount) return;
+    let alive = true;
     setQuoting(true);
     setQuoteErr(null);
     pdaxFundingQuote(String(usdcAmount))
       .then((q) => {
+        if (!alive) return;
         setQuote(q);
         setPhp(String(q.php_to_pay));
       })
-      .catch((e) => setQuoteErr(`couldn't price in PHP — ${toMessage(e)}`))
-      .finally(() => setQuoting(false));
+      .catch((e) => {
+        if (alive) setQuoteErr(`couldn't price in PHP — ${toMessage(e)}`);
+      })
+      .finally(() => {
+        if (alive) setQuoting(false);
+      });
+    return () => {
+      alive = false;
+    };
   }, [usdcAmount]);
 
   useEffect(() => {
