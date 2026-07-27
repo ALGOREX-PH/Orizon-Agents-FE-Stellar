@@ -153,10 +153,11 @@ export default function OrchestratorPage() {
       </div>
 
       <Card>
-        <label className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan">
+        <label htmlFor="intent" className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan">
           ▸ intent
         </label>
         <textarea
+          id="intent"
           value={intent}
           onChange={(e) => setIntent(e.target.value)}
           placeholder='e.g. "code a calculator web app"'
