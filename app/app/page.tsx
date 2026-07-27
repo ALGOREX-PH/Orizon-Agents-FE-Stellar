@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getOverview, listTasks } from "@/lib/api";
 import type { Overview, Task } from "@/lib/types";
+import { focusRing } from "@/lib/ui";
 import { usePolling } from "@/lib/use-polling";
 
 const statusTone: Record<Task["status"], "cyan" | "violet" | "muted" | "magenta"> = {
@@ -129,7 +130,7 @@ export default function OverviewPage() {
                   disabled
                   title="coming soon"
                   className={
-                    "clip-cyber-sm border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition " +
+                    `clip-cyber-sm border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition ${focusRing} ` +
                     (i === 1
                       ? "border-violet bg-violet/20 text-text"
                       : "border-border text-muted hover:text-text")
