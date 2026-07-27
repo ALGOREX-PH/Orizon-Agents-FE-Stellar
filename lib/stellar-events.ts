@@ -80,6 +80,8 @@ export function useStellarEvents(
       cursorRef.current = resp.cursor;
       setLatestLedger(resp.latestLedger);
       setLastTickAt(Date.now());
+      // A successful poll clears any stale error from a prior transient failure.
+      setError(null);
 
       if (resp.events.length === 0) return;
 

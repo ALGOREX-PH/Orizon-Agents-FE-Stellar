@@ -17,7 +17,7 @@ const statusTone: Record<Task["status"], "cyan" | "violet" | "muted" | "magenta"
 
 function Sparkline({ points }: { points: number[] }) {
   if (!points.length) return <div className="h-36" />;
-  const max = Math.max(...points);
+  const max = Math.max(...points) || 1;
   const w = 600;
   const h = 140;
   const path = points
@@ -125,6 +125,9 @@ export default function OverviewPage() {
               {["1h", "24h", "7d"].map((t, i) => (
                 <button
                   key={t}
+                  type="button"
+                  disabled
+                  title="coming soon"
                   className={
                     "clip-cyber-sm border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition " +
                     (i === 1

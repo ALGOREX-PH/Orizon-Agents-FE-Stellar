@@ -1,5 +1,4 @@
 "use client";
-import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
@@ -10,7 +9,8 @@ import {
   defaultExplorerNetwork,
   stellarExpertUrl,
 } from "@/components/ui/stellar-link";
-import type { StellarNetworkInfo } from "@/lib/types";
+import { getStellarNetwork } from "@/lib/api";
+import { useFetch } from "@/lib/use-fetch";
 import { prettyName } from "@/lib/utils";
 
 // Display label for the configured network — "mainnet" | "testnet".
@@ -19,26 +19,7 @@ const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet
 export default function WalletPage() {
   const { connected, address, network, xlmBalance, balanceLoading, refreshBalance } =
     useWallet();
-  const [info, setInfo] = useState<StellarNetworkInfo | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/stellar/network")
-      .then((r) => {
-        if (!r.ok) throw new Error(`GET /api/stellar/network → ${r.status}`);
-        return r.json();
-      })
-      .then((data) => {
-        if (alive) setInfo(data);
-      })
-      .catch((e) => {
-        if (alive) setError(e.message);
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const { data: info, error } = useFetch(getStellarNetwork, []);
 
   const networkMismatch =
     connected && info && network?.networkPassphrase !== info.network_passphrase;

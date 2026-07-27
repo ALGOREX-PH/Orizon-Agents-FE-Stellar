@@ -69,7 +69,7 @@ export function TxStatus({
   if (state === "idle") return null;
 
   return (
-    <div className={className}>
+    <div role="status" aria-live="polite" className={className}>
       <StepTrail state={state} />
       {state === "success" && hash && (
         <SuccessCard

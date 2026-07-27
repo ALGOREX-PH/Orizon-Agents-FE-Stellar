@@ -47,7 +47,10 @@ describe("get (via listAgents)", () => {
     await expect(listAgents()).resolves.toEqual(agents);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith("/api/agents", { cache: "no-store" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/agents",
+      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
+    );
   });
 
   it("rejects on a non-OK response with method, path and status in the message", async () => {
@@ -87,9 +90,10 @@ describe("listReputation", () => {
     await expect(listReputation()).resolves.toEqual(batch);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith("/api/stellar/reputation", {
-      cache: "no-store",
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/stellar/reputation",
+      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
+    );
   });
 
   it("rejects on a non-OK response with method, path and status in the message", async () => {
@@ -106,9 +110,10 @@ describe("getReputation", () => {
     await expect(getReputation("agt_01h8")).resolves.toEqual(repInfo);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith("/api/stellar/reputation/agt_01h8", {
-      cache: "no-store",
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/stellar/reputation/agt_01h8",
+      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
+    );
   });
 
   it("rejects on a non-OK response with method, path and status in the message", async () => {
@@ -141,9 +146,10 @@ describe("getReputationParams", () => {
     await expect(getReputationParams()).resolves.toEqual(params);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith("/api/stellar/reputation/params", {
-      cache: "no-store",
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/stellar/reputation/params",
+      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
+    );
   });
 
   it("rejects on a non-OK response with method, path and status in the message", async () => {
@@ -162,11 +168,15 @@ describe("post (via decompose)", () => {
 
     await expect(decompose("tetris")).resolves.toEqual(plan);
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/orchestrator/decompose", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ intent: "tetris" }),
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/orchestrator/decompose",
+      expect.objectContaining({
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ intent: "tetris" }),
+        signal: expect.any(AbortSignal),
+      }),
+    );
   });
 
   it("surfaces the backend `detail` field in the rejection message", async () => {

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import {
   JetBrains_Mono,
   Inter,
@@ -52,6 +52,11 @@ export const metadata: Metadata = {
     description:
       "The orchestration layer for autonomous digital labor. Agents hire, pay, and verify each other — on-chain.",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0A0014",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({

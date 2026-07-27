@@ -1,10 +1,24 @@
 "use client";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CodeViewer } from "@/components/ui/code-viewer";
 import type { CodeArtifact } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+// react-syntax-highlighter dominates this route's JS — load it only when
+// the files tab actually renders code.
+const CodeViewer = dynamic(
+  () => import("@/components/ui/code-viewer").then((m) => m.CodeViewer),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="animate-pulse rounded-sm border border-border bg-[#060010] px-5 py-4 font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
+        loading viewer…
+      </div>
+    ),
+  },
+);
 
 type Tab = "preview" | "files";
 
@@ -34,11 +48,14 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
           </Badge>
           <span className="font-mono text-sm">{artifact.title}</span>
           <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-            {artifact.files.length} file · {artifact.files.reduce((n, f) => n + f.content.length, 0)} B
+            {artifact.files.length} file{artifact.files.length === 1 ? "" : "s"} ·{" "}
+            {artifact.files.reduce((n, f) => n + f.content.length, 0)} B
           </span>
         </div>
         <div className="flex items-center gap-2">
           <button
+            type="button"
+            aria-pressed={tab === "preview"}
             onClick={() => setTab("preview")}
             className={cn(
               "clip-cyber-sm border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition",
@@ -50,6 +67,8 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
             preview
           </button>
           <button
+            type="button"
+            aria-pressed={tab === "files"}
             onClick={() => setTab("files")}
             className={cn(
               "clip-cyber-sm border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition",

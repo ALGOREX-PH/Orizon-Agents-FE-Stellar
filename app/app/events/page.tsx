@@ -1,10 +1,12 @@
 "use client";
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useMemo } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StellarExpertLink, defaultExplorerNetwork } from "@/components/ui/stellar-link";
+import { getStellarNetwork } from "@/lib/api";
+import { useFetch } from "@/lib/use-fetch";
 import { useStellarEvents, type FeedEvent } from "@/lib/stellar-events";
-import type { StellarNetworkInfo } from "@/lib/types";
 import { prettyName } from "@/lib/utils";
 
 const FEED_OPTIONS = { intervalMs: 5000, max: 60 };
@@ -12,29 +14,8 @@ const FEED_OPTIONS = { intervalMs: 5000, max: 60 };
 // Display label for the configured network — "mainnet" | "testnet".
 const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
-type StellarInfo = Pick<StellarNetworkInfo, "network" | "contracts">;
-
 export default function EventsPage() {
-  const [info, setInfo] = useState<StellarInfo | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/stellar/network")
-      .then((r) => {
-        if (!r.ok) throw new Error(`GET /api/stellar/network → ${r.status}`);
-        return r.json();
-      })
-      .then((data) => {
-        if (alive) setInfo(data);
-      })
-      .catch((e) => {
-        if (alive) setLoadError(e.message);
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const { data: info, error: loadError } = useFetch(getStellarNetwork, []);
 
   const contractIds = useMemo(
     () => (info ? Object.values(info.contracts) : null),
@@ -123,9 +104,9 @@ export default function EventsPage() {
           <div className="space-y-2">
             <div className="text-sm text-muted">
               No events yet. Run a workflow on{" "}
-              <a href="/app/orchestrator" className="text-cyan hover:underline">
+              <Link href="/app/orchestrator" className="text-cyan hover:underline">
                 /app/orchestrator
-              </a>{" "}
+              </Link>{" "}
               — it'll publish <code className="text-cyan">charge</code> and{" "}
               <code className="text-cyan">seal</code> events that show up here within a
               ledger.
