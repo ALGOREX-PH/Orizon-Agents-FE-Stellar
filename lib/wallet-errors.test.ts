@@ -8,7 +8,11 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { classifyError, isFriendlyError, wrongNetworkError } from "./wallet-errors";
+import {
+  classifyError,
+  isFriendlyError,
+  wrongNetworkError,
+} from "./wallet-errors";
 
 describe("classifyError", () => {
   it("maps Freighter user-rejected message to user_rejected", () => {

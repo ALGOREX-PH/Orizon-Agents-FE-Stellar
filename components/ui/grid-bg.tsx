@@ -28,7 +28,8 @@ export function Glow({
   className?: string;
 }) {
   const palette = {
-    violet: "bg-[radial-gradient(closest-side,rgba(176,38,255,0.55),transparent)]",
+    violet:
+      "bg-[radial-gradient(closest-side,rgba(176,38,255,0.55),transparent)]",
     cyan: "bg-[radial-gradient(closest-side,rgba(0,255,209,0.35),transparent)]",
     magenta:
       "bg-[radial-gradient(closest-side,rgba(255,46,154,0.45),transparent)]",

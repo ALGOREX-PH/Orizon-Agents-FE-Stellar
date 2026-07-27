@@ -52,13 +52,7 @@ export type ExecuteResponse = {
 };
 
 export type TraceLevel =
-  | "input"
-  | "exec"
-  | "proof"
-  | "cost"
-  | "out"
-  | "error"
-  | "artifact";
+  "input" | "exec" | "proof" | "cost" | "out" | "error" | "artifact";
 export type TraceLine = { t: string; level: TraceLevel; msg: string };
 
 export type ArtifactFile = {
@@ -81,7 +75,13 @@ export type ArtifactResponse = {
   proof_tx?: string | null;
 };
 
-export type FlowNode = { id: string; label: string; sub: string; x: number; y: number };
+export type FlowNode = {
+  id: string;
+  label: string;
+  sub: string;
+  x: number;
+  y: number;
+};
 export type Flow = { nodes: FlowNode[]; edges: [string, string][] };
 
 export type Overview = {

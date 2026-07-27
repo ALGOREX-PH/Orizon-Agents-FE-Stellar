@@ -16,18 +16,20 @@ import { useFetch } from "@/lib/use-fetch";
  * the page renders fully even with the chain or backend unreachable.
  */
 export default function ReputationPage() {
-  const { data: agents, error: agentsError, loading: agentsLoading } = useFetch(
-    listAgents,
-    [],
-    { revalidateOnFocus: true },
-  );
-  const { data: batch, error: batchError, loading: batchLoading } = useFetch(
-    listReputation,
-    [],
-    { revalidateOnFocus: true },
-  );
+  const {
+    data: agents,
+    error: agentsError,
+    loading: agentsLoading,
+  } = useFetch(listAgents, [], { revalidateOnFocus: true });
+  const {
+    data: batch,
+    error: batchError,
+    loading: batchLoading,
+  } = useFetch(listReputation, [], { revalidateOnFocus: true });
   // Static config — the calculator and ledger card fall back to defaults.
-  const { data: params } = useFetch(getReputationParams, [], { revalidateOnFocus: true });
+  const { data: params } = useFetch(getReputationParams, [], {
+    revalidateOnFocus: true,
+  });
 
   return (
     <div className="space-y-10">
@@ -51,8 +53,8 @@ export default function ReputationPage() {
             Leaderboard
           </h2>
           <p className="mt-1 text-sm text-muted">
-            Every registered agent, ranked by its smoothed score. Agents
-            without settled on-chain evidence show the ≈ prior.
+            Every registered agent, ranked by its smoothed score. Agents without
+            settled on-chain evidence show the ≈ prior.
           </p>
         </div>
         <RepLeaderboard

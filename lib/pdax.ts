@@ -28,7 +28,8 @@ async function get<T>(path: string): Promise<T> {
     { cache: "no-store" },
     GET_TIMEOUT_MS,
   );
-  if (!res.ok) throw new Error(`GET ${path} → ${res.status}${await detail(res)}`);
+  if (!res.ok)
+    throw new Error(`GET ${path} → ${res.status}${await detail(res)}`);
   return res.json();
 }
 
@@ -43,23 +44,31 @@ async function post<T, B>(path: string, body: B): Promise<T> {
     },
     POST_TIMEOUT_MS,
   );
-  if (!res.ok) throw new Error(`POST ${path} → ${res.status}${await detail(res)}`);
+  if (!res.ok)
+    throw new Error(`POST ${path} → ${res.status}${await detail(res)}`);
   return res.json();
 }
 
 async function detail(res: Response): Promise<string> {
   try {
     const j = await res.json();
-    return j?.detail ? ` — ${j.detail}` : ` — ${JSON.stringify(j).slice(0, 300)}`;
+    return j?.detail
+      ? ` — ${j.detail}`
+      : ` — ${JSON.stringify(j).slice(0, 300)}`;
   } catch {
     return "";
   }
 }
 
 function qs(params: Record<string, string | number | undefined>): string {
-  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== "");
+  const entries = Object.entries(params).filter(
+    ([, v]) => v !== undefined && v !== "",
+  );
   return entries.length
-    ? "?" + entries.map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join("&")
+    ? "?" +
+        entries
+          .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
+          .join("&")
     : "";
 }
 
@@ -93,7 +102,10 @@ export const getPdaxCryptoTransactions = (p?: {
   type?: string;
   page?: number;
   pageSize?: number;
-}) => get<{ transactions: PdaxCryptoTransaction[] }>(`/crypto/transactions${qs(p ?? {})}`);
+}) =>
+  get<{ transactions: PdaxCryptoTransaction[] }>(
+    `/crypto/transactions${qs(p ?? {})}`,
+  );
 
 // ── ramp (PHP <-> USDCXLM orchestration) ────────────────────
 export const pdaxRampEstimate = (

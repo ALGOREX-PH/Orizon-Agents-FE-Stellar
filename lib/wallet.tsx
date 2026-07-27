@@ -72,7 +72,10 @@ type WalletState = {
   balanceLoading: boolean;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
-  signXdr: (xdr: string, opts?: { networkPassphrase?: string }) => Promise<string>;
+  signXdr: (
+    xdr: string,
+    opts?: { networkPassphrase?: string },
+  ) => Promise<string>;
   refreshBalance: () => Promise<void>;
 };
 
@@ -161,7 +164,11 @@ function saveSession(s: StoredSession | null) {
 async function probeWalletNetwork(kit: Kit): Promise<NetworkDetails | null> {
   try {
     const net = await kit.getNetwork();
-    if (net && typeof net.networkPassphrase === "string" && net.networkPassphrase) {
+    if (
+      net &&
+      typeof net.networkPassphrase === "string" &&
+      net.networkPassphrase
+    ) {
       return {
         network: typeof net.network === "string" ? net.network : "",
         networkPassphrase: net.networkPassphrase,
@@ -183,7 +190,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [xlmBalance, setXlmBalance] = useState<string | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
   // What the connected wallet itself reported via getNetwork() — null = unknown.
-  const [walletNetwork, setWalletNetwork] = useState<NetworkDetails | null>(null);
+  const [walletNetwork, setWalletNetwork] = useState<NetworkDetails | null>(
+    null,
+  );
 
   const network = useMemo<NetworkDetails>(
     () => ({ network: NETWORK_NAME, networkPassphrase: NETWORK_PASSPHRASE }),
@@ -194,8 +203,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   // a passphrase; wallets that can't report one never trigger the warning.
   const walletNetworkMismatch = Boolean(
     address &&
-      walletNetwork &&
-      walletNetwork.networkPassphrase !== NETWORK_PASSPHRASE,
+    walletNetwork &&
+    walletNetwork.networkPassphrase !== NETWORK_PASSPHRASE,
   );
 
   const fetchBalance = useCallback(async (g: string) => {
@@ -213,7 +222,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       }
       const j = await r.json();
       const native = j.balances?.find(
-        (b: { asset_type: string; balance: string }) => b.asset_type === "native",
+        (b: { asset_type: string; balance: string }) =>
+          b.asset_type === "native",
       );
       setXlmBalance(native?.balance ?? "0");
     } catch {

@@ -44,7 +44,11 @@ function ev(id: string, ledger = 990) {
   };
 }
 
-function page(cursor: string, latestLedger: number, events: ReturnType<typeof ev>[]) {
+function page(
+  cursor: string,
+  latestLedger: number,
+  events: ReturnType<typeof ev>[],
+) {
   return { cursor, latestLedger, events };
 }
 
@@ -164,7 +168,9 @@ describe("useStellarEvents", () => {
   it("drops an expired cursor and re-anchors on the start ledger", async () => {
     getEventsMock
       .mockResolvedValueOnce(page("cur-1", 1000, [ev("e1")]))
-      .mockRejectedValueOnce(new Error("cursor is invalid or outside retention"))
+      .mockRejectedValueOnce(
+        new Error("cursor is invalid or outside retention"),
+      )
       .mockResolvedValueOnce(page("cur-2", 1001, []));
 
     renderHook(() => useStellarEvents(IDS, { intervalMs: INTERVAL }));

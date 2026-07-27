@@ -19,9 +19,7 @@ test.describe("marketing page", () => {
     // Top navigation is present (first() — a hidden mobile menu nav may
     // also live in the header).
     await expect(page.locator("header nav").first()).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: /launch app/i }),
-    ).toBeVisible();
+    await expect(page.getByRole("link", { name: /launch app/i })).toBeVisible();
 
     // Structured data ships as static HTML.
     const jsonLd = page.locator('script[type="application/ld+json"]');

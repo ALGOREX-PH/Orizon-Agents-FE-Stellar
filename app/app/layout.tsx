@@ -24,11 +24,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <MobileNavProvider>
       <link rel="preconnect" href={HORIZON_ORIGIN} crossOrigin="" />
@@ -40,7 +36,10 @@ export default function AppLayout({
         <Sidebar />
         <ConsoleContent>
           <Topbar />
-          <main id="main" className="relative px-4 sm:px-6 md:px-8 py-6 md:py-8">
+          <main
+            id="main"
+            className="relative px-4 sm:px-6 md:px-8 py-6 md:py-8"
+          >
             {children}
           </main>
         </ConsoleContent>

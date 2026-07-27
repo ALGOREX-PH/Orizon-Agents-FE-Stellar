@@ -50,7 +50,9 @@ function TracePageInner() {
   const [lines, setLines] = useState<TraceLine[]>([]);
   const [done, setDone] = useState(false);
   const [tab, setTab] = useState<Tab>("trace");
-  const [artifactData, setArtifactData] = useState<ArtifactResponse | null>(null);
+  const [artifactData, setArtifactData] = useState<ArtifactResponse | null>(
+    null,
+  );
   const [artifactError, setArtifactError] = useState<string | null>(null);
   const [streamError, setStreamError] = useState(false);
 
@@ -139,7 +141,8 @@ function TracePageInner() {
     if (taskId) return;
     if (!demoPlaying) return;
     if (demoCursor >= demoTrace.length) return;
-    const prevT = demoCursor === 0 ? 0 : parseFloat(demoTrace[demoCursor - 1].t);
+    const prevT =
+      demoCursor === 0 ? 0 : parseFloat(demoTrace[demoCursor - 1].t);
     const nextT = parseFloat(demoTrace[demoCursor].t);
     const rawDelta = Math.round((nextT - prevT) * 1000);
     // Floor 120ms so very-fast steps still feel like motion; cap 2800ms so a
@@ -183,7 +186,11 @@ function TracePageInner() {
         </div>
         {!taskId && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setDemoPlaying((p) => !p)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDemoPlaying((p) => !p)}
+            >
               {demoPlaying ? "⏸ Pause" : "▸ Play"}
             </Button>
             <Button
@@ -333,7 +340,9 @@ function TracePageInner() {
                     <dt className="text-muted font-mono text-[11px] uppercase tracking-widest">
                       {k}
                     </dt>
-                    <dd className="font-mono truncate max-w-[160px] text-right">{v}</dd>
+                    <dd className="font-mono truncate max-w-[160px] text-right">
+                      {v}
+                    </dd>
                   </div>
                 ))}
               </dl>
@@ -372,7 +381,9 @@ function TxRow({ label, hash }: { label: string; hash: string }) {
 
 export default function TracePage() {
   return (
-    <Suspense fallback={<div className="font-mono text-sm text-muted">loading…</div>}>
+    <Suspense
+      fallback={<div className="font-mono text-sm text-muted">loading…</div>}
+    >
       <TracePageInner />
     </Suspense>
   );

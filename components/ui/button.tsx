@@ -32,11 +32,15 @@ type Common = {
   children: ReactNode;
 };
 
-type AsButton = Common & ButtonHTMLAttributes<HTMLButtonElement> & { href?: undefined };
+type AsButton = Common &
+  ButtonHTMLAttributes<HTMLButtonElement> & { href?: undefined };
 type AsLink = Common & { href: string };
 
 export const Button = forwardRef<HTMLButtonElement, AsButton>(
-  ({ variant = "primary", size = "md", className, children, ...props }, ref) => (
+  (
+    { variant = "primary", size = "md", className, children, ...props },
+    ref,
+  ) => (
     <button
       ref={ref}
       className={cn(base, variants[variant], sizes[size], className)}

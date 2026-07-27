@@ -24,8 +24,14 @@ export function PricePanel() {
     pending: busy,
     reset,
   } = useAsyncAction(async (firmQuote: boolean) => {
-    const params = { quote_currency: quoteCurrency, side, base_quantity: baseQuantity };
-    const quote = firmQuote ? await pdaxFirmQuote(params) : await getPdaxPrice(params);
+    const params = {
+      quote_currency: quoteCurrency,
+      side,
+      base_quantity: baseQuantity,
+    };
+    const quote = firmQuote
+      ? await pdaxFirmQuote(params)
+      : await getPdaxPrice(params);
     return { quote, firm: firmQuote };
   });
 
@@ -74,16 +80,28 @@ export function PricePanel() {
       </div>
 
       <div className="mt-4 flex gap-3">
-        <Button size="sm" variant="outline" onClick={() => run(false)} disabled={busy}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => run(false)}
+          disabled={busy}
+        >
           {busy ? "◉ …" : "indicative price"}
         </Button>
-        <Button size="sm" variant="cyan" onClick={() => run(true)} disabled={busy}>
+        <Button
+          size="sm"
+          variant="cyan"
+          onClick={() => run(true)}
+          disabled={busy}
+        >
           firm quote
         </Button>
       </div>
 
       {err && (
-        <ErrorNote className="mt-3 border-0 bg-transparent p-0">{err}</ErrorNote>
+        <ErrorNote className="mt-3 border-0 bg-transparent p-0">
+          {err}
+        </ErrorNote>
       )}
 
       {quote && (
@@ -92,11 +110,13 @@ export function PricePanel() {
             <span className="font-mono text-sm">
               {quote.side} {quote.base_quantity} {quote.quote_currency}
             </span>
-            <Badge tone={firm ? "cyan" : "muted"}>{firm ? "firm" : "indicative"}</Badge>
+            <Badge tone={firm ? "cyan" : "muted"}>
+              {firm ? "firm" : "indicative"}
+            </Badge>
           </div>
           <div className="font-mono text-xs text-muted">
-            price {quote.price} {quote.base_currency} · total {quote.total_amount}{" "}
-            {quote.base_currency}
+            price {quote.price} {quote.base_currency} · total{" "}
+            {quote.total_amount} {quote.base_currency}
           </div>
           {firm && quote.quote_id && (
             <div className="font-mono text-[10px] text-cyan break-all">

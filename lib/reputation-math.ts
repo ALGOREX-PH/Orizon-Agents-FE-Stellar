@@ -35,7 +35,9 @@ export function smoothedBps(
   const den = p.prior_weight_usdc + weightUsdc;
   if (den <= 0) return p.prior_bps;
   return clampBps(
-    Math.floor((p.prior_weight_usdc * p.prior_bps + meanBps * weightUsdc) / den),
+    Math.floor(
+      (p.prior_weight_usdc * p.prior_bps + meanBps * weightUsdc) / den,
+    ),
   );
 }
 

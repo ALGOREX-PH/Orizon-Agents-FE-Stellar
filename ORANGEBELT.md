@@ -39,16 +39,17 @@ Action list for completing **Level 3 — Orange Belt** of the Stellar Composabil
 
 The video has to fit **60 seconds**. Tight script:
 
-| Time     | What to show                                                                                       |
-| -------- | -------------------------------------------------------------------------------------------------- |
-| 0:00–0:08 | Open `/app/orchestrator`, type `code a calculator web app`, click **Decompose ▸**                  |
-| 0:08–0:20 | Click **Connect Wallet** → kit modal opens → pick Freighter → sign **Authorize & Execute**         |
-| 0:20–0:38 | Trace page streams the workflow → final calculator artifact loads in the iframe                   |
-| 0:38–0:48 | Click `view on stellar.expert` next to a `charge` receipt → on-chain tx visible                    |
-| 0:48–0:55 | Quick flash of `/app/events` showing the `charge` and `seal` events live                           |
-| 0:55–1:00 | `/app/wallet` showing the balance + connected state                                                 |
+| Time      | What to show                                                                               |
+| --------- | ------------------------------------------------------------------------------------------ |
+| 0:00–0:08 | Open `/app/orchestrator`, type `code a calculator web app`, click **Decompose ▸**          |
+| 0:08–0:20 | Click **Connect Wallet** → kit modal opens → pick Freighter → sign **Authorize & Execute** |
+| 0:20–0:38 | Trace page streams the workflow → final calculator artifact loads in the iframe            |
+| 0:38–0:48 | Click `view on stellar.expert` next to a `charge` receipt → on-chain tx visible            |
+| 0:48–0:55 | Quick flash of `/app/events` showing the `charge` and `seal` events live                   |
+| 0:55–1:00 | `/app/wallet` showing the balance + connected state                                        |
 
 **Tools (pick one):**
+
 - **Loom** (easiest) — https://loom.com → record screen → Loom auto-uploads → copy share link.
 - **YouTube unlisted** — OBS or Windows Game Bar (`Win+Alt+R`) → record → upload to YouTube as **Unlisted** → copy URL.
 
@@ -100,15 +101,15 @@ git push origin main
 
 ## Requirements ↔ where it's implemented
 
-| Orange Belt requirement | Status | File / location |
-| --- | --- | --- |
-| Mini-dApp fully functional | ✅ | live at `https://orizon-agents-fe-stellar.vercel.app` |
-| **Minimum 3 tests passing** | ✅ | `lib/wallet-errors.test.ts` (5 tests) |
-| Test runner installed | ✅ | `vitest@^4` + `vitest.config.ts` |
-| `npm test` script | ✅ | `package.json` |
-| README — complete documentation | ✅ | `README.md` (White + Yellow + Orange sections) |
-| **Demo video (1 minute)** | ⚠️ pending | record + paste URL into README |
-| Test-output screenshot | ⚠️ pending | `public/tests-passing.png` |
-| **3+ meaningful commits** | ✅ | 50+ commits in log; 3 more from steps 5 above |
-| Live demo link in README | ✅ | https://orizon-agents-fe-stellar.vercel.app |
-| Reviewer revision: `contract/` folder | ✅ | resolved across all 3 belts |
+| Orange Belt requirement               | Status     | File / location                                       |
+| ------------------------------------- | ---------- | ----------------------------------------------------- |
+| Mini-dApp fully functional            | ✅         | live at `https://orizon-agents-fe-stellar.vercel.app` |
+| **Minimum 3 tests passing**           | ✅         | `lib/wallet-errors.test.ts` (5 tests)                 |
+| Test runner installed                 | ✅         | `vitest@^4` + `vitest.config.ts`                      |
+| `npm test` script                     | ✅         | `package.json`                                        |
+| README — complete documentation       | ✅         | `README.md` (White + Yellow + Orange sections)        |
+| **Demo video (1 minute)**             | ⚠️ pending | record + paste URL into README                        |
+| Test-output screenshot                | ⚠️ pending | `public/tests-passing.png`                            |
+| **3+ meaningful commits**             | ✅         | 50+ commits in log; 3 more from steps 5 above         |
+| Live demo link in README              | ✅         | https://orizon-agents-fe-stellar.vercel.app           |
+| Reviewer revision: `contract/` folder | ✅         | resolved across all 3 belts                           |

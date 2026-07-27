@@ -16,7 +16,9 @@
 // (validated at build time), shared with wallet.tsx and the explorer links.
 import { IS_MAINNET } from "@/lib/env";
 
-const NETWORK_LABEL = IS_MAINNET ? "Stellar Public network" : "Stellar Test Net";
+const NETWORK_LABEL = IS_MAINNET
+  ? "Stellar Public network"
+  : "Stellar Test Net";
 const TOP_UP_ADVICE = IS_MAINNET
   ? "Fund the wallet with XLM and retry."
   : "Top up via Friendbot and try again.";
@@ -202,7 +204,8 @@ export function classifyError(e: unknown): FriendlyError {
     return {
       kind: "user_rejected",
       title: "Signature cancelled",
-      detail: "You closed or declined the signing prompt — nothing was sent on-chain.",
+      detail:
+        "You closed or declined the signing prompt — nothing was sent on-chain.",
       raw,
     };
   }
@@ -243,7 +246,13 @@ function extractHorizonResultCodes(
 ): { transaction?: string; operations?: string[] } | null {
   if (!e || typeof e !== "object") return null;
   const anyE = e as {
-    response?: { data?: { extras?: { result_codes?: { transaction?: string; operations?: string[] } } } };
+    response?: {
+      data?: {
+        extras?: {
+          result_codes?: { transaction?: string; operations?: string[] };
+        };
+      };
+    };
   };
   return anyE.response?.data?.extras?.result_codes ?? null;
 }

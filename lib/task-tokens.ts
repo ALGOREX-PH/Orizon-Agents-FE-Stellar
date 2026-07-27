@@ -29,7 +29,9 @@ function readEntries(): Entry[] {
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
       (e): e is Entry =>
-        Array.isArray(e) && typeof e[0] === "string" && typeof e[1] === "string",
+        Array.isArray(e) &&
+        typeof e[0] === "string" &&
+        typeof e[1] === "string",
     );
   } catch {
     return [];

@@ -32,7 +32,8 @@ type FetchMockResponse = {
   text: () => Promise<string>;
 };
 
-const fetchMock = vi.fn<(input: string, init?: RequestInit) => Promise<FetchMockResponse>>();
+const fetchMock =
+  vi.fn<(input: string, init?: RequestInit) => Promise<FetchMockResponse>>();
 vi.stubGlobal("fetch", fetchMock);
 
 // This suite runs in node (no DOM): give lib/task-tokens a window with a
@@ -86,7 +87,10 @@ describe("get (via listAgents)", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/agents",
-      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
+      expect.objectContaining({
+        cache: "no-store",
+        signal: expect.any(AbortSignal),
+      }),
     );
   });
 
@@ -129,14 +133,21 @@ describe("listReputation", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/stellar/reputation",
-      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
+      expect.objectContaining({
+        cache: "no-store",
+        signal: expect.any(AbortSignal),
+      }),
     );
   });
 
   it("rejects on a non-OK response with method, path and status in the message", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(502, { detail: "horizon down" }));
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(502, { detail: "horizon down" }),
+    );
 
-    await expect(listReputation()).rejects.toThrow("GET /stellar/reputation → 502");
+    await expect(listReputation()).rejects.toThrow(
+      "GET /stellar/reputation → 502",
+    );
   });
 });
 
@@ -149,12 +160,17 @@ describe("getReputation", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/stellar/reputation/agt_01h8",
-      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
+      expect.objectContaining({
+        cache: "no-store",
+        signal: expect.any(AbortSignal),
+      }),
     );
   });
 
   it("rejects on a non-OK response with method, path and status in the message", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(404, { detail: "unknown agent" }));
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(404, { detail: "unknown agent" }),
+    );
 
     await expect(getReputation("agt_nope")).rejects.toThrow(
       "GET /stellar/reputation/agt_nope → 404",
@@ -185,7 +201,10 @@ describe("getReputationParams", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/stellar/reputation/params",
-      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
+      expect.objectContaining({
+        cache: "no-store",
+        signal: expect.any(AbortSignal),
+      }),
     );
   });
 
@@ -279,7 +298,13 @@ describe("get dedupe cache", () => {
 
 describe("post (via decompose)", () => {
   it("sends a JSON body with content-type header and resolves parsed JSON", async () => {
-    const plan = { plan_id: "pln_1", intent: "tetris", steps: [], total_usdc: 0, total_eta: 0 };
+    const plan = {
+      plan_id: "pln_1",
+      intent: "tetris",
+      steps: [],
+      total_usdc: 0,
+      total_eta: 0,
+    };
     fetchMock.mockResolvedValueOnce(jsonResponse(200, plan));
 
     await expect(decompose("tetris")).resolves.toEqual(plan);
@@ -296,7 +321,9 @@ describe("post (via decompose)", () => {
   });
 
   it("surfaces the backend `detail` field in the rejection message", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(422, { detail: "plan too vague" }));
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(422, { detail: "plan too vague" }),
+    );
 
     await expect(decompose("x")).rejects.toThrow(
       "POST /orchestrator/decompose → 422 — plan too vague",
@@ -318,7 +345,10 @@ describe("post (via decompose)", () => {
 
   it("falls back to detail when the envelope carries no message", async () => {
     fetchMock.mockResolvedValueOnce(
-      jsonResponse(422, { error: { code: "invalid_plan" }, detail: "plan too vague" }),
+      jsonResponse(422, {
+        error: { code: "invalid_plan" },
+        detail: "plan too vague",
+      }),
     );
 
     await expect(decompose("x")).rejects.toThrow(
@@ -378,7 +408,9 @@ describe("post (via decompose)", () => {
       text: () => Promise.reject(new Error("no body")),
     });
 
-    await expect(decompose("x")).rejects.toThrow("POST /orchestrator/decompose → 500");
+    await expect(decompose("x")).rejects.toThrow(
+      "POST /orchestrator/decompose → 500",
+    );
   });
 
   it("propagates a network-level rejection untouched", async () => {

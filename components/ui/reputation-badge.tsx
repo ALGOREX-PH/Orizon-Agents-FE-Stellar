@@ -60,9 +60,7 @@ export function ReputationBadge({
         className,
       )}
     >
-      <span aria-hidden="true">
-        {prior ? "≈" : ""}★
-      </span>
+      <span aria-hidden="true">{prior ? "≈" : ""}★</span>
       {score(bps)}
       {showCount && <span className="opacity-70">· {count}</span>}
       {disputePct && <span className="text-magenta">⚑ {disputePct}%</span>}

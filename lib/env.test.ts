@@ -41,7 +41,10 @@ describe("env", () => {
 
   it("rejects an unknown passphrase", async () => {
     await expect(
-      loadEnv({ NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE: "Publc Global Stellar Network ; September 2015" }),
+      loadEnv({
+        NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE:
+          "Publc Global Stellar Network ; September 2015",
+      }),
     ).rejects.toThrow(/not a known Stellar network/);
   });
 
@@ -56,7 +59,9 @@ describe("env", () => {
 
   it("rejects a testnet passphrase with a mainnet endpoint", async () => {
     await expect(
-      loadEnv({ NEXT_PUBLIC_SOROBAN_RPC_URL: "https://mainnet.sorobanrpc.com" }),
+      loadEnv({
+        NEXT_PUBLIC_SOROBAN_RPC_URL: "https://mainnet.sorobanrpc.com",
+      }),
     ).rejects.toThrow(/mainnet endpoint but the passphrase is not mainnet/);
   });
 

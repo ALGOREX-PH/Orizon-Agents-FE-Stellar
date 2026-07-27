@@ -96,7 +96,13 @@ describe("openTraceStream reconnect", () => {
 
   it("does not fire onReset when disposed before the retry timer elapses", () => {
     const onReset = vi.fn();
-    const dispose = openTraceStream("tsk_2", () => {}, undefined, undefined, onReset);
+    const dispose = openTraceStream(
+      "tsk_2",
+      () => {},
+      undefined,
+      undefined,
+      onReset,
+    );
 
     FakeEventSource.instances[0].emit("error");
     dispose();

@@ -79,7 +79,12 @@ export function Nav() {
             onClick={() => setOpen((v) => !v)}
             className="grid h-9 w-9 place-items-center text-muted hover:text-text transition-colors md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan"
           >
-            <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5" aria-hidden="true">
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              className="h-5 w-5"
+              aria-hidden="true"
+            >
               {open ? (
                 <path
                   d="M5 5l10 10M15 5L5 15"

@@ -74,7 +74,9 @@ export function DepositPanel() {
       </div>
 
       {err && (
-        <ErrorNote className="mt-3 border-0 bg-transparent p-0">{err}</ErrorNote>
+        <ErrorNote className="mt-3 border-0 bg-transparent p-0">
+          {err}
+        </ErrorNote>
       )}
 
       {addr && (
@@ -84,7 +86,9 @@ export function DepositPanel() {
           </div>
           <div className="font-mono text-xs break-all">{addr.address}</div>
           {addr.tag && (
-            <div className="font-mono text-[11px] text-cyan">memo / tag: {addr.tag}</div>
+            <div className="font-mono text-[11px] text-cyan">
+              memo / tag: {addr.tag}
+            </div>
           )}
           <Button size="sm" variant="ghost" onClick={copy}>
             {copied ? "copied ✓" : "copy address"}

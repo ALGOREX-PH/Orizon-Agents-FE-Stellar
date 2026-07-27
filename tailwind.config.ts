@@ -44,8 +44,7 @@ const config: Config = {
         "inner-glow": "inset 0 0 40px rgba(176, 38, 255, 0.12)",
       },
       backgroundImage: {
-        grid:
-          "linear-gradient(rgba(176, 38, 255, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(176, 38, 255, 0.08) 1px, transparent 1px)",
+        grid: "linear-gradient(rgba(176, 38, 255, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(176, 38, 255, 0.08) 1px, transparent 1px)",
         "grid-fade":
           "radial-gradient(ellipse at center, #0A0014 0%, #0A0014 40%, transparent 80%)",
         "violet-radial":

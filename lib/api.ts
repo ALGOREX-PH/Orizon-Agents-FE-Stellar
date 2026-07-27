@@ -44,7 +44,10 @@ export async function fetchWithTimeout(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(`${base}${path}`, { ...init, signal: controller.signal });
+    return await fetch(`${base}${path}`, {
+      ...init,
+      signal: controller.signal,
+    });
   } catch (err) {
     if (controller.signal.aborted) {
       throw new Error(`${method} ${path} → timeout after ${timeoutMs / 1000}s`);
@@ -75,7 +78,10 @@ function get<T>(
   headers?: Record<string, string>,
 ): Promise<T> {
   const hit = getCache.get(path);
-  if (hit && (hit.settledAt === null || Date.now() - hit.settledAt < GET_DEDUPE_MS)) {
+  if (
+    hit &&
+    (hit.settledAt === null || Date.now() - hit.settledAt < GET_DEDUPE_MS)
+  ) {
     return hit.promise as Promise<T>;
   }
   const promise = (async () => {
@@ -148,7 +154,10 @@ async function post<T, B>(
  * page's normal error state, instead of crashing mid-render on
  * `undefined.toFixed(...)`.
  */
-function ensure<T>(path: string, guard: (v: unknown) => v is T): (v: unknown) => T {
+function ensure<T>(
+  path: string,
+  guard: (v: unknown) => v is T,
+): (v: unknown) => T {
   return (v) => {
     if (!guard(v)) throw new Error(`malformed response from ${path}`);
     return v;
@@ -167,7 +176,8 @@ function taskAuthHeaders(taskId: string): Record<string, string> | undefined {
 }
 
 export const listAgents = () => get<Agent[]>("/agents");
-export const listTasks = () => get<Task[]>("/tasks", ensure("/tasks", isTaskList));
+export const listTasks = () =>
+  get<Task[]>("/tasks", ensure("/tasks", isTaskList));
 export const getOverview = () =>
   get<Overview>("/metrics/overview", ensure("/metrics/overview", isOverview));
 export const getFlow = () => get<Flow>("/flow/default");
@@ -185,10 +195,10 @@ export const execute = (
   planId: string,
   opts?: { auth_id_hex?: string; payer?: string },
 ) =>
-  post<ExecuteResponse, { plan_id: string; auth_id_hex?: string; payer?: string }>(
-    "/orchestrator/execute",
-    { plan_id: planId, ...opts },
-  ).then((res) => {
+  post<
+    ExecuteResponse,
+    { plan_id: string; auth_id_hex?: string; payer?: string }
+  >("/orchestrator/execute", { plan_id: planId, ...opts }).then((res) => {
     // Remember the read token at the API seam so every execute caller
     // (simulated and on-chain paths alike) gets later task reads authorized
     // without extra wiring. No-op while the backend ships no token.

@@ -3,7 +3,13 @@
  * Tiny context shared between Sidebar (the drawer) and Topbar (the hamburger).
  * Mobile-only — desktop ignores `open` because the sidebar is always rendered.
  */
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 
 type Ctx = {
   open: boolean;

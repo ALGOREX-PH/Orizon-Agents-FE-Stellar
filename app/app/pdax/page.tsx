@@ -4,11 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ErrorNote } from "@/components/ui/error-note";
 import { LoadingStatus, Skeleton } from "@/components/ui/skeleton";
-import {
-  getPdaxBalances,
-  getPdaxEnvironment,
-  getPdaxHealth,
-} from "@/lib/pdax";
+import { getPdaxBalances, getPdaxEnvironment, getPdaxHealth } from "@/lib/pdax";
 import { useFetch } from "@/lib/use-fetch";
 import { RampPanel } from "./_components/ramp-panel";
 import { PricePanel } from "./_components/price-panel";

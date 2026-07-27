@@ -71,14 +71,16 @@ export function useFetch<T>(
     const prev = prevDepsRef.current;
     const depsChanged =
       prev !== null &&
-      (prev.length !== deps.length || deps.some((d, i) => !Object.is(d, prev[i])));
+      (prev.length !== deps.length ||
+        deps.some((d, i) => !Object.is(d, prev[i])));
     prevDepsRef.current = deps;
     if (depsChanged && !opts?.keepPreviousData) {
       setData(null);
       setError(null);
     }
     setLoading(true);
-    fnRef.current()
+    fnRef
+      .current()
       .then((d) => {
         if (!alive) return;
         lastSuccessRef.current = Date.now();

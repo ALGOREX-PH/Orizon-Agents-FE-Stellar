@@ -84,7 +84,10 @@ export function RatingRubric() {
           </thead>
           <tbody>
             {ROWS.map((r) => (
-              <tr key={r.signal} className="border-b border-border/50 last:border-0">
+              <tr
+                key={r.signal}
+                className="border-b border-border/50 last:border-0"
+              >
                 <th
                   scope="row"
                   className="py-3 pr-4 text-left font-normal text-text"

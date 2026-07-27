@@ -20,7 +20,9 @@ test.describe("console overview", () => {
     // agents_online renders localized ("2,481") in a metric card (and again
     // in the sidebar footer, hence first()); tasks_per_sec renders "1.234".
     await expect(
-      page.getByText(mockOverview.agents_online.toLocaleString("en-US")).first(),
+      page
+        .getByText(mockOverview.agents_online.toLocaleString("en-US"))
+        .first(),
     ).toBeVisible();
     await expect(
       page.getByText(mockOverview.tasks_per_sec.toFixed(3)).first(),

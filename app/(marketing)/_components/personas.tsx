@@ -44,7 +44,9 @@ export function Personas() {
                   / {String(i + 1).padStart(2, "0")} persona
                 </div>
                 <h3 className="text-2xl font-semibold mb-3">{p.label}</h3>
-                <p className="text-sm leading-relaxed text-muted mb-6">{p.hook}</p>
+                <p className="text-sm leading-relaxed text-muted mb-6">
+                  {p.hook}
+                </p>
                 <div className="border-t border-border pt-4 font-mono text-xs text-violet">
                   ◆ {p.stat}
                 </div>

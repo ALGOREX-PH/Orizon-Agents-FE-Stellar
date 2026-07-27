@@ -7,7 +7,10 @@ export function CTA() {
   return (
     <section className="relative py-32">
       <GridBg />
-      <Glow color="violet" className="left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2" />
+      <Glow
+        color="violet"
+        className="left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2"
+      />
 
       <m.div
         initial={{ opacity: 0, y: 24 }}
@@ -20,8 +23,8 @@ export function CTA() {
           ▸▸ FINAL TRANSMISSION
         </p>
         <h2 className="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05]">
-          Stop shipping{" "}
-          <span className="text-muted line-through">outputs</span>.
+          Stop shipping <span className="text-muted line-through">outputs</span>
+          .
           <br />
           Start shipping{" "}
           <span className="bg-gradient-to-r from-violet via-magenta to-cyan bg-clip-text text-transparent">

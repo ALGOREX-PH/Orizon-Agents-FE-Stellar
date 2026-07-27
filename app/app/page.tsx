@@ -9,7 +9,10 @@ import type { Overview, Task } from "@/lib/types";
 import { focusRing } from "@/lib/ui";
 import { usePolling } from "@/lib/use-polling";
 
-const statusTone: Record<Task["status"], "cyan" | "violet" | "muted" | "magenta"> = {
+const statusTone: Record<
+  Task["status"],
+  "cyan" | "violet" | "muted" | "magenta"
+> = {
   complete: "cyan",
   running: "violet",
   pending: "muted",
@@ -30,7 +33,11 @@ function Sparkline({ points }: { points: number[] }) {
     .join(" ");
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="h-36 w-full" preserveAspectRatio="none">
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      className="h-36 w-full"
+      preserveAspectRatio="none"
+    >
       <defs>
         <linearGradient id="sparkFill" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor="#B026FF" stopOpacity="0.4" />
@@ -39,7 +46,13 @@ function Sparkline({ points }: { points: number[] }) {
       </defs>
       <path d={`${path} L${w},${h} L0,${h} Z`} fill="url(#sparkFill)" />
       <path d={path} stroke="#B026FF" strokeWidth="1.5" fill="none" />
-      <path d={path} stroke="#00FFD1" strokeWidth="0.6" fill="none" opacity="0.6" />
+      <path
+        d={path}
+        stroke="#00FFD1"
+        strokeWidth="0.6"
+        fill="none"
+        opacity="0.6"
+      />
     </svg>
   );
 }
@@ -64,10 +77,30 @@ export default function OverviewPage() {
 
   const metrics = overview
     ? [
-        { k: "Agents online", v: overview.agents_online.toLocaleString(), d: "live", tone: "cyan" as const },
-        { k: "Tasks / s", v: overview.tasks_per_sec.toFixed(3), d: "+12%", tone: "violet" as const },
-        { k: "Avg completion", v: `${(overview.avg_completion * 100).toFixed(1)}%`, d: "+0.4", tone: "cyan" as const },
-        { k: "Avg trust", v: overview.avg_trust.toFixed(2), d: "/5", tone: "magenta" as const },
+        {
+          k: "Agents online",
+          v: overview.agents_online.toLocaleString(),
+          d: "live",
+          tone: "cyan" as const,
+        },
+        {
+          k: "Tasks / s",
+          v: overview.tasks_per_sec.toFixed(3),
+          d: "+12%",
+          tone: "violet" as const,
+        },
+        {
+          k: "Avg completion",
+          v: `${(overview.avg_completion * 100).toFixed(1)}%`,
+          d: "+0.4",
+          tone: "cyan" as const,
+        },
+        {
+          k: "Avg trust",
+          v: overview.avg_trust.toFixed(2),
+          d: "/5",
+          tone: "magenta" as const,
+        },
       ]
     : [];
 
@@ -141,7 +174,11 @@ export default function OverviewPage() {
               ))}
             </div>
           </div>
-          {overview ? <Sparkline points={overview.throughput} /> : <Skeleton className="h-36 w-full" />}
+          {overview ? (
+            <Sparkline points={overview.throughput} />
+          ) : (
+            <Skeleton className="h-36 w-full" />
+          )}
         </Card>
 
         <Card>
@@ -171,7 +208,10 @@ export default function OverviewPage() {
                 </div>
               </div>
             ))}
-            {!overview && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-4 w-full" />)}
+            {!overview &&
+              Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-4 w-full" />
+              ))}
           </div>
         </Card>
       </div>
@@ -204,18 +244,28 @@ export default function OverviewPage() {
                   <td className="py-3 font-mono text-xs text-muted">{t.id}</td>
                   <td className="py-3 max-w-md truncate">{t.intent}</td>
                   <td className="py-3 font-mono text-xs">{t.agents}</td>
-                  <td className="py-3 font-mono text-xs text-cyan">{t.spent.toFixed(3)} USDC</td>
+                  <td className="py-3 font-mono text-xs text-cyan">
+                    {t.spent.toFixed(3)} USDC
+                  </td>
                   <td className="py-3">
-                    <Badge tone={statusTone[t.status]} dot={t.status !== "complete"}>
+                    <Badge
+                      tone={statusTone[t.status]}
+                      dot={t.status !== "complete"}
+                    >
                       {t.status}
                     </Badge>
                   </td>
-                  <td className="py-3 text-right font-mono text-xs text-muted">{t.started}</td>
+                  <td className="py-3 text-right font-mono text-xs text-muted">
+                    {t.started}
+                  </td>
                 </tr>
               ))}
               {tasks && tasks.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-muted font-mono text-xs">
+                  <td
+                    colSpan={6}
+                    className="py-10 text-center text-muted font-mono text-xs"
+                  >
                     No tasks yet — try the Orchestrator.
                   </td>
                 </tr>

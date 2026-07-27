@@ -16,7 +16,7 @@ Action list for completing **Level 1 — White Belt** of the Stellar Composabili
 
 ## 1. Verify locally (~5 min)
 
-- [ ] Start the BE: in `~/Websites-2026/orizon-agents-FE-Stellar/backend` → `./run.sh`  *(or the canonical `~/Websites-Services-2026/orizon-agents-BE-Stellar`)*
+- [ ] Start the BE: in `~/Websites-2026/orizon-agents-FE-Stellar/backend` → `./run.sh` _(or the canonical `~/Websites-Services-2026/orizon-agents-BE-Stellar`)_
 - [ ] Start the FE: in repo root → `npm run dev`
 - [ ] Open http://localhost:3000/app
 - [ ] Click **Connect Wallet** → pick **Freighter** in the StellarWalletsKit modal → approve on **Test Net**
@@ -93,21 +93,21 @@ git push origin main
 
 ## Requirements ↔ where it's implemented
 
-| White Belt requirement | Status | File / location |
-| --- | --- | --- |
-| **Reviewer revision: folder named `contract`** | ✅ | [`./contract`](./contract) (FE snapshot) + canonical contracts repo `contract/` |
-| Freighter wallet | ✅ | `lib/wallet.tsx` (via StellarWalletsKit) |
-| Stellar Testnet | ✅ | enforced via `Networks.TESTNET` + wrong-net warning |
-| Connect functionality | ✅ | `components/ui/connect-wallet.tsx` (multi-wallet modal) |
-| Disconnect functionality | ✅ | click address chip in topbar |
-| Fetch XLM balance | ✅ | `lib/wallet.tsx` → Horizon `/accounts/{g}` |
-| Display balance | ✅ | topbar live + `/app/wallet` card |
-| Send XLM transaction | ✅ | `/app/send` — `Operation.payment` |
-| Tx success/failure feedback | ✅ | green success card / red error card on `/app/send` |
-| Tx hash + explorer link | ✅ | success card → `stellar.expert/explorer/testnet/tx/<hash>` |
-| README — description | ✅ | `README.md` |
-| README — setup instructions | ✅ | `README.md` → "Local setup" |
-| README — wallet-connected screenshot | ⚠️ pending | `public/wallet-connected.png` |
-| README — balance screenshot | ⚠️ pending | `public/balance.png` |
-| README — successful tx screenshot | ⚠️ pending | `public/send-success.png` |
-| README — tx result screenshot | ⚠️ pending | `public/stellar-expert.png` |
+| White Belt requirement                         | Status     | File / location                                                                 |
+| ---------------------------------------------- | ---------- | ------------------------------------------------------------------------------- |
+| **Reviewer revision: folder named `contract`** | ✅         | [`./contract`](./contract) (FE snapshot) + canonical contracts repo `contract/` |
+| Freighter wallet                               | ✅         | `lib/wallet.tsx` (via StellarWalletsKit)                                        |
+| Stellar Testnet                                | ✅         | enforced via `Networks.TESTNET` + wrong-net warning                             |
+| Connect functionality                          | ✅         | `components/ui/connect-wallet.tsx` (multi-wallet modal)                         |
+| Disconnect functionality                       | ✅         | click address chip in topbar                                                    |
+| Fetch XLM balance                              | ✅         | `lib/wallet.tsx` → Horizon `/accounts/{g}`                                      |
+| Display balance                                | ✅         | topbar live + `/app/wallet` card                                                |
+| Send XLM transaction                           | ✅         | `/app/send` — `Operation.payment`                                               |
+| Tx success/failure feedback                    | ✅         | green success card / red error card on `/app/send`                              |
+| Tx hash + explorer link                        | ✅         | success card → `stellar.expert/explorer/testnet/tx/<hash>`                      |
+| README — description                           | ✅         | `README.md`                                                                     |
+| README — setup instructions                    | ✅         | `README.md` → "Local setup"                                                     |
+| README — wallet-connected screenshot           | ⚠️ pending | `public/wallet-connected.png`                                                   |
+| README — balance screenshot                    | ⚠️ pending | `public/balance.png`                                                            |
+| README — successful tx screenshot              | ⚠️ pending | `public/send-success.png`                                                       |
+| README — tx result screenshot                  | ⚠️ pending | `public/stellar-expert.png`                                                     |

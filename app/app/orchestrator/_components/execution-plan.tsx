@@ -58,7 +58,9 @@ export function ExecutionPlan({ plan }: { plan: DecomposeResponse }) {
   const [showFiat, setShowFiat] = useState(false);
   const [step, setStep] = useState<ExecStep>("");
   const [txState, setTxState] = useState<TxState>("idle");
-  const [friendlyError, setFriendlyError] = useState<FriendlyError | null>(null);
+  const [friendlyError, setFriendlyError] = useState<FriendlyError | null>(
+    null,
+  );
   const [authorizeHash, setAuthorizeHash] = useState<string | null>(null);
 
   /** Simulated path — no wallet required. */
@@ -89,7 +91,11 @@ export function ExecutionPlan({ plan }: { plan: DecomposeResponse }) {
       const broadcast = await submitSigned(signedXdr);
       if (broadcast.status !== "SUCCESS") {
         throw new Error(
-          [`authorize tx ${broadcast.status}`, broadcast.diagnostic, broadcast.explorer]
+          [
+            `authorize tx ${broadcast.status}`,
+            broadcast.diagnostic,
+            broadcast.explorer,
+          ]
             .filter(Boolean)
             .join(" · "),
         );
@@ -173,7 +179,9 @@ export function ExecutionPlan({ plan }: { plan: DecomposeResponse }) {
               <div className="text-muted uppercase tracking-widest text-[10px]">
                 eta
               </div>
-              <div className="text-violet text-lg">{plan.total_eta.toFixed(1)}s</div>
+              <div className="text-violet text-lg">
+                {plan.total_eta.toFixed(1)}s
+              </div>
             </div>
           </div>
         </div>
@@ -193,7 +201,10 @@ export function ExecutionPlan({ plan }: { plan: DecomposeResponse }) {
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone="violet">{s.agent_name ?? s.agent_id}</Badge>
                 {s.rep_bps != null && (
-                  <ReputationBadge bps={s.rep_bps} source={s.rep_source ?? "prior"} />
+                  <ReputationBadge
+                    bps={s.rep_bps}
+                    source={s.rep_source ?? "prior"}
+                  />
                 )}
               </div>
               <span className="text-sm text-muted">→</span>
@@ -218,9 +229,10 @@ export function ExecutionPlan({ plan }: { plan: DecomposeResponse }) {
                   ▸ ready to authorize on-chain
                 </div>
                 <div className="text-sm">
-                  Freighter will prompt for <b className="text-text">one signature</b>{" "}
-                  authorizing up to{" "}
-                  <b className="text-text">{plan.total_usdc.toFixed(3)} USDC</b>.
+                  Freighter will prompt for{" "}
+                  <b className="text-text">one signature</b> authorizing up to{" "}
+                  <b className="text-text">{plan.total_usdc.toFixed(3)} USDC</b>
+                  .
                 </div>
               </div>
               <div className="flex gap-2">
@@ -254,8 +266,8 @@ export function ExecutionPlan({ plan }: { plan: DecomposeResponse }) {
                   ▸ wallet required
                 </div>
                 <div className="text-sm">
-                  Connect Freighter ({NETWORK_LABEL}) to pay with x402 on-chain, or run
-                  a simulated pass.
+                  Connect Freighter ({NETWORK_LABEL}) to pay with x402 on-chain,
+                  or run a simulated pass.
                 </div>
               </div>
               <div className="flex gap-2 items-center">

@@ -109,7 +109,10 @@ describe("useFetch", () => {
   });
 
   it("keeps the current data while a reload() refetch is in flight", async () => {
-    const defs: Array<{ promise: Promise<string>; resolve: (v: string) => void }> = [];
+    const defs: Array<{
+      promise: Promise<string>;
+      resolve: (v: string) => void;
+    }> = [];
     const fn = vi.fn(() => {
       const d = deferred<string>();
       defs.push(d);

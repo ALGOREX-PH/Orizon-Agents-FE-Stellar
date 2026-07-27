@@ -16,8 +16,9 @@ afterEach(() => {
 });
 
 // @testing-library/react's act() requires this flag in a bare jsdom env.
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
-  true;
+(
+  globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 /** A promise with externally controlled settle, to observe mid-flight state. */
 function deferred<T>() {
@@ -45,9 +46,7 @@ describe("toMessage", () => {
 
 describe("useAsyncAction", () => {
   it("starts idle: no data, no error, not pending", () => {
-    const { result } = renderHook(() =>
-      useAsyncAction(async () => "unused"),
-    );
+    const { result } = renderHook(() => useAsyncAction(async () => "unused"));
     expect(result.current.data).toBeNull();
     expect(result.current.error).toBeNull();
     expect(result.current.pending).toBe(false);
@@ -150,9 +149,7 @@ describe("useAsyncAction", () => {
   });
 
   it("reset() clears data and error", async () => {
-    const { result } = renderHook(() =>
-      useAsyncAction(async () => "value"),
-    );
+    const { result } = renderHook(() => useAsyncAction(async () => "value"));
     await act(async () => {
       await result.current.run();
     });

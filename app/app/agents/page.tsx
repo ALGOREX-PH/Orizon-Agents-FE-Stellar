@@ -19,17 +19,26 @@ const statusTone = {
 };
 
 export default function AgentsPage() {
-  const { data: agents, error } = useFetch(listAgents, [], { revalidateOnFocus: true });
+  const { data: agents, error } = useFetch(listAgents, [], {
+    revalidateOnFocus: true,
+  });
   // On-chain reputation is best-effort: on error we silently keep seeded values.
-  const { data: repBatch } = useFetch(listReputation, [], { revalidateOnFocus: true });
+  const { data: repBatch } = useFetch(listReputation, [], {
+    revalidateOnFocus: true,
+  });
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<"all" | "online" | "idle" | "offline">("all");
+  const [filter, setFilter] = useState<"all" | "online" | "idle" | "offline">(
+    "all",
+  );
 
   const rows = useMemo(() => {
     if (!agents) return [];
     return agents.filter((a) => {
       const ql = q.toLowerCase();
-      const matchesQ = !ql || a.name.toLowerCase().includes(ql) || a.skills.some((s) => s.toLowerCase().includes(ql));
+      const matchesQ =
+        !ql ||
+        a.name.toLowerCase().includes(ql) ||
+        a.skills.some((s) => s.toLowerCase().includes(ql));
       const matchesStatus = filter === "all" || a.status === filter;
       return matchesQ && matchesStatus;
     });
@@ -49,7 +58,11 @@ export default function AgentsPage() {
       );
     }
     return (
-      <ReputationBadge bps={a.rep * 2000} source="prior" floorBps={repBatch?.floor_bps} />
+      <ReputationBadge
+        bps={a.rep * 2000}
+        source="prior"
+        floorBps={repBatch?.floor_bps}
+      />
     );
   };
 
@@ -57,7 +70,9 @@ export default function AgentsPage() {
     <div className="space-y-6">
       <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Agent Registry</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Agent Registry
+          </h1>
           <p className="mt-1 text-sm text-muted">
             ERC-8004 profiles — identity, skills, price, reputation.
           </p>
@@ -76,8 +91,19 @@ export default function AgentsPage() {
               aria-hidden="true"
               className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted"
             >
-              <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M14 14l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <circle
+                cx="9"
+                cy="9"
+                r="6"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <path
+                d="M14 14l4 4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
             </svg>
             <input
               type="search"
@@ -168,12 +194,20 @@ export default function AgentsPage() {
                     {a.runs.toLocaleString()}
                   </td>
                   <td className="py-3">
-                    <Badge tone={statusTone[a.status]} dot={a.status === "online"}>
+                    <Badge
+                      tone={statusTone[a.status]}
+                      dot={a.status === "online"}
+                    >
                       {a.status}
                     </Badge>
                   </td>
                   <td className="py-3 text-right">
-                    <Button variant="ghost" size="sm" disabled title="coming soon">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled
+                      title="coming soon"
+                    >
                       ▸ view
                     </Button>
                   </td>
@@ -181,7 +215,10 @@ export default function AgentsPage() {
               ))}
               {agents && rows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center text-muted font-mono text-xs">
+                  <td
+                    colSpan={8}
+                    className="py-10 text-center text-muted font-mono text-xs"
+                  >
                     no agents match your filters.
                   </td>
                 </tr>

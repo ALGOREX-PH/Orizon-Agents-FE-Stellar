@@ -13,12 +13,23 @@ const primitives = [
     body: "Parse intent, decompose into subtasks, and route to the right agents. Chaining, branching, parallel execution.",
     icon: (
       <svg viewBox="0 0 48 48" className="h-10 w-10" fill="none">
-        <circle cx="24" cy="24" r="5" stroke="#B026FF" strokeWidth="1.5" fill="rgba(176,38,255,0.15)" />
+        <circle
+          cx="24"
+          cy="24"
+          r="5"
+          stroke="#B026FF"
+          strokeWidth="1.5"
+          fill="rgba(176,38,255,0.15)"
+        />
         <circle cx="10" cy="10" r="3" stroke="#B026FF" strokeWidth="1.5" />
         <circle cx="38" cy="10" r="3" stroke="#B026FF" strokeWidth="1.5" />
         <circle cx="10" cy="38" r="3" stroke="#B026FF" strokeWidth="1.5" />
         <circle cx="38" cy="38" r="3" stroke="#B026FF" strokeWidth="1.5" />
-        <path d="M12.5 12 L20 20 M35.5 12 L28 20 M12.5 36 L20 28 M35.5 36 L28 28" stroke="#00FFD1" strokeWidth="1" />
+        <path
+          d="M12.5 12 L20 20 M35.5 12 L28 20 M12.5 36 L20 28 M35.5 36 L28 28"
+          stroke="#00FFD1"
+          strokeWidth="1"
+        />
       </svg>
     ),
   },
@@ -30,7 +41,16 @@ const primitives = [
     body: "Agents pay each other per call. No keys. No subs. Request → 402 → pay → execute — built into the protocol.",
     icon: (
       <svg viewBox="0 0 48 48" className="h-10 w-10" fill="none">
-        <rect x="6" y="14" width="36" height="22" rx="2" stroke="#00FFD1" strokeWidth="1.5" fill="rgba(0,255,209,0.08)" />
+        <rect
+          x="6"
+          y="14"
+          width="36"
+          height="22"
+          rx="2"
+          stroke="#00FFD1"
+          strokeWidth="1.5"
+          fill="rgba(0,255,209,0.08)"
+        />
         <path d="M6 22 L42 22" stroke="#00FFD1" strokeWidth="1.5" />
         <circle cx="34" cy="30" r="2" fill="#00FFD1" />
         <path d="M12 30 L22 30" stroke="#B026FF" strokeWidth="1.5" />
@@ -45,8 +65,19 @@ const primitives = [
     body: "Every step is attributed, recorded, and verifiable. Identity-linked agents, on-chain attestation, auditable logs.",
     icon: (
       <svg viewBox="0 0 48 48" className="h-10 w-10" fill="none">
-        <path d="M24 4 L40 12 L40 26 C40 34 32 40 24 44 C16 40 8 34 8 26 L8 12 Z" stroke="#FF2E9A" strokeWidth="1.5" fill="rgba(255,46,154,0.08)" />
-        <path d="M17 24 L22 29 L31 19" stroke="#00FFD1" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d="M24 4 L40 12 L40 26 C40 34 32 40 24 44 C16 40 8 34 8 26 L8 12 Z"
+          stroke="#FF2E9A"
+          strokeWidth="1.5"
+          fill="rgba(255,46,154,0.08)"
+        />
+        <path
+          d="M17 24 L22 29 L31 19"
+          stroke="#00FFD1"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     ),
   },

@@ -33,7 +33,11 @@ export function ConnectWallet({
     // Compare what the wallet itself reported against this build's network.
     // Unknown wallet network (unsupported getNetwork) → no false alarm.
     const wrongNet = walletNetworkMismatch;
-    const netLabel = (walletNetwork?.network || network?.network || "stellar").toLowerCase();
+    const netLabel = (
+      walletNetwork?.network ||
+      network?.network ||
+      "stellar"
+    ).toLowerCase();
     return (
       <div className={cn("flex items-center gap-2", className)}>
         {walletName && (

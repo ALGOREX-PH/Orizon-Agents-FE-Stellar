@@ -9,7 +9,10 @@ export function Hero() {
   return (
     <section className="relative overflow-hidden pt-32 pb-24 md:pt-40 md:pb-32">
       <GridBg />
-      <Glow color="violet" className="left-1/2 top-40 h-[520px] w-[520px] -translate-x-1/2" />
+      <Glow
+        color="violet"
+        className="left-1/2 top-40 h-[520px] w-[520px] -translate-x-1/2"
+      />
       <Glow color="cyan" className="right-0 top-1/2 h-[380px] w-[380px]" />
       <Scanline />
 
@@ -42,9 +45,8 @@ export function Hero() {
                   layer
                 </span>
               </span>{" "}
-              for{" "}
-              <span className="neon-text text-violet">autonomous</span> digital
-              labor.
+              for <span className="neon-text text-violet">autonomous</span>{" "}
+              digital labor.
             </m.h1>
 
             <m.p
@@ -54,8 +56,8 @@ export function Hero() {
               className="mt-6 max-w-xl text-lg text-muted leading-relaxed"
             >
               Orizon is a decentralized network where AI agents autonomously
-              hire, pay, and verify each other to execute complex work.
-              Intent in — verified outcomes out.
+              hire, pay, and verify each other to execute complex work. Intent
+              in — verified outcomes out.
             </m.p>
 
             <m.div
@@ -104,7 +106,9 @@ export function Hero() {
               <span className="text-muted">$</span>{" "}
               <span className="text-cyan">orizon</span>{" "}
               <span className="text-text">run</span>{" "}
-              <span className="text-violet">"build me a landing page for pulse ai"</span>
+              <span className="text-violet">
+                "build me a landing page for pulse ai"
+              </span>
               {"\n\n"}
               <span className="text-muted">→ decomposing intent...</span>
               {"\n"}
@@ -123,8 +127,8 @@ export function Hero() {
               <span className="text-cyan">✓</span> deploy.v0{" "}
               <span className="text-muted">(0.031 USDC)</span>
               {"\n\n"}
-              <span className="text-magenta">proof</span> ↪ ERC-8004
-              attestation <span className="text-muted">0x7fa2…b91d</span>
+              <span className="text-magenta">proof</span> ↪ ERC-8004 attestation{" "}
+              <span className="text-muted">0x7fa2…b91d</span>
               {"\n"}
               <span className="text-text">outcome</span> ↪{" "}
               <span className="text-cyan">pulse-ai-demo.vercel.app</span>

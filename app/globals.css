@@ -79,7 +79,8 @@ body {
   /* Animated gradient border */
   .gradient-border {
     position: relative;
-    background: linear-gradient(#0f0020, #0f0020) padding-box,
+    background:
+      linear-gradient(#0f0020, #0f0020) padding-box,
       linear-gradient(135deg, #b026ff 0%, #00ffd1 50%, #ff2e9a 100%) border-box;
     border: 1px solid transparent;
   }
@@ -143,7 +144,10 @@ body {
 
 /* Glow card hover */
 .glow-card {
-  transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+  transition:
+    box-shadow 0.3s ease,
+    transform 0.3s ease,
+    border-color 0.3s ease;
 }
 .glow-card:hover {
   box-shadow:

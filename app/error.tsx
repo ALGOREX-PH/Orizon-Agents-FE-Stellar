@@ -36,8 +36,8 @@ export default function Error({
         SYSTEM FAULT
       </h1>
       <p className="mt-4 max-w-sm font-mono text-xs leading-relaxed text-muted">
-        An unexpected error interrupted this process. The rest of the network
-        is unaffected — retry the operation.
+        An unexpected error interrupted this process. The rest of the network is
+        unaffected — retry the operation.
       </p>
       <div className="mt-8">
         <Button variant="outline" onClick={reset}>

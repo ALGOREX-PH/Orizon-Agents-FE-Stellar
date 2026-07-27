@@ -29,7 +29,8 @@ type FetchMockResponse = {
   text: () => Promise<string>;
 };
 
-const fetchMock = vi.fn<(input: string, init?: RequestInit) => Promise<FetchMockResponse>>();
+const fetchMock =
+  vi.fn<(input: string, init?: RequestInit) => Promise<FetchMockResponse>>();
 vi.stubGlobal("fetch", fetchMock);
 
 function jsonResponse(status: number, body: unknown): FetchMockResponse {
@@ -53,7 +54,10 @@ describe("query-string construction", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/pdax/balances?currency=PHP",
-      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
+      expect.objectContaining({
+        cache: "no-store",
+        signal: expect.any(AbortSignal),
+      }),
     );
   });
 
@@ -90,7 +94,12 @@ describe("query-string construction", () => {
   it("drops undefined and empty-string params from the transactions listing", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(200, { transactions: [] }));
 
-    await getPdaxCryptoTransactions({ page: 2, pageSize: 50, identifier: undefined, txn_hash: "" });
+    await getPdaxCryptoTransactions({
+      page: 2,
+      pageSize: 50,
+      identifier: undefined,
+      txn_hash: "",
+    });
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/pdax/crypto/transactions?page=2&pageSize=50",
@@ -115,7 +124,11 @@ describe("path construction", () => {
 
 describe("POST endpoints", () => {
   it("sends the firm-quote body as JSON with content-type", async () => {
-    const body = { quote_currency: "PHP", side: "buy" as const, base_quantity: "10" };
+    const body = {
+      quote_currency: "PHP",
+      side: "buy" as const,
+      base_quantity: "10",
+    };
     const quote = { quote_id: "q_1", price: "57.00" };
     fetchMock.mockResolvedValueOnce(jsonResponse(200, quote));
 
@@ -136,7 +149,9 @@ describe("POST endpoints", () => {
     const estimate = { direction: "onramp", php_in: "1000", usdc_out: "17.2" };
     fetchMock.mockResolvedValueOnce(jsonResponse(200, estimate));
 
-    await expect(pdaxRampEstimate("onramp", "1000", "PHP")).resolves.toEqual(estimate);
+    await expect(pdaxRampEstimate("onramp", "1000", "PHP")).resolves.toEqual(
+      estimate,
+    );
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/pdax/ramp/estimate?direction=onramp&amount=1000&currency=PHP",
@@ -163,7 +178,9 @@ describe("POST endpoints", () => {
 
 describe("error detail extraction", () => {
   it("surfaces the backend detail field on a GET failure", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(503, { detail: "pdax maintenance" }));
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(503, { detail: "pdax maintenance" }),
+    );
 
     await expect(getPdaxHealth()).rejects.toThrow(
       "GET /health → 503 — pdax maintenance",
@@ -194,11 +211,15 @@ describe("error detail extraction", () => {
       text: () => Promise.resolve("Bad Gateway"),
     });
 
-    await expect(getPdaxRamp("rmp_bad")).rejects.toThrow("GET /ramp/rmp_bad → 502");
+    await expect(getPdaxRamp("rmp_bad")).rejects.toThrow(
+      "GET /ramp/rmp_bad → 502",
+    );
   });
 
   it("includes the query string and detail in a POST failure message", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(422, { detail: "amount too small" }));
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(422, { detail: "amount too small" }),
+    );
 
     await expect(pdaxRampEstimate("offramp", "5")).rejects.toThrow(
       "POST /ramp/estimate?direction=offramp&amount=5 → 422 — amount too small",

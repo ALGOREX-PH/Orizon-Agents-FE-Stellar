@@ -25,20 +25,29 @@ export function TransactionsPanel() {
         <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted">
           crypto transactions
         </div>
-        <Button size="sm" variant="outline" onClick={() => void load()} disabled={busy}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => void load()}
+          disabled={busy}
+        >
           {busy ? "◉ loading…" : "load"}
         </Button>
       </div>
 
       {err && (
-        <ErrorNote className="mt-3 border-0 bg-transparent p-0">{err}</ErrorNote>
+        <ErrorNote className="mt-3 border-0 bg-transparent p-0">
+          {err}
+        </ErrorNote>
       )}
 
       <div className="mt-4 space-y-2">
         {txns === null && (
           <div className="text-xs text-muted">No transactions loaded yet.</div>
         )}
-        {txns?.length === 0 && <div className="text-xs text-muted">No records.</div>}
+        {txns?.length === 0 && (
+          <div className="text-xs text-muted">No records.</div>
+        )}
         {txns?.map((t) => (
           <div
             key={t.transaction_id}
@@ -49,12 +58,16 @@ export function TransactionsPanel() {
                 {t.type} · {t.credit_ccy ?? t.debit_ccy ?? ""}
               </div>
               {t.txn_hash && (
-                <div className="text-[10px] text-muted break-all">{t.txn_hash}</div>
+                <div className="text-[10px] text-muted break-all">
+                  {t.txn_hash}
+                </div>
               )}
             </div>
             <div className="flex items-center gap-2">
               <span className="font-mono text-xs">
-                {t.credit_amount !== "0" ? `+${t.credit_amount}` : `-${t.debit_amount}`}
+                {t.credit_amount !== "0"
+                  ? `+${t.credit_amount}`
+                  : `-${t.debit_amount}`}
               </span>
               <Badge tone={statusTone(t.status)}>{t.status}</Badge>
             </div>

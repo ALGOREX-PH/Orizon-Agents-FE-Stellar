@@ -113,15 +113,15 @@ This adds 3 commits on top of the 50+ already in the log → way more than the *
 
 ## Requirements ↔ where it's implemented
 
-| Green Belt requirement | Status | File / location |
-| --- | --- | --- |
-| Inter-contract call working | ✅ | `contract/contract/payment-escrow/src/lib.rs:140,149` (RegistryClient + TokenClient inside `charge()`) |
-| Custom token / pool deployed | n/a | uses native XLM SAC (`CDLZFC3S…CYSC`) — no custom asset |
-| **CI/CD pipeline running** | ✅ committed | `.github/workflows/ci.yml` + badge in README |
-| **Mobile responsive** | ✅ committed | sidebar drawer + hamburger + responsive layout padding |
-| 8+ meaningful commits | ✅ | 50+ historical + 3 new for Green Belt |
-| Live demo link in README | ✅ | https://orizon-agents-fe-stellar.vercel.app |
-| **Mobile screenshot in README** | ⚠️ pending capture | `public/mobile.png` |
-| **CI screenshot/badge in README** | ⚠️ partly | badge ✓ at top of README; screenshot `public/ci-passing.png` pending capture |
-| Contract addresses + tx hash | ✅ | top of README + sample tx hash pinned |
-| Reviewer revision (`contract/` folder) | ✅ | resolved across all belts |
+| Green Belt requirement                 | Status             | File / location                                                                                        |
+| -------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------ |
+| Inter-contract call working            | ✅                 | `contract/contract/payment-escrow/src/lib.rs:140,149` (RegistryClient + TokenClient inside `charge()`) |
+| Custom token / pool deployed           | n/a                | uses native XLM SAC (`CDLZFC3S…CYSC`) — no custom asset                                                |
+| **CI/CD pipeline running**             | ✅ committed       | `.github/workflows/ci.yml` + badge in README                                                           |
+| **Mobile responsive**                  | ✅ committed       | sidebar drawer + hamburger + responsive layout padding                                                 |
+| 8+ meaningful commits                  | ✅                 | 50+ historical + 3 new for Green Belt                                                                  |
+| Live demo link in README               | ✅                 | https://orizon-agents-fe-stellar.vercel.app                                                            |
+| **Mobile screenshot in README**        | ⚠️ pending capture | `public/mobile.png`                                                                                    |
+| **CI screenshot/badge in README**      | ⚠️ partly          | badge ✓ at top of README; screenshot `public/ci-passing.png` pending capture                           |
+| Contract addresses + tx hash           | ✅                 | top of README + sample tx hash pinned                                                                  |
+| Reviewer revision (`contract/` folder) | ✅                 | resolved across all belts                                                                              |

@@ -2,7 +2,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { pdaxFundingQuote, pdaxReconcileRamp, pdaxStartOnRamp } from "@/lib/pdax";
+import {
+  pdaxFundingQuote,
+  pdaxReconcileRamp,
+  pdaxStartOnRamp,
+} from "@/lib/pdax";
 import type { PdaxFundingQuote, PdaxRampRecord } from "@/lib/pdax-types";
 import { inputCls } from "@/lib/ui";
 import { toMessage, useAsyncAction } from "@/lib/use-async-action";
@@ -83,7 +87,9 @@ export function FiatFund({
   // off while the backend is failing, pauses in hidden tabs, and stops once
   // the ramp reaches a terminal state or the component unmounts.
   const rampPending =
-    record !== null && record.status !== "completed" && record.status !== "failed";
+    record !== null &&
+    record.status !== "completed" &&
+    record.status !== "failed";
   const pollFailures = useRef(0);
   usePolling(
     async () => {
@@ -146,7 +152,11 @@ export function FiatFund({
         </label>
         <label className="space-y-1">
           <span className="text-[10px] text-muted">pay via</span>
-          <select value={method} onChange={(e) => setMethod(e.target.value)} className={inputCls}>
+          <select
+            value={method}
+            onChange={(e) => setMethod(e.target.value)}
+            className={inputCls}
+          >
             {METHODS.map(([v, label]) => (
               <option key={v} value={v}>
                 {label}
@@ -159,8 +169,8 @@ export function FiatFund({
       {quote && (
         <div className="mt-2 text-[11px] font-mono text-muted">
           funds <b className="text-text">{quote.usdc_target} USDC</b> · base ≈ ₱
-          {quote.php_base.toFixed(2)} + {(quote.buffer_bps / 100).toFixed(1)}% buffer →{" "}
-          <b className="text-violet">you pay ₱{quote.php_to_pay}</b>
+          {quote.php_base.toFixed(2)} + {(quote.buffer_bps / 100).toFixed(1)}%
+          buffer → <b className="text-violet">you pay ₱{quote.php_to_pay}</b>
           {quote.php_to_pay >
             quote.php_base * (1 + quote.buffer_bps / 10000) + 0.5 && (
             <span className="text-cyan">
@@ -179,8 +189,20 @@ export function FiatFund({
         placeholder="Stellar address (G…) to receive USDCXLM"
       />
       <div className="grid grid-cols-2 gap-2 mt-2">
-        <input aria-label="First name" value={first} onChange={(e) => setFirst(e.target.value)} className={inputCls} placeholder="first name" />
-        <input aria-label="Last name" value={last} onChange={(e) => setLast(e.target.value)} className={inputCls} placeholder="last name" />
+        <input
+          aria-label="First name"
+          value={first}
+          onChange={(e) => setFirst(e.target.value)}
+          className={inputCls}
+          placeholder="first name"
+        />
+        <input
+          aria-label="Last name"
+          value={last}
+          onChange={(e) => setLast(e.target.value)}
+          className={inputCls}
+          placeholder="last name"
+        />
       </div>
 
       <Button
@@ -202,18 +224,27 @@ export function FiatFund({
       {record && (
         <div className="mt-3 border border-border bg-bg/40 p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-[11px] text-muted">{record.ramp_id}</span>
-            <Badge tone={record.status === "failed" ? "magenta" : "cyan"}>{record.status}</Badge>
+            <span className="font-mono text-[11px] text-muted">
+              {record.ramp_id}
+            </span>
+            <Badge tone={record.status === "failed" ? "magenta" : "cyan"}>
+              {record.status}
+            </Badge>
           </div>
           {record.checkout_url && (
-            <a href={record.checkout_url} target="_blank" rel="noreferrer" className="block font-mono text-xs text-cyan underline break-all">
+            <a
+              href={record.checkout_url}
+              target="_blank"
+              rel="noreferrer"
+              className="block font-mono text-xs text-cyan underline break-all"
+            >
               ▸ pay here: {record.checkout_url}
             </a>
           )}
           {record.status !== "completed" && record.status !== "failed" && (
             <div className="text-[10px] font-mono text-muted">
-              ◉ tracking here — after you pay, this completes automatically.
-              You can ignore PDAX&apos;s redirect page.
+              ◉ tracking here — after you pay, this completes automatically. You
+              can ignore PDAX&apos;s redirect page.
             </div>
           )}
           {pollStale && (
@@ -224,7 +255,10 @@ export function FiatFund({
           {record.stages.length > 0 && (
             <div className="space-y-1 pt-1">
               {record.stages.map((s, i) => (
-                <div key={i} className="flex items-center gap-2 font-mono text-[10px]">
+                <div
+                  key={i}
+                  className="flex items-center gap-2 font-mono text-[10px]"
+                >
                   <span
                     className={
                       s.status === "success"
@@ -234,15 +268,25 @@ export function FiatFund({
                           : "text-muted"
                     }
                   >
-                    {s.status === "success" ? "✓" : s.status === "failed" ? "✕" : "•"}
+                    {s.status === "success"
+                      ? "✓"
+                      : s.status === "failed"
+                        ? "✕"
+                        : "•"}
                   </span>
                   <span className="text-muted">{s.name}</span>
-                  {s.detail && <span className="text-muted/70">— {s.detail}</span>}
+                  {s.detail && (
+                    <span className="text-muted/70">— {s.detail}</span>
+                  )}
                 </div>
               ))}
             </div>
           )}
-          {record.error && <div className="text-[11px] font-mono text-magenta">{record.error}</div>}
+          {record.error && (
+            <div className="text-[11px] font-mono text-magenta">
+              {record.error}
+            </div>
+          )}
         </div>
       )}
     </div>

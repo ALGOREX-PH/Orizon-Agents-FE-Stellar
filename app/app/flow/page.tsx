@@ -11,7 +11,9 @@ import { useFetch } from "@/lib/use-fetch";
 export default function FlowPage() {
   const { data: flow, error } = useFetch(getFlow, []);
 
-  const nodeById = flow ? Object.fromEntries(flow.nodes.map((n) => [n.id, n])) : {};
+  const nodeById = flow
+    ? Object.fromEntries(flow.nodes.map((n) => [n.id, n]))
+    : {};
 
   return (
     <div className="space-y-6">
@@ -39,7 +41,9 @@ export default function FlowPage() {
               autonomous-growth.flow
             </Badge>
             <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-              {flow ? `${flow.nodes.length} nodes · ${flow.edges.length} edges` : "loading…"}
+              {flow
+                ? `${flow.nodes.length} nodes · ${flow.edges.length} edges`
+                : "loading…"}
             </span>
           </div>
           <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan">

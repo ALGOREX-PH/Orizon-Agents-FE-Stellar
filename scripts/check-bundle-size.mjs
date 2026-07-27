@@ -38,11 +38,15 @@ for (const [route, files] of Object.entries(manifest.pages)) {
 
 rows.sort((a, b) => b.kb - a.kb);
 for (const { route, kb, over } of rows) {
-  console.log(`${over ? "FAIL" : "  ok"}  ${String(kb).padStart(5)} KB  ${route}`);
+  console.log(
+    `${over ? "FAIL" : "  ok"}  ${String(kb).padStart(5)} KB  ${route}`,
+  );
 }
 
 if (failed) {
-  console.error(`\nBundle budget exceeded (${BUDGET_KB} KB uncompressed first-load JS per route).`);
+  console.error(
+    `\nBundle budget exceeded (${BUDGET_KB} KB uncompressed first-load JS per route).`,
+  );
   process.exit(1);
 }
 console.log(`\nAll routes within the ${BUDGET_KB} KB first-load budget.`);

@@ -25,8 +25,11 @@ type Tab = "preview" | "files";
 
 export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
   const [tab, setTab] = useState<Tab>("preview");
-  const [activeFile, setActiveFile] = useState(artifact.entry || artifact.files[0]?.path);
-  const current = artifact.files.find((f) => f.path === activeFile) ?? artifact.files[0];
+  const [activeFile, setActiveFile] = useState(
+    artifact.entry || artifact.files[0]?.path,
+  );
+  const current =
+    artifact.files.find((f) => f.path === activeFile) ?? artifact.files[0];
 
   const download = () => {
     const file = artifact.files[0];
@@ -49,8 +52,8 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
           </Badge>
           <span className="font-mono text-sm">{artifact.title}</span>
           <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-            {artifact.files.length} file{artifact.files.length === 1 ? "" : "s"} ·{" "}
-            {artifact.files.reduce((n, f) => n + f.content.length, 0)} B
+            {artifact.files.length} file{artifact.files.length === 1 ? "" : "s"}{" "}
+            · {artifact.files.reduce((n, f) => n + f.content.length, 0)} B
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -127,7 +130,10 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
                 <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan mb-2">
                   {current.path} · {current.language}
                 </div>
-                <CodeViewer language={current.language} code={current.content} />
+                <CodeViewer
+                  language={current.language}
+                  code={current.content}
+                />
               </>
             )}
           </div>

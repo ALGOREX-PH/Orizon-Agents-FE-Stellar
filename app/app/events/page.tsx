@@ -39,7 +39,9 @@ export default function EventsPage() {
   );
 
   const ageSec =
-    lastTickAt !== null ? Math.max(0, Math.floor((Date.now() - lastTickAt) / 1000)) : null;
+    lastTickAt !== null
+      ? Math.max(0, Math.floor((Date.now() - lastTickAt) / 1000))
+      : null;
 
   // The feed isn't ready while the contract list is still being fetched or
   // the stellar-sdk chunk is loading ("starting") — during that window an
@@ -54,7 +56,8 @@ export default function EventsPage() {
           <h1 className="text-3xl font-semibold tracking-tight">Events</h1>
           <p className="mt-1 text-sm text-muted">
             Live Soroban contract events for Orizon's four contracts. Polling{" "}
-            <code className="text-cyan">getEvents</code> from {NETWORK_LABEL} RPC every 5 s.
+            <code className="text-cyan">getEvents</code> from {NETWORK_LABEL}{" "}
+            RPC every 5 s.
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -134,8 +137,8 @@ export default function EventsPage() {
                 /app/orchestrator
               </Link>{" "}
               — it'll publish <code className="text-cyan">charge</code> and{" "}
-              <code className="text-cyan">seal</code> events that show up here within a
-              ledger.
+              <code className="text-cyan">seal</code> events that show up here
+              within a ledger.
             </div>
             <div className="flex gap-3 pt-3">
               {[1, 2, 3, 4].map((i) => (
