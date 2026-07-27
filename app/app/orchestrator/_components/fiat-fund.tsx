@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { pdaxFundingQuote, pdaxReconcileRamp, pdaxStartOnRamp } from "@/lib/pdax";
 import type { PdaxFundingQuote, PdaxRampRecord } from "@/lib/pdax-types";
 import { inputCls } from "@/lib/ui";
+import { toMessage, useAsyncAction } from "@/lib/use-async-action";
 
 const METHODS = [
   ["instapay_upay_cashin", "Bank / e-wallet (QRPh)"],
@@ -29,23 +30,34 @@ export function FiatFund({
   const [method, setMethod] = useState(METHODS[0][0]);
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
+  // The record outlives the start call (reconcile polling refreshes it),
+  // so it stays as ordinary state fed from the action's result.
   const [record, setRecord] = useState<PdaxRampRecord | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  // Quote-pricing failures are a separate error source from starting the
+  // ramp; the fund action's error takes precedence in the shared line.
+  const [quoteErr, setQuoteErr] = useState<string | null>(null);
   const [pollStale, setPollStale] = useState(false);
+
+  const {
+    run: runFund,
+    error: fundErr,
+    pending: busy,
+  } = useAsyncAction(pdaxStartOnRamp);
+
+  const err = fundErr ?? quoteErr;
 
   // Server-authoritative funding quote: pesos that always cover the workflow
   // (buffer + round-up applied backend-side).
   useEffect(() => {
     if (!usdcAmount) return;
     setQuoting(true);
-    setErr(null);
+    setQuoteErr(null);
     pdaxFundingQuote(String(usdcAmount))
       .then((q) => {
         setQuote(q);
         setPhp(String(q.php_to_pay));
       })
-      .catch((e) => setErr(`couldn't price in PHP — ${String(e)}`))
+      .catch((e) => setQuoteErr(`couldn't price in PHP — ${toMessage(e)}`))
       .finally(() => setQuoting(false));
   }, [usdcAmount]);
 
@@ -80,26 +92,19 @@ export function FiatFund({
   }, [record?.ramp_id, record?.status]);
 
   const fund = async () => {
-    setErr(null);
-    setBusy(true);
+    setQuoteErr(null);
     setRecord(null);
-    try {
-      const r = await pdaxStartOnRamp({
-        php_amount: php,
-        stellar_address: address,
-        method,
-        identifier: crypto.randomUUID(),
-        sender_first_name: first,
-        sender_last_name: last,
-        beneficiary_first_name: first,
-        beneficiary_last_name: last,
-      });
-      setRecord(r);
-    } catch (e) {
-      setErr(String(e));
-    } finally {
-      setBusy(false);
-    }
+    const r = await runFund({
+      php_amount: php,
+      stellar_address: address,
+      method,
+      identifier: crypto.randomUUID(),
+      sender_first_name: first,
+      sender_last_name: last,
+      beneficiary_first_name: first,
+      beneficiary_last_name: last,
+    });
+    if (r) setRecord(r);
   };
 
   return (
