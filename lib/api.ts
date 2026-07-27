@@ -110,7 +110,13 @@ async function post<T, B>(
     let detail = "";
     try {
       const j = await res.json();
-      detail = j?.detail ? ` — ${j.detail}` : ` — ${JSON.stringify(j).slice(0, 300)}`;
+      // The backend is standardizing on an { error: { code, message } }
+      // envelope — prefer its message, fall back to the legacy `detail`
+      // field, then the raw body; statusText is the last resort below.
+      const envelopeMsg =
+        typeof j?.error?.message === "string" ? j.error.message : undefined;
+      const msg = envelopeMsg ?? j?.detail;
+      detail = msg ? ` — ${msg}` : ` — ${JSON.stringify(j).slice(0, 300)}`;
     } catch {
       try {
         detail = ` — ${(await res.text()).slice(0, 300)}`;
@@ -118,6 +124,7 @@ async function post<T, B>(
         /* ignore */
       }
     }
+    if (!detail && res.statusText) detail = ` — ${res.statusText}`;
     throw new Error(`POST ${path} → ${res.status}${detail}`);
   }
   const json: unknown = await res.json();

@@ -22,6 +22,7 @@ import {
 type FetchMockResponse = {
   ok: boolean;
   status: number;
+  statusText?: string;
   json: () => Promise<unknown>;
   text: () => Promise<string>;
 };
@@ -269,6 +270,43 @@ describe("post (via decompose)", () => {
 
     await expect(decompose("x")).rejects.toThrow(
       "POST /orchestrator/decompose → 422 — plan too vague",
+    );
+  });
+
+  it("prefers the standardized error-envelope message over detail", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(402, {
+        error: { code: "payment_required", message: "authorization expired" },
+        detail: "legacy detail",
+      }),
+    );
+
+    await expect(decompose("x")).rejects.toThrow(
+      "POST /orchestrator/decompose → 402 — authorization expired",
+    );
+  });
+
+  it("falls back to detail when the envelope carries no message", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(422, { error: { code: "invalid_plan" }, detail: "plan too vague" }),
+    );
+
+    await expect(decompose("x")).rejects.toThrow(
+      "POST /orchestrator/decompose → 422 — plan too vague",
+    );
+  });
+
+  it("falls back to statusText when the body is unreadable", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      statusText: "Service Unavailable",
+      json: () => Promise.reject(new Error("no body")),
+      text: () => Promise.reject(new Error("no body")),
+    });
+
+    await expect(decompose("x")).rejects.toThrow(
+      "POST /orchestrator/decompose → 503 — Service Unavailable",
     );
   });
 
