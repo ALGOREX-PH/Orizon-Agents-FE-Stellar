@@ -18,9 +18,8 @@ import type { rpc as RpcNs } from "@stellar/stellar-sdk";
 type StellarSdk = typeof import("@stellar/stellar-sdk");
 type ScValToNativeFn = StellarSdk["scValToNative"];
 
-// Env-driven RPC endpoint — falls back to Stellar testnet when unset.
-const RPC_URL =
-  process.env.NEXT_PUBLIC_SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
+// RPC endpoint resolution lives in lib/env.ts (validated at build time).
+import { SOROBAN_RPC_URL as RPC_URL } from "@/lib/env";
 
 export type FeedEvent = {
   id: string;
