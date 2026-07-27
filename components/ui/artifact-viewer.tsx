@@ -54,6 +54,8 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
         </div>
         <div className="flex items-center gap-2">
           <button
+            type="button"
+            aria-pressed={tab === "preview"}
             onClick={() => setTab("preview")}
             className={cn(
               "clip-cyber-sm border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition",
@@ -65,6 +67,8 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
             preview
           </button>
           <button
+            type="button"
+            aria-pressed={tab === "files"}
             onClick={() => setTab("files")}
             className={cn(
               "clip-cyber-sm border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition",
