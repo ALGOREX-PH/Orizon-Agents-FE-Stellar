@@ -5,6 +5,8 @@ import {
   Michroma,
   Share_Tech_Mono,
 } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { MotionProvider } from "@/components/ui/motion-provider";
 import { WalletProvider } from "@/lib/wallet";
@@ -79,6 +81,8 @@ export default function RootLayout({
         <MotionProvider>
           <WalletProvider>{children}</WalletProvider>
         </MotionProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
