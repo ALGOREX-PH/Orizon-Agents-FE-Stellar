@@ -23,7 +23,7 @@ export default function WalletPage() {
     balanceLoading,
     refreshBalance,
   } = useWallet();
-  const { data: info, error } = useFetch(getStellarNetwork, []);
+  const { data: info, error } = useFetch(getStellarNetwork, [], { revalidateOnFocus: true });
 
   // Compare the network the wallet itself reported against the backend's
   // deploy. Wallets that can't report a network (walletNetwork null) show

@@ -19,9 +19,9 @@ const statusTone = {
 };
 
 export default function AgentsPage() {
-  const { data: agents, error } = useFetch(listAgents, []);
+  const { data: agents, error } = useFetch(listAgents, [], { revalidateOnFocus: true });
   // On-chain reputation is best-effort: on error we silently keep seeded values.
-  const { data: repBatch } = useFetch(listReputation, []);
+  const { data: repBatch } = useFetch(listReputation, [], { revalidateOnFocus: true });
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "online" | "idle" | "offline">("all");
 

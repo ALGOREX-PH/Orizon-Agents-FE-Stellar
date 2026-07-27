@@ -19,13 +19,15 @@ export default function ReputationPage() {
   const { data: agents, error: agentsError, loading: agentsLoading } = useFetch(
     listAgents,
     [],
+    { revalidateOnFocus: true },
   );
   const { data: batch, error: batchError, loading: batchLoading } = useFetch(
     listReputation,
     [],
+    { revalidateOnFocus: true },
   );
   // Static config — the calculator and ledger card fall back to defaults.
-  const { data: params } = useFetch(getReputationParams, []);
+  const { data: params } = useFetch(getReputationParams, [], { revalidateOnFocus: true });
 
   return (
     <div className="space-y-10">
