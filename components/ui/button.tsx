@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { focusRing } from "@/lib/ui";
 import { cn } from "@/lib/utils";
 
 type Variant = "primary" | "outline" | "ghost" | "cyan";
 type Size = "sm" | "md" | "lg";
 
-const base =
-  "relative inline-flex items-center justify-center gap-2 font-mono uppercase tracking-[0.18em] transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none select-none clip-cyber focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-bg";
+// `clip-cyber` clips anything painted outside the element (offset rings,
+// shadows), so the shared inset focus ring is the only visible option here.
+const base = `relative inline-flex items-center justify-center gap-2 font-mono uppercase tracking-[0.18em] transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none select-none clip-cyber ${focusRing}`;
 
 const variants: Record<Variant, string> = {
   primary:
