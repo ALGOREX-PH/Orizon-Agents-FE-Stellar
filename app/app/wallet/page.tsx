@@ -2,6 +2,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
+import { ErrorNote } from "@/components/ui/error-note";
 import { NETWORK_NAME, useWallet } from "@/lib/wallet";
 import { KVRow } from "@/components/ui/kv-row";
 import {
@@ -58,11 +59,11 @@ export default function WalletPage() {
       </div>
 
       {networkMismatch && (
-        <div className="clip-cyber-sm border border-magenta/50 bg-magenta/5 p-4 font-mono text-xs text-magenta">
+        <ErrorNote className="clip-cyber-sm border-magenta/50 p-4">
           ⚠ your wallet is on <b>{walletNetwork?.network || "another network"}</b>{" "}
           but Orizon deployed to <b>{info?.network}</b>. Switch networks in your
           wallet extension.
-        </div>
+        </ErrorNote>
       )}
 
       {connected && (
@@ -136,13 +137,13 @@ export default function WalletPage() {
         </Card>
 
         <Card>
-          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-violet mb-4">
+          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-violet-readable mb-4">
             Orizon deploy ({info?.network ?? "…"})
           </div>
           {error && (
-            <div className="text-sm text-magenta mb-3 font-mono">
+            <ErrorNote className="border-0 bg-transparent p-0 text-sm mb-3">
               backend offline — {error}
-            </div>
+            </ErrorNote>
           )}
           {info ? (
             <dl className="space-y-3 text-sm font-mono">
