@@ -1,0 +1,105 @@
+import type { Page, Route } from "@playwright/test";
+
+/**
+ * Mock payloads shaped to satisfy lib/guards.ts (isOverview, isTaskList,
+ * isDecomposeResponse) so lib/api.ts accepts them exactly like real backend
+ * responses. Values are chosen to be distinctive so specs can assert them.
+ */
+
+export const mockOverview = {
+  agents_online: 2481,
+  tasks_per_sec: 1.234,
+  avg_completion: 0.984,
+  avg_trust: 4.87,
+  throughput: [12, 18, 9, 22, 30, 25, 14, 19, 27, 31, 24, 16],
+  skills: [
+    { name: "code", pct: 42, tone: "violet" },
+    { name: "design", pct: 31, tone: "cyan" },
+    { name: "research", pct: 27, tone: "magenta" },
+  ],
+};
+
+export const mockTasks = [
+  {
+    id: "task_e2e_001",
+    intent: "build a landing page for pulse ai",
+    agents: 3,
+    spent: 0.166,
+    status: "complete",
+    started: "2026-07-27 10:00",
+  },
+  {
+    id: "task_e2e_002",
+    intent: "audit the escrow contract",
+    agents: 2,
+    spent: 0.045,
+    status: "running",
+    started: "2026-07-27 10:05",
+  },
+];
+
+export const mockPlan = {
+  plan_id: "plan_e2e_1",
+  intent: "code a calculator web app",
+  steps: [
+    {
+      agent_id: "seo.brief",
+      agent_name: "seo.brief",
+      rationale: "outline requirements and keywords",
+      est_price_usdc: 0.009,
+      est_eta_seconds: 1.2,
+    },
+    {
+      agent_id: "design.figma",
+      agent_name: "design.figma",
+      rationale: "produce the interface layout",
+      est_price_usdc: 0.048,
+      est_eta_seconds: 2.4,
+    },
+    {
+      agent_id: "code.next",
+      agent_name: "code.next",
+      rationale: "implement and wire up the app",
+      est_price_usdc: 0.066,
+      est_eta_seconds: 3.1,
+    },
+  ],
+  total_usdc: 0.123,
+  total_eta: 6.7,
+};
+
+function json(route: Route, body: unknown) {
+  return route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify(body),
+  });
+}
+
+/**
+ * Intercepts every /api/* request the app can make (all data fetching is
+ * client-side and /api is a pure rewrite proxy, so this catches everything)
+ * and fulfills it with mocked JSON — no backend needed.
+ */
+export async function mockApi(page: Page): Promise<void> {
+  await page.route("**/api/**", (route) => {
+    const { pathname } = new URL(route.request().url());
+    const method = route.request().method();
+
+    if (method === "GET" && pathname === "/api/metrics/overview") {
+      return json(route, mockOverview);
+    }
+    if (method === "GET" && pathname === "/api/tasks") {
+      return json(route, mockTasks);
+    }
+    if (method === "POST" && pathname === "/api/orchestrator/decompose") {
+      return json(route, mockPlan);
+    }
+    if (method === "GET" && pathname === "/api/agents") {
+      return json(route, []);
+    }
+    // Anything else gets an empty-but-valid JSON body so stray fetches
+    // resolve instead of hanging or erroring.
+    return json(route, {});
+  });
+}
