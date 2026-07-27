@@ -12,10 +12,10 @@ export const focusRing =
 export const inputCls = `w-full bg-bg/60 border border-input px-3 py-2 text-sm font-mono outline-none focus:border-violet ${focusRing}`;
 
 /** Badge tones used for status rendering (subset of the Badge component's Tone). */
-export type StatusTone = "success" | "magenta" | "cyan" | "muted";
+type StatusTone = "success" | "magenta" | "cyan" | "muted";
 
 /** Status → Badge tone map (superset of the per-panel maps). */
-export const statusTones: Record<string, StatusTone> = {
+const statusTones: Record<string, StatusTone> = {
   completed: "success",
   failed: "magenta",
   awaiting_payment: "cyan",
