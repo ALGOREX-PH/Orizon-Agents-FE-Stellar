@@ -40,6 +40,12 @@ export default function EventsPage() {
   const ageSec =
     lastTickAt !== null ? Math.max(0, Math.floor((Date.now() - lastTickAt) / 1000)) : null;
 
+  // The feed isn't ready while the contract list is still being fetched or
+  // the stellar-sdk chunk is loading ("starting") — during that window an
+  // empty list means "still loading", not "no events".
+  const feedLoading =
+    status === "starting" || (contractIds === null && !loadError);
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between flex-wrap gap-4">
@@ -100,7 +106,21 @@ export default function EventsPage() {
           </span>
         </div>
 
-        {events.length === 0 ? (
+        {feedLoading && events.length === 0 ? (
+          <div className="space-y-2">
+            <div role="status" className="text-sm text-muted">
+              Connecting to the event feed…
+            </div>
+            <div className="flex gap-3 pt-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="flex-1 h-16 clip-cyber-sm border border-border bg-bg/40 animate-pulse"
+                />
+              ))}
+            </div>
+          </div>
+        ) : events.length === 0 ? (
           <div className="space-y-2">
             <div className="text-sm text-muted">
               No events yet. Run a workflow on{" "}
