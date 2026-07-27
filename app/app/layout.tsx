@@ -4,6 +4,17 @@ import { Topbar } from "./_components/topbar";
 import { GridBg } from "@/components/ui/grid-bg";
 import { MobileNavProvider } from "./_components/mobile-nav-context";
 
+// Origins the console talks to from the browser — derived exactly as
+// lib/wallet.tsx (HORIZON_URL) and lib/stellar-events.ts (RPC_URL) do, so the
+// preconnect hints below always match the endpoints actually fetched.
+const HORIZON_ORIGIN = new URL(
+  process.env.NEXT_PUBLIC_HORIZON_URL || "https://horizon-testnet.stellar.org",
+).origin;
+const SOROBAN_RPC_ORIGIN = new URL(
+  process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ||
+    "https://soroban-testnet.stellar.org",
+).origin;
+
 export const metadata: Metadata = {
   title: {
     default: "Console — Orizon Agents",
@@ -22,6 +33,10 @@ export default function AppLayout({
 }) {
   return (
     <MobileNavProvider>
+      <link rel="preconnect" href={HORIZON_ORIGIN} crossOrigin="" />
+      {SOROBAN_RPC_ORIGIN !== HORIZON_ORIGIN && (
+        <link rel="preconnect" href={SOROBAN_RPC_ORIGIN} crossOrigin="" />
+      )}
       <div className="relative min-h-screen">
         <GridBg fade={false} className="opacity-40" />
         <Sidebar />
