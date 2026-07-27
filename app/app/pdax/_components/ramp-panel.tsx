@@ -14,6 +14,7 @@ import type {
   RampDirection,
 } from "@/lib/pdax-types";
 import { inputCls, statusTone } from "@/lib/ui";
+import { useAsyncAction } from "@/lib/use-async-action";
 
 const DEPOSIT_METHODS = [
   "instapay_upay_cashin",
@@ -36,28 +37,26 @@ export function RampPanel() {
 
   const [est, setEst] = useState<PdaxRampEstimate | null>(null);
   const [record, setRecord] = useState<PdaxRampRecord | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+
+  // Both buttons share one pending flag and one error line (only one action
+  // can run at a time), so a single runner action drives them while `est`
+  // and `record` stay as ordinary state with their existing lifecycles.
+  const {
+    run,
+    error: err,
+    pending: busy,
+  } = useAsyncAction((task: () => Promise<void>) => task());
 
   const onRamp = dir === "onramp";
 
-  const estimate = async () => {
-    setErr(null);
-    setBusy(true);
-    try {
+  const estimate = () =>
+    run(async () => {
       setEst(await pdaxRampEstimate(dir, amount));
-    } catch (e) {
-      setErr(String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
+    });
 
-  const start = async () => {
-    setErr(null);
-    setBusy(true);
+  const start = () => {
     setRecord(null);
-    try {
+    return run(async () => {
       const id = crypto.randomUUID();
       const r = onRamp
         ? await pdaxStartOnRamp({
@@ -82,11 +81,7 @@ export function RampPanel() {
             beneficiary_last_name: last,
           });
       setRecord(r);
-    } catch (e) {
-      setErr(String(e));
-    } finally {
-      setBusy(false);
-    }
+    });
   };
 
   return (
