@@ -1,17 +1,13 @@
+import { IS_MAINNET } from "@/lib/env";
 import { cn } from "@/lib/utils";
 
 export type StellarExpertKind = "tx" | "account" | "contract";
 
 /**
- * Explorer segment resolved from the wallet network env (same var wallet.tsx
- * reads): the public passphrase → "public", anything else → "testnet".
+ * Explorer segment resolved from the shared network config (lib/env.ts):
+ * mainnet → "public", anything else → "testnet".
  */
-export const defaultExplorerNetwork =
-  (process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE ||
-    "Test SDF Network ; September 2015") ===
-  "Public Global Stellar Network ; September 2015"
-    ? "public"
-    : "testnet";
+export const defaultExplorerNetwork = IS_MAINNET ? "public" : "testnet";
 
 /** Canonical stellar.expert explorer URL for a tx / account / contract. */
 export function stellarExpertUrl(
