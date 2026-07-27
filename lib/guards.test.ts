@@ -1,0 +1,183 @@
+/**
+ * Tests for the shallow runtime guards in lib/guards.ts.
+ *
+ * Each guard accepts a realistic valid payload (extra unknown keys included —
+ * the guards are deliberately non-exhaustive) and rejects payloads where an
+ * arithmetic-critical field carries the wrong type.
+ */
+
+import { describe, expect, it } from "vitest";
+import {
+  isArtifactResponse,
+  isDecomposeResponse,
+  isOverview,
+  isReputationBatch,
+  isStellarNetworkInfo,
+  isTaskList,
+} from "./guards";
+
+describe("isOverview", () => {
+  const valid = {
+    agents_online: 128,
+    tasks_per_sec: 0.42,
+    avg_completion: 0.97,
+    avg_trust: 4.6,
+    throughput: [1, 2, 3],
+    skills: [{ name: "code", pct: 62, tone: "violet" }],
+  };
+
+  it("accepts a valid payload (extra keys tolerated)", () => {
+    expect(isOverview({ ...valid, extra: "ignored" })).toBe(true);
+  });
+
+  it("rejects non-objects", () => {
+    expect(isOverview(null)).toBe(false);
+    expect(isOverview([])).toBe(false);
+    expect(isOverview("<html>proxy error</html>")).toBe(false);
+  });
+
+  it("rejects a throughput array containing non-numbers", () => {
+    expect(isOverview({ ...valid, throughput: [1, "2", 3] })).toBe(false);
+  });
+
+  it("rejects a string avg_completion", () => {
+    expect(isOverview({ ...valid, avg_completion: "0.97" })).toBe(false);
+  });
+
+  it("rejects a skills entry without a numeric pct", () => {
+    expect(isOverview({ ...valid, skills: [{ name: "code" }] })).toBe(false);
+  });
+});
+
+describe("isTaskList", () => {
+  const task = {
+    id: "tsk_01",
+    intent: "build tetris",
+    agents: 3,
+    spent: 0.054,
+    status: "complete",
+    started: "2m ago",
+  };
+
+  it("accepts a valid list and the empty list", () => {
+    expect(isTaskList([task])).toBe(true);
+    expect(isTaskList([])).toBe(true);
+  });
+
+  it("rejects a non-array and items with a non-numeric spent", () => {
+    expect(isTaskList({ tasks: [task] })).toBe(false);
+    expect(isTaskList([{ ...task, spent: "0.054" }])).toBe(false);
+    expect(isTaskList([task, { ...task, spent: undefined }])).toBe(false);
+  });
+});
+
+describe("isDecomposeResponse", () => {
+  const valid = {
+    plan_id: "pln_1",
+    intent: "tetris",
+    steps: [
+      {
+        agent_id: "agt_01",
+        rationale: "codes",
+        est_price_usdc: 0.03,
+        est_eta_seconds: 4.5,
+      },
+    ],
+    total_usdc: 0.03,
+    total_eta: 4.5,
+  };
+
+  it("accepts a valid plan (empty steps included)", () => {
+    expect(isDecomposeResponse(valid)).toBe(true);
+    expect(isDecomposeResponse({ ...valid, steps: [] })).toBe(true);
+  });
+
+  it("rejects a non-numeric total_usdc", () => {
+    expect(isDecomposeResponse({ ...valid, total_usdc: "0.03" })).toBe(false);
+  });
+
+  it("rejects a step with a missing price estimate", () => {
+    const step = { agent_id: "agt_01", est_eta_seconds: 4.5 };
+    expect(isDecomposeResponse({ ...valid, steps: [step] })).toBe(false);
+  });
+});
+
+describe("isReputationBatch", () => {
+  const rep = {
+    agent_id: "agt_01",
+    smoothed_bps: 7000,
+    lower_bound_bps: 5677,
+    avg_bps: 0,
+    count: 0,
+    weight: 0,
+    disputed: 0,
+    dispute_rate_bps: 0,
+    source: "prior",
+  };
+  const valid = { reputations: { agt_01: rep }, floor_bps: 5500, prior_bps: 7000 };
+
+  it("accepts a valid batch (empty reputations included)", () => {
+    expect(isReputationBatch(valid)).toBe(true);
+    expect(isReputationBatch({ ...valid, reputations: {} })).toBe(true);
+  });
+
+  it("rejects an entry with a non-numeric smoothed_bps", () => {
+    const bad = { ...rep, smoothed_bps: null };
+    expect(isReputationBatch({ ...valid, reputations: { agt_01: bad } })).toBe(false);
+  });
+
+  it("rejects a batch without a numeric floor_bps", () => {
+    expect(isReputationBatch({ ...valid, floor_bps: undefined })).toBe(false);
+  });
+});
+
+describe("isArtifactResponse", () => {
+  const artifact = {
+    title: "Tetris",
+    summary: "playable tetris",
+    files: [{ path: "index.html", language: "html", content: "<html/>" }],
+    entry: "index.html",
+    preview_html: "<html/>",
+  };
+
+  it("accepts a sealed artifact and a null artifact", () => {
+    expect(isArtifactResponse({ artifact, charge_tx: "abc", proof_tx: null })).toBe(true);
+    expect(isArtifactResponse({ artifact: null })).toBe(true);
+  });
+
+  it("rejects an artifact whose files entries lack string content", () => {
+    const bad = { ...artifact, files: [{ path: "index.html", content: 42 }] };
+    expect(isArtifactResponse({ artifact: bad })).toBe(false);
+  });
+
+  it("rejects non-object payloads", () => {
+    expect(isArtifactResponse(null)).toBe(false);
+    expect(isArtifactResponse("gateway timeout")).toBe(false);
+  });
+});
+
+describe("isStellarNetworkInfo", () => {
+  const valid = {
+    network: "testnet",
+    rpc_url: "https://soroban-testnet.stellar.org",
+    network_passphrase: "Test SDF Network ; September 2015",
+    admin: "GABC",
+    contracts: { reputation: "CDCS", escrow: "CAAA" },
+    asset: "USDC",
+    asset_sac: "CBBB12345678",
+  };
+
+  it("accepts a valid payload (empty contracts included)", () => {
+    expect(isStellarNetworkInfo(valid)).toBe(true);
+    expect(isStellarNetworkInfo({ ...valid, contracts: {} })).toBe(true);
+  });
+
+  it("rejects non-string contract ids", () => {
+    expect(isStellarNetworkInfo({ ...valid, contracts: { reputation: 7 } })).toBe(false);
+  });
+
+  it("rejects a missing asset_sac", () => {
+    const { asset_sac: _drop, ...rest } = valid;
+    expect(isStellarNetworkInfo(rest)).toBe(false);
+  });
+});
