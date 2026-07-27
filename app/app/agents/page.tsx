@@ -4,6 +4,7 @@ import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ErrorNote } from "@/components/ui/error-note";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ReputationBadge } from "@/components/ui/reputation-badge";
 import { listAgents, listReputation } from "@/lib/api";
@@ -61,7 +62,9 @@ export default function AgentsPage() {
             ERC-8004 profiles — identity, skills, price, reputation.
           </p>
         </div>
-        <Button variant="primary">+ Register agent</Button>
+        <Button variant="primary" disabled title="coming soon">
+          + Register agent
+        </Button>
       </div>
 
       <Card>
@@ -104,9 +107,9 @@ export default function AgentsPage() {
         </div>
 
         {error && (
-          <div className="mb-4 clip-cyber-sm border border-magenta/40 bg-magenta/5 px-4 py-3 font-mono text-xs text-magenta">
+          <ErrorNote className="mb-4 clip-cyber-sm">
             backend offline — {error}
-          </div>
+          </ErrorNote>
         )}
 
         <div className="overflow-x-auto">
@@ -170,7 +173,7 @@ export default function AgentsPage() {
                     </Badge>
                   </td>
                   <td className="py-3 text-right">
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" disabled title="coming soon">
                       ▸ view
                     </Button>
                   </td>
