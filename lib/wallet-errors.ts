@@ -38,6 +38,42 @@ export type FriendlyError = {
   raw: string;
 };
 
+const ERROR_KINDS: ReadonlySet<string> = new Set([
+  "wallet_not_found",
+  "user_rejected",
+  "insufficient_balance",
+  "wrong_network",
+  "unknown",
+] satisfies WalletErrorKind[]);
+
+/** True when `e` is already a classified FriendlyError (e.g. thrown pre-classified by signXdr). */
+export function isFriendlyError(e: unknown): e is FriendlyError {
+  if (!e || typeof e !== "object") return false;
+  const f = e as Partial<FriendlyError>;
+  return (
+    typeof f.kind === "string" &&
+    ERROR_KINDS.has(f.kind) &&
+    typeof f.title === "string" &&
+    typeof f.detail === "string" &&
+    typeof f.raw === "string"
+  );
+}
+
+/**
+ * Canonical wrong-network error. Used by the classifier when a wallet's own
+ * message mentions the wrong network, and thrown pre-classified by signXdr
+ * when the provider already knows the wallet's reported network mismatches
+ * the app's — before any signing popup opens.
+ */
+export function wrongNetworkError(raw = ""): FriendlyError {
+  return {
+    kind: "wrong_network",
+    title: "Wrong network",
+    detail: `Your wallet is connected to the wrong network. Switch to ${NETWORK_LABEL} in your wallet extension.`,
+    raw,
+  };
+}
+
 const REJECT_PATTERNS = [
   /user (?:declined|rejected|cancelled|canceled)/i,
   /denied/i,
@@ -69,6 +105,9 @@ const WRONG_NETWORK_PATTERNS = [
 
 /** Normalize anything thrown by Freighter / xBull / Horizon / our own code into a FriendlyError. */
 export function classifyError(e: unknown): FriendlyError {
+  // Already classified (e.g. the pre-flight wrong_network throw in signXdr) —
+  // pass it through untouched so call-sites can classify unconditionally.
+  if (isFriendlyError(e)) return e;
   const raw = extractMessage(e);
   const horizonExtras = extractHorizonResultCodes(e);
   // Build a richer "raw" string when Horizon gives us structured codes.
@@ -180,12 +219,7 @@ export function classifyError(e: unknown): FriendlyError {
   }
 
   if (WRONG_NETWORK_PATTERNS.some((re) => re.test(raw))) {
-    return {
-      kind: "wrong_network",
-      title: "Wrong network",
-      detail: `Your wallet is connected to the wrong network. Switch to ${NETWORK_LABEL} in your wallet extension.`,
-      raw,
-    };
+    return wrongNetworkError(raw);
   }
 
   return {
