@@ -9,6 +9,7 @@ import { KVRow } from "@/components/ui/kv-row";
 import { StellarExpertLink } from "@/components/ui/stellar-link";
 import { getArtifact, openTraceStream } from "@/lib/api";
 import type { ArtifactResponse, TraceLine } from "@/lib/types";
+import { focusRing } from "@/lib/ui";
 import { cn } from "@/lib/utils";
 
 const levelColor: Record<TraceLine["level"], string> = {
@@ -207,6 +208,7 @@ function TracePageInner() {
             onClick={() => setTab("trace")}
             className={cn(
               "clip-cyber-sm border px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] transition",
+              focusRing,
               tab === "trace"
                 ? "border-violet bg-violet/20 text-text shadow-neon-violet"
                 : "border-border text-muted hover:text-text",
@@ -220,6 +222,7 @@ function TracePageInner() {
             onClick={() => setTab("artifact")}
             className={cn(
               "clip-cyber-sm border px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] transition",
+              focusRing,
               tab === "artifact"
                 ? "border-cyan bg-cyan/20 text-text shadow-neon-cyan"
                 : "border-border text-muted hover:text-text",
