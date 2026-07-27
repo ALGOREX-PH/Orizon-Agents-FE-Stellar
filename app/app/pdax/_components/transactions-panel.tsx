@@ -1,30 +1,22 @@
 "use client";
-import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getPdaxCryptoTransactions } from "@/lib/pdax";
-import type { PdaxCryptoTransaction } from "@/lib/pdax-types";
 import { statusTone } from "@/lib/ui";
+import { useAsyncAction } from "@/lib/use-async-action";
 
 /** Recent crypto deposits / withdrawals on the PDAX account. */
 export function TransactionsPanel() {
-  const [txns, setTxns] = useState<PdaxCryptoTransaction[] | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const load = async () => {
-    setErr(null);
-    setBusy(true);
-    try {
-      const { transactions } = await getPdaxCryptoTransactions({ pageSize: 10 });
-      setTxns(transactions);
-    } catch (e) {
-      setErr(String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const {
+    run: load,
+    data: txns,
+    error: err,
+    pending: busy,
+  } = useAsyncAction(async () => {
+    const { transactions } = await getPdaxCryptoTransactions({ pageSize: 10 });
+    return transactions;
+  });
 
   return (
     <Card>
@@ -32,7 +24,7 @@ export function TransactionsPanel() {
         <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted">
           crypto transactions
         </div>
-        <Button size="sm" variant="outline" onClick={load} disabled={busy}>
+        <Button size="sm" variant="outline" onClick={() => void load()} disabled={busy}>
           {busy ? "◉ loading…" : "load"}
         </Button>
       </div>

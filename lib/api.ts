@@ -1,3 +1,11 @@
+import {
+  isArtifactResponse,
+  isDecomposeResponse,
+  isOverview,
+  isReputationBatch,
+  isStellarNetworkInfo,
+  isTaskList,
+} from "./guards";
 import type {
   Agent,
   ArtifactResponse,
@@ -45,13 +53,49 @@ export async function fetchWithTimeout(
   }
 }
 
-async function get<T>(path: string): Promise<T> {
-  const res = await fetchWithTimeout("GET", path, { cache: "no-store" }, GET_TIMEOUT_MS);
-  if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
-  return res.json();
+// Several components fetch the same GET simultaneously on mount (/app fires
+// getOverview from both the sidebar and the page). Identical paths share one
+// request while it is in flight and for a short window after it resolves;
+// rejections are evicted immediately so retries always hit the network.
+export const GET_DEDUPE_MS = 1_000;
+
+type GetCacheEntry = { promise: Promise<unknown>; settledAt: number | null };
+const getCache = new Map<string, GetCacheEntry>();
+
+/** Drops all deduped GET entries — exposed for tests. */
+export function clearGetCache(): void {
+  getCache.clear();
 }
 
-async function post<T, B>(path: string, body: B): Promise<T> {
+function get<T>(path: string, parse?: (v: unknown) => T): Promise<T> {
+  const hit = getCache.get(path);
+  if (hit && (hit.settledAt === null || Date.now() - hit.settledAt < GET_DEDUPE_MS)) {
+    return hit.promise as Promise<T>;
+  }
+  const promise = (async () => {
+    const res = await fetchWithTimeout("GET", path, { cache: "no-store" }, GET_TIMEOUT_MS);
+    if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
+    const json: unknown = await res.json();
+    return parse ? parse(json) : (json as T);
+  })();
+  const entry: GetCacheEntry = { promise, settledAt: null };
+  getCache.set(path, entry);
+  promise.then(
+    () => {
+      entry.settledAt = Date.now();
+    },
+    () => {
+      if (getCache.get(path) === entry) getCache.delete(path);
+    },
+  );
+  return promise;
+}
+
+async function post<T, B>(
+  path: string,
+  body: B,
+  parse?: (v: unknown) => T,
+): Promise<T> {
   const res = await fetchWithTimeout(
     "POST",
     path,
@@ -66,7 +110,13 @@ async function post<T, B>(path: string, body: B): Promise<T> {
     let detail = "";
     try {
       const j = await res.json();
-      detail = j?.detail ? ` — ${j.detail}` : ` — ${JSON.stringify(j).slice(0, 300)}`;
+      // The backend is standardizing on an { error: { code, message } }
+      // envelope — prefer its message, fall back to the legacy `detail`
+      // field, then the raw body; statusText is the last resort below.
+      const envelopeMsg =
+        typeof j?.error?.message === "string" ? j.error.message : undefined;
+      const msg = envelopeMsg ?? j?.detail;
+      detail = msg ? ` — ${msg}` : ` — ${JSON.stringify(j).slice(0, 300)}`;
     } catch {
       try {
         detail = ` — ${(await res.text()).slice(0, 300)}`;
@@ -74,19 +124,39 @@ async function post<T, B>(path: string, body: B): Promise<T> {
         /* ignore */
       }
     }
+    if (!detail && res.statusText) detail = ` — ${res.statusText}`;
     throw new Error(`POST ${path} → ${res.status}${detail}`);
   }
-  return res.json();
+  const json: unknown = await res.json();
+  return parse ? parse(json) : (json as T);
+}
+
+/**
+ * Wraps a runtime guard into a parse fn for `get`/`post`: a payload that
+ * fails the guard rejects like any other request error and surfaces in the
+ * page's normal error state, instead of crashing mid-render on
+ * `undefined.toFixed(...)`.
+ */
+function ensure<T>(path: string, guard: (v: unknown) => v is T): (v: unknown) => T {
+  return (v) => {
+    if (!guard(v)) throw new Error(`malformed response from ${path}`);
+    return v;
+  };
 }
 
 export const listAgents = () => get<Agent[]>("/agents");
-export const listTasks = () => get<Task[]>("/tasks");
-export const getOverview = () => get<Overview>("/metrics/overview");
+export const listTasks = () => get<Task[]>("/tasks", ensure("/tasks", isTaskList));
+export const getOverview = () =>
+  get<Overview>("/metrics/overview", ensure("/metrics/overview", isOverview));
 export const getFlow = () => get<Flow>("/flow/default");
 export const getTrace = (taskId: string) => get<TraceLine[]>(`/trace/${taskId}`);
 
 export const decompose = (intent: string) =>
-  post<DecomposeResponse, { intent: string }>("/orchestrator/decompose", { intent });
+  post<DecomposeResponse, { intent: string }>(
+    "/orchestrator/decompose",
+    { intent },
+    ensure("/orchestrator/decompose", isDecomposeResponse),
+  );
 
 export const execute = (
   planId: string,
@@ -98,10 +168,17 @@ export const execute = (
   );
 
 export const getArtifact = (taskId: string) =>
-  get<ArtifactResponse>(`/tasks/${taskId}/artifact`);
+  get<ArtifactResponse>(
+    `/tasks/${taskId}/artifact`,
+    ensure(`/tasks/${taskId}/artifact`, isArtifactResponse),
+  );
 
 // ── Stellar / x402 ──────────────────────────────────────────
-export const getStellarNetwork = () => get<StellarNetworkInfo>("/stellar/network");
+export const getStellarNetwork = () =>
+  get<StellarNetworkInfo>(
+    "/stellar/network",
+    ensure("/stellar/network", isStellarNetworkInfo),
+  );
 
 export const buildAuthorize = (body: {
   payer: string;
@@ -114,7 +191,11 @@ export const buildAuthorize = (body: {
     body,
   );
 
-export const listReputation = () => get<ReputationBatch>("/stellar/reputation");
+export const listReputation = () =>
+  get<ReputationBatch>(
+    "/stellar/reputation",
+    ensure("/stellar/reputation", isReputationBatch),
+  );
 export const getReputationParams = () =>
   get<ReputationParams>("/stellar/reputation/params");
 export const getReputation = (agentId: string) =>
@@ -140,12 +221,18 @@ export const submitSigned = (signedXdr: string) =>
  *
  * Transient drops auto-reconnect up to 3 times (1s/2s/4s backoff) before
  * surfacing the error; once `done` arrives no reconnect is attempted.
+ *
+ * The backend replays the full trace history to every new subscriber, so a
+ * reconnect re-delivers already-seen lines. onReset fires immediately before
+ * each reconnect opens its EventSource — consumers must drop accumulated
+ * lines there or the replay double-renders (and double-counts spend).
  */
 export function openTraceStream(
   taskId: string,
   onEvent: (line: TraceLine) => void,
   onDone?: () => void,
   onError?: () => void,
+  onReset?: () => void,
 ): () => void {
   const MAX_RECONNECTS = 3;
   const BACKOFF_MS = [1_000, 2_000, 4_000];
@@ -177,6 +264,7 @@ export function openTraceStream(
         attempts += 1;
         retryTimer = setTimeout(() => {
           retryTimer = null;
+          onReset?.();
           connect();
         }, delay);
       } else {

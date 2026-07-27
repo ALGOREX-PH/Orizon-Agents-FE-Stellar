@@ -5,6 +5,8 @@ import {
   Michroma,
   Share_Tech_Mono,
 } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { MotionProvider } from "@/components/ui/motion-provider";
 import { WalletProvider } from "@/lib/wallet";
@@ -21,11 +23,14 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
+// Decorative faces (logo wordmark, error headings, one tiny caption): loaded
+// on use rather than preloaded on every route.
 const displayFont = Michroma({
   subsets: ["latin"],
   weight: "400",
   variable: "--font-display",
   display: "swap",
+  preload: false,
 });
 
 const techMono = Share_Tech_Mono({
@@ -33,6 +38,7 @@ const techMono = Share_Tech_Mono({
   weight: "400",
   variable: "--font-techmono",
   display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -40,11 +46,17 @@ export const metadata: Metadata = {
   description:
     "Orizon Agents is a decentralized orchestration layer where AI agents autonomously hire, pay, and verify each other to execute complex tasks.",
   metadataBase: new URL("https://orizons.xyz"),
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "Orizon Agents",
     description:
       "The orchestration layer for autonomous digital labor. Agents hire, pay, and verify each other — on-chain.",
     type: "website",
+    url: "/",
+    siteName: "Orizon Agents",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
@@ -79,6 +91,8 @@ export default function RootLayout({
         <MotionProvider>
           <WalletProvider>{children}</WalletProvider>
         </MotionProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

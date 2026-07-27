@@ -1,14 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadingStatus, Skeleton } from "@/components/ui/skeleton";
 import {
   getPdaxBalances,
   getPdaxEnvironment,
   getPdaxHealth,
 } from "@/lib/pdax";
-import type { PdaxBalance } from "@/lib/pdax-types";
 import { useFetch } from "@/lib/use-fetch";
 import { RampPanel } from "./_components/ramp-panel";
 import { PricePanel } from "./_components/price-panel";
@@ -16,31 +15,26 @@ import { DepositPanel } from "./_components/deposit-panel";
 import { TransactionsPanel } from "./_components/transactions-panel";
 
 export default function PdaxPage() {
-  const { data: env, error: envError } = useFetch(getPdaxEnvironment, []);
+  const {
+    data: env,
+    error: envError,
+    loading: envLoading,
+  } = useFetch(getPdaxEnvironment, []);
   const { data: health, error: healthError } = useFetch(getPdaxHealth, []);
   const healthDown = healthError !== null;
-  const [balances, setBalances] = useState<PdaxBalance[] | null>(null);
-  const [loadingBal, setLoadingBal] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
 
-  // Surface the environment fetch failure in the shared error banner
-  // (a later balances refresh clears it, matching the previous behavior).
-  useEffect(() => {
-    if (envError) setErr(envError);
-  }, [envError]);
+  // Balances auto-load on mount; `reload` backs the manual refresh button.
+  // While a refresh is in flight the previous rows stay visible.
+  const {
+    data: balances,
+    error: balError,
+    loading: loadingBal,
+    reload: reloadBalances,
+  } = useFetch(async () => (await getPdaxBalances()).balances, []);
 
-  const loadBalances = async () => {
-    setErr(null);
-    setLoadingBal(true);
-    try {
-      const { balances } = await getPdaxBalances();
-      setBalances(balances);
-    } catch (e) {
-      setErr(String(e));
-    } finally {
-      setLoadingBal(false);
-    }
-  };
+  // Shared banner: the balances failure takes precedence; an environment
+  // fetch failure also surfaces here.
+  const err = balError ?? envError;
 
   return (
     <div className="space-y-6">
@@ -86,8 +80,10 @@ export default function PdaxPage() {
               <Badge tone={env.configured ? "success" : "muted"}>
                 {env.environment}
               </Badge>
-            ) : (
+            ) : envLoading ? (
               <Badge tone="muted">loading…</Badge>
+            ) : (
+              <Badge tone="magenta">unavailable</Badge>
             )}
           </div>
         </div>
@@ -108,13 +104,28 @@ export default function PdaxPage() {
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted">
             balances
           </div>
-          <Button size="sm" variant="outline" onClick={loadBalances} disabled={loadingBal}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={reloadBalances}
+            disabled={loadingBal}
+          >
             {loadingBal ? "◉ loading…" : "refresh"}
           </Button>
         </div>
         <div className="mt-4 space-y-2">
-          {balances === null && (
-            <div className="text-xs text-muted">No balances loaded yet.</div>
+          {balances === null && loadingBal && (
+            <>
+              <LoadingStatus label="Loading balances…" />
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-9 w-full" />
+              ))}
+            </>
+          )}
+          {balances === null && !loadingBal && (
+            <div className="text-xs text-muted">
+              Balances unavailable — refresh to retry.
+            </div>
           )}
           {balances?.length === 0 && (
             <div className="text-xs text-muted">No assets.</div>

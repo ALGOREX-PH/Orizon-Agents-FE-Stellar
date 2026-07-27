@@ -2,7 +2,7 @@
 import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
-import { useWallet } from "@/lib/wallet";
+import { NETWORK_NAME, useWallet } from "@/lib/wallet";
 import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
 import { useMobileNav } from "./mobile-nav-context";
 
@@ -31,10 +31,12 @@ function fmtXlm(b: string | null): string {
 export function Topbar() {
   const pathname = usePathname();
   const meta = titles[pathname] ?? { t: "Console", b: ["console"] };
-  const { connected, xlmBalance, balanceLoading } = useWallet();
+  const { connected, xlmBalance, balanceLoading, walletNetwork, walletNetworkMismatch } =
+    useWallet();
   const { toggle } = useMobileNav();
 
   return (
+    <>
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-bg/70 backdrop-blur-xl px-4 md:px-8">
       <div className="flex items-center gap-3 md:gap-4 min-w-0">
         <button
@@ -79,5 +81,17 @@ export function Topbar() {
         </Badge>
       </div>
     </header>
+    {walletNetworkMismatch && (
+      <div
+        role="alert"
+        className="sticky top-16 z-20 border-b border-magenta/50 bg-magenta/10 backdrop-blur-xl px-4 md:px-8 py-2 font-mono text-[11px] text-magenta"
+      >
+        ⚠ wrong network — your wallet is on{" "}
+        <b>{walletNetwork?.network || "another network"}</b> but this app expects{" "}
+        <b>{NETWORK_NAME}</b>. Switch networks in your wallet extension before
+        signing.
+      </div>
+    )}
+    </>
   );
 }

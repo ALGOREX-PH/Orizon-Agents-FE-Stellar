@@ -17,12 +17,29 @@ import { prettyName } from "@/lib/utils";
 const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 export default function WalletPage() {
-  const { connected, address, network, xlmBalance, balanceLoading, refreshBalance } =
-    useWallet();
+  const {
+    connected,
+    address,
+    network,
+    walletNetwork,
+    xlmBalance,
+    balanceLoading,
+    refreshBalance,
+  } = useWallet();
   const { data: info, error } = useFetch(getStellarNetwork, []);
 
+  // Compare the network the wallet itself reported against the backend's
+  // deploy. Wallets that can't report a network (walletNetwork null) show
+  // no warning — unknown is not a mismatch.
   const networkMismatch =
-    connected && info && network?.networkPassphrase !== info.network_passphrase;
+    connected &&
+    info &&
+    walletNetwork &&
+    walletNetwork.networkPassphrase !== info.network_passphrase;
+
+  // Prefer the wallet-reported network for session display; fall back to
+  // this build's configured network when the wallet didn't report one.
+  const sessionNetwork = walletNetwork ?? network;
 
   const balanceFmt =
     xlmBalance === null ? "—" : parseFloat(xlmBalance).toFixed(7);
@@ -41,8 +58,9 @@ export default function WalletPage() {
 
       {networkMismatch && (
         <div className="clip-cyber-sm border border-magenta/50 bg-magenta/5 p-4 font-mono text-xs text-magenta">
-          ⚠ your wallet is on <b>{network?.network}</b> but Orizon deployed to{" "}
-          <b>{info?.network}</b>. Switch networks in the Freighter extension.
+          ⚠ your wallet is on <b>{walletNetwork?.network || "another network"}</b>{" "}
+          but Orizon deployed to <b>{info?.network}</b>. Switch networks in your
+          wallet extension.
         </div>
       )}
 
@@ -63,7 +81,7 @@ export default function WalletPage() {
               </div>
               <div className="mt-2 font-mono text-[11px] text-muted">
                 {address ? `${address.slice(0, 6)}…${address.slice(-6)}` : ""} ·{" "}
-                {network?.network ?? NETWORK_NAME}
+                {sessionNetwork?.network ?? NETWORK_NAME}
               </div>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
@@ -105,8 +123,8 @@ export default function WalletPage() {
           {connected ? (
             <dl className="space-y-3 text-sm font-mono">
               <KVRow k="address" value={address ?? ""} />
-              <KVRow k="network" value={network?.network ?? ""} />
-              <KVRow k="passphrase" value={network?.networkPassphrase ?? ""} />
+              <KVRow k="network" value={sessionNetwork?.network ?? ""} />
+              <KVRow k="passphrase" value={sessionNetwork?.networkPassphrase ?? ""} />
             </dl>
           ) : (
             <div className="text-sm text-muted">

@@ -1,10 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { pdaxFundingQuote, pdaxReconcileRamp, pdaxStartOnRamp } from "@/lib/pdax";
 import type { PdaxFundingQuote, PdaxRampRecord } from "@/lib/pdax-types";
 import { inputCls } from "@/lib/ui";
+import { toMessage, useAsyncAction } from "@/lib/use-async-action";
+import { usePolling } from "@/lib/use-polling";
 
 const METHODS = [
   ["instapay_upay_cashin", "Bank / e-wallet (QRPh)"],
@@ -29,24 +31,45 @@ export function FiatFund({
   const [method, setMethod] = useState(METHODS[0][0]);
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
+  // The record outlives the start call (reconcile polling refreshes it),
+  // so it stays as ordinary state fed from the action's result.
   const [record, setRecord] = useState<PdaxRampRecord | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  // Quote-pricing failures are a separate error source from starting the
+  // ramp; the fund action's error takes precedence in the shared line.
+  const [quoteErr, setQuoteErr] = useState<string | null>(null);
   const [pollStale, setPollStale] = useState(false);
 
+  const {
+    run: runFund,
+    error: fundErr,
+    pending: busy,
+  } = useAsyncAction(pdaxStartOnRamp);
+
+  const err = fundErr ?? quoteErr;
+
   // Server-authoritative funding quote: pesos that always cover the workflow
-  // (buffer + round-up applied backend-side).
+  // (buffer + round-up applied backend-side). The alive flag keeps a torn-down
+  // effect (unmount or usdcAmount change) from applying a stale response.
   useEffect(() => {
     if (!usdcAmount) return;
+    let alive = true;
     setQuoting(true);
-    setErr(null);
+    setQuoteErr(null);
     pdaxFundingQuote(String(usdcAmount))
       .then((q) => {
+        if (!alive) return;
         setQuote(q);
         setPhp(String(q.php_to_pay));
       })
-      .catch((e) => setErr(`couldn't price in PHP — ${String(e)}`))
-      .finally(() => setQuoting(false));
+      .catch((e) => {
+        if (alive) setQuoteErr(`couldn't price in PHP — ${toMessage(e)}`);
+      })
+      .finally(() => {
+        if (alive) setQuoting(false);
+      });
+    return () => {
+      alive = false;
+    };
   }, [usdcAmount]);
 
   useEffect(() => {
@@ -55,51 +78,47 @@ export function FiatFund({
 
   // Once a ramp is started, poll our backend (which reconciles against PDAX)
   // so status updates here — no dependence on PDAX's redirect page.
-  useEffect(() => {
-    if (!record || record.status === "completed" || record.status === "failed") {
-      return;
-    }
-    let failures = 0;
-    const id = setInterval(() => {
-      // Skip polls while the tab is hidden — resume on return.
-      if (typeof document !== "undefined" && document.hidden) return;
-      pdaxReconcileRamp(record.ramp_id)
-        .then((r) => {
-          failures = 0;
-          setPollStale(false);
-          setRecord(r);
-        })
-        .catch(() => {
-          // One missed poll is transient; only surface a persistent outage.
-          failures += 1;
-          if (failures >= 3) setPollStale(true);
-        });
-    }, 6000);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [record?.ramp_id, record?.status]);
+  // usePolling only re-schedules after the previous reconcile settles (the
+  // POST has a long timeout, so a raw interval could stack requests), backs
+  // off while the backend is failing, pauses in hidden tabs, and stops once
+  // the ramp reaches a terminal state or the component unmounts.
+  const rampPending =
+    record !== null && record.status !== "completed" && record.status !== "failed";
+  const pollFailures = useRef(0);
+  usePolling(
+    async () => {
+      if (!record) return;
+      try {
+        const r = await pdaxReconcileRamp(record.ramp_id);
+        pollFailures.current = 0;
+        setPollStale(false);
+        setRecord(r);
+      } catch (e) {
+        // One missed poll is transient; only surface a persistent outage.
+        pollFailures.current += 1;
+        if (pollFailures.current >= 3) setPollStale(true);
+        throw e; // let usePolling apply its backoff
+      }
+    },
+    6000,
+    { enabled: rampPending },
+  );
 
   const fund = async () => {
-    setErr(null);
-    setBusy(true);
+    setQuoteErr(null);
     setRecord(null);
-    try {
-      const r = await pdaxStartOnRamp({
-        php_amount: php,
-        stellar_address: address,
-        method,
-        identifier: crypto.randomUUID(),
-        sender_first_name: first,
-        sender_last_name: last,
-        beneficiary_first_name: first,
-        beneficiary_last_name: last,
-      });
-      setRecord(r);
-    } catch (e) {
-      setErr(String(e));
-    } finally {
-      setBusy(false);
-    }
+    pollFailures.current = 0; // a new ramp starts with a clean streak
+    const r = await runFund({
+      php_amount: php,
+      stellar_address: address,
+      method,
+      identifier: crypto.randomUUID(),
+      sender_first_name: first,
+      sender_last_name: last,
+      beneficiary_first_name: first,
+      beneficiary_last_name: last,
+    });
+    if (r) setRecord(r);
   };
 
   return (

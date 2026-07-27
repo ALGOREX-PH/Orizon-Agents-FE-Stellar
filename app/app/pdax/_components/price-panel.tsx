@@ -4,35 +4,37 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getPdaxPrice, pdaxFirmQuote } from "@/lib/pdax";
-import type { PdaxQuote, PdaxSide } from "@/lib/pdax-types";
+import type { PdaxSide } from "@/lib/pdax-types";
 import { inputCls } from "@/lib/ui";
+import { useAsyncAction } from "@/lib/use-async-action";
 
 /** Indicative price + firm-quote console for a PHP pair (default USDC). */
 export function PricePanel() {
   const [side, setSide] = useState<PdaxSide>("buy");
   const [quoteCurrency, setQuoteCurrency] = useState("USDC");
   const [baseQuantity, setBaseQuantity] = useState("100");
-  const [quote, setQuote] = useState<PdaxQuote | null>(null);
-  const [firm, setFirm] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
 
-  const run = async (firmQuote: boolean) => {
-    setErr(null);
-    setBusy(true);
-    setQuote(null);
-    try {
-      const q = firmQuote
-        ? await pdaxFirmQuote({ quote_currency: quoteCurrency, side, base_quantity: baseQuantity })
-        : await getPdaxPrice({ quote_currency: quoteCurrency, side, base_quantity: baseQuantity });
-      setQuote(q);
-      setFirm(firmQuote);
-    } catch (e) {
-      setErr(String(e));
-    } finally {
-      setBusy(false);
-    }
+  // The firm flag rides along with the quote so a failed run can't leave
+  // a stale "firm" badge on an indicative price (or vice versa).
+  const {
+    run: fetchQuote,
+    data: result,
+    error: err,
+    pending: busy,
+    reset,
+  } = useAsyncAction(async (firmQuote: boolean) => {
+    const params = { quote_currency: quoteCurrency, side, base_quantity: baseQuantity };
+    const quote = firmQuote ? await pdaxFirmQuote(params) : await getPdaxPrice(params);
+    return { quote, firm: firmQuote };
+  });
+
+  const run = (firmQuote: boolean) => {
+    reset(); // drop the previous quote while the new one is in flight
+    void fetchQuote(firmQuote);
   };
+
+  const quote = result?.quote ?? null;
+  const firm = result?.firm ?? false;
 
   return (
     <Card>

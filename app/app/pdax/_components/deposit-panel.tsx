@@ -1,31 +1,45 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getPdaxCryptoDeposit } from "@/lib/pdax";
-import type { PdaxCryptoDepositAddress } from "@/lib/pdax-types";
 import { inputCls } from "@/lib/ui";
+import { useAsyncAction } from "@/lib/use-async-action";
 
 /** Fetch a PDAX deposit wallet for a token (default USDCXLM — USDC on Stellar). */
 export function DepositPanel() {
   const [currency, setCurrency] = useState("USDCXLM");
-  const [addr, setAddr] = useState<PdaxCryptoDepositAddress | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // Clipboard failures are a separate error source from the fetch; the
+  // fetch action's error takes precedence and a new load clears both.
+  const [copyErr, setCopyErr] = useState<string | null>(null);
 
-  const load = async () => {
-    setErr(null);
-    setBusy(true);
-    setAddr(null);
-    try {
-      setAddr(await getPdaxCryptoDeposit(currency));
-    } catch (e) {
-      setErr(String(e));
-    } finally {
-      setBusy(false);
-    }
+  const {
+    run: fetchAddr,
+    data: addr,
+    error: loadErr,
+    pending: busy,
+    reset,
+  } = useAsyncAction(() => getPdaxCryptoDeposit(currency));
+
+  const load = () => {
+    reset(); // drop the previous address while the new one is in flight
+    setCopyErr(null);
+    void fetchAddr();
   };
+
+  const err = loadErr ?? copyErr;
+
+  // Single owner of the "copied ✓" reset timer: a re-click replaces the
+  // pending timer instead of racing it, and unmount clears it so no
+  // setState fires on an unmounted component.
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    },
+    [],
+  );
 
   const copy = async () => {
     if (!addr) return;
@@ -33,9 +47,10 @@ export function DepositPanel() {
       await navigator.clipboard.writeText(addr.address);
       setCopied(true);
     } catch {
-      setErr("copy failed — clipboard unavailable");
+      setCopyErr("copy failed — clipboard unavailable");
     }
-    setTimeout(() => setCopied(false), 1500);
+    if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    copiedTimer.current = setTimeout(() => setCopied(false), 1500);
   };
 
   return (

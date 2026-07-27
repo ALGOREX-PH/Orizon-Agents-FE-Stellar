@@ -1,6 +1,6 @@
 # Orizon Agents
 
-[![CI](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml/badge.svg)](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml) [![tests](https://img.shields.io/badge/tests-37%20passing-brightgreen)](./lib) [![Stellar Testnet](https://img.shields.io/badge/Stellar-Testnet-cyan)](https://stellar.expert/explorer/testnet/contract/CBJPTMAPMGODGZCZ2IMEQSRUX3WGUXNMKDTNN2KMJ3NFGYZ5OJ5525PI)
+[![CI](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml/badge.svg)](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml) [![tests](https://img.shields.io/badge/tests-125%20passing-brightgreen)](./lib) [![Stellar Testnet](https://img.shields.io/badge/Stellar-Testnet-cyan)](https://stellar.expert/explorer/testnet/contract/CBJPTMAPMGODGZCZ2IMEQSRUX3WGUXNMKDTNN2KMJ3NFGYZ5OJ5525PI)
 
 
 > **Type what you want. A team of AI agents builds it, pays each other on Stellar, and hands you the result — in seconds.**
@@ -97,16 +97,16 @@ Beyond the agent platform, the dApp also implements every Level 1 (White Belt) S
 **▸ Try the White-Belt flow:** [open the dApp](https://orizon-agents-fe-stellar.vercel.app/app/send) → connect Freighter on **Test Net** → if you're unfunded, click **▸ fund testnet** to hit Friendbot → enter any G-address (e.g. a second testnet wallet you own), `1` XLM, memo `White Belt` → **Send XLM ▸**. The success card shows the tx hash, and the topbar balance refreshes automatically.
 
 **Wallet connected**
-![Wallet connected — topbar shows the address chip](./public/wallet-connected.png)
+![Wallet connected — topbar shows the address chip](./docs/wallet-connected.png)
 
 **XLM balance**
-![Balance card on /app/wallet](./public/balance.png)
+![Balance card on /app/wallet](./docs/balance.png)
 
 **Successful testnet payment**
-![Send XLM success card with tx hash](./public/send-success.png)
+![Send XLM success card with tx hash](./docs/send-success.png)
 
 **Transaction on stellar.expert**
-![stellar.expert tx page](./public/stellar-expert.png)
+![stellar.expert tx page](./docs/stellar-expert.png)
 
 ## Yellow Belt — multi-wallet, events, status
 
@@ -127,13 +127,13 @@ Beyond the canonical Stellar fundamentals, the dApp also implements every Level 
 **▸ Try the Yellow-Belt flow:** [open the events page](https://orizon-agents-fe-stellar.vercel.app/app/events) — leave it open in one tab. In a second tab, [run a workflow](https://orizon-agents-fe-stellar.vercel.app/app/orchestrator). Within ~5 s of the workflow's charge + seal landing, those events appear in the feed with their tx hashes.
 
 **Multi-wallet picker (StellarWalletsKit modal)**
-![Wallet options modal](./public/wallet-options.png)
+![Wallet options modal](./docs/wallet-options.png)
 
 **Live contract event feed**
-![Soroban events feed](./public/events-feed.png)
+![Soroban events feed](./docs/events-feed.png)
 
 **Tx status — full lifecycle**
-![TxStatus component, build → confirmed](./public/tx-status.png)
+![TxStatus component, build → confirmed](./docs/tx-status.png)
 
 > **Sample contract-call tx hash:** [`47a13c4b4b3aa6ec25ba742f0e52857872fac49273620ba991b3795b4d78299a`](https://stellar.expert/explorer/testnet/tx/47a13c4b4b3aa6ec25ba742f0e52857872fac49273620ba991b3795b4d78299a) — `PaymentEscrow.authorize("orizon_batch", …)`, settled on Stellar testnet.
 
@@ -148,15 +148,15 @@ npm test
 
 | Orange Belt requirement | Where |
 | --- | --- |
-| **3+ tests passing** | 31 tests across 4 files — [`lib/wallet-errors.test.ts`](./lib/wallet-errors.test.ts), [`lib/api.test.ts`](./lib/api.test.ts), [`lib/reputation-math.test.ts`](./lib/reputation-math.test.ts), [`components/ui/stellar-link.test.ts`](./components/ui/stellar-link.test.ts) |
+| **3+ tests passing** | 125 tests across 14 files — [`lib/wallet-errors.test.ts`](./lib/wallet-errors.test.ts), [`lib/api.test.ts`](./lib/api.test.ts), [`lib/reputation-math.test.ts`](./lib/reputation-math.test.ts), [`components/ui/stellar-link.test.ts`](./components/ui/stellar-link.test.ts) |
 | README with complete docs | this file (White-Belt + Yellow-Belt + Orange-Belt sections) |
 | **Demo video (1 min)** | [▸ watch on YouTube](https://youtu.be/E4EYx-RoxpY) — full intent → wallet → on-chain settlement flow |
 | Live deploy | https://orizon-agents-fe-stellar.vercel.app |
 | 3+ meaningful commits | `git log --oneline | head -20` — well over 3 |
 
-**Test output (`npm test`)** — Orange-Belt-era screenshot; the suite has since grown to 31 tests across 4 files:
+**Test output (`npm test`)** — Orange-Belt-era screenshot; the suite has since grown to 125 tests across 14 files:
 
-![tests passing in Vitest](./public/tests-passing.png)
+![tests passing in Vitest](./docs/tests-passing.png)
 
 **What the wallet-error tests cover:**
 
@@ -192,13 +192,13 @@ Both are typed `contractclient` calls in [`contract/contract/payment-escrow/src/
 
 ### Mobile responsive
 
-![Mobile responsive view](./public/mobile.png)
+![Mobile responsive view](./docs/mobile.png)
 
 ### CI/CD
 
 Every push runs the GitHub Actions workflow above — `npm ci → lint → test → build`. The badge at the top of this README turns green when the latest run passes.
 
-![CI/CD passing](./public/ci-passing.png)
+![CI/CD passing](./docs/ci-passing.png)
 
 ## Try it in 3 clicks
 
@@ -216,7 +216,7 @@ That's it. You'll land on the Trace page and watch the workflow run. When it fin
 - **A finished artifact.** Real code you can preview, browse file-by-file, and download.
 - **On-chain receipts.** Transaction hashes link straight to [stellar.expert](https://stellar.expert/explorer/testnet) so anyone can audit the run.
 
-![Orchestrator page](./public/orchestrator.png)
+![Orchestrator page](./docs/orchestrator.png)
 
 ## Glossary (plain English)
 
@@ -242,10 +242,10 @@ That's it. You'll land on the Trace page and watch the workflow run. When it fin
 ## Screenshots
 
 **Landing — hero**
-![Hero section](./public/hero.png)
+![Hero section](./docs/hero.png)
 
 **Landing — roadmap**
-![Roadmap — MVP to digital labor market](./public/roadmap.png)
+![Roadmap — MVP to digital labor market](./docs/roadmap.png)
 
 ## Example intents to try
 

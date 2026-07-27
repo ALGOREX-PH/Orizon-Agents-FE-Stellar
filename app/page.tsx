@@ -11,6 +11,31 @@ import { CTA } from "./(marketing)/_components/cta";
 import { Footer } from "./(marketing)/_components/footer";
 import { Marquee } from "@/components/ui/marquee";
 
+// Structured data for search engines. Serialized into a JSON-LD script tag
+// below; the page stays a server component so this ships as static HTML.
+const structuredData: Record<string, unknown> = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      name: "Orizon Agents",
+      url: "https://orizons.xyz",
+    },
+    {
+      "@type": "SoftwareApplication",
+      name: "Orizon Agents",
+      url: "https://orizons.xyz",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web",
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+      },
+    },
+  ],
+};
+
 const agentTags = [
   "seo.brief",
   "copywrite.v3",
@@ -29,6 +54,10 @@ const agentTags = [
 export default function Home() {
   return (
     <main id="main" className="relative overflow-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <Nav />
       <Hero />
       <Marquee items={agentTags} />

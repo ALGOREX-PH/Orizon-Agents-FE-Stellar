@@ -73,6 +73,10 @@ function TracePageInner() {
   // Live mode: subscribe to SSE.
   useEffect(() => {
     if (!taskId) return;
+    // getArtifact can resolve up to 30s later — without this guard a slow
+    // response lands after unmount or applies the previous task's artifact
+    // when ?task= changes.
+    let alive = true;
     setLines([]);
     setDone(false);
     setArtifactData(null);
@@ -81,10 +85,12 @@ function TracePageInner() {
     const fetchArtifact = () =>
       getArtifact(taskId)
         .then((data) => {
+          if (!alive) return;
           setArtifactData(data);
           setArtifactError(null);
         })
         .catch((err: unknown) => {
+          if (!alive) return;
           setArtifactError(
             err instanceof Error ? err.message : "artifact fetch failed",
           );
@@ -106,8 +112,17 @@ function TracePageInner() {
         setStreamError(true);
         fetchArtifact();
       },
+      () => {
+        // Reconnecting — the backend replays full history to the new
+        // subscriber, so drop what we have or every line (and the spent
+        // sum) doubles.
+        setLines([]);
+      },
     );
-    return close;
+    return () => {
+      alive = false;
+      close();
+    };
   }, [taskId]);
 
   // Auto-switch tabs when an artifact arrives.

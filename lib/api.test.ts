@@ -9,7 +9,10 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  GET_DEDUPE_MS,
+  clearGetCache,
   decompose,
+  getOverview,
   getReputation,
   getReputationParams,
   listAgents,
@@ -19,6 +22,7 @@ import {
 type FetchMockResponse = {
   ok: boolean;
   status: number;
+  statusText?: string;
   json: () => Promise<unknown>;
   text: () => Promise<string>;
 };
@@ -37,6 +41,9 @@ function jsonResponse(status: number, body: unknown): FetchMockResponse {
 
 afterEach(() => {
   fetchMock.mockReset();
+  // GETs dedupe per path for ~1s — flush so each test controls its fetches.
+  clearGetCache();
+  vi.restoreAllMocks();
 });
 
 describe("get (via listAgents)", () => {
@@ -161,6 +168,85 @@ describe("getReputationParams", () => {
   });
 });
 
+describe("response guards", () => {
+  it("rejects a malformed overview payload as a normal request error", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { agents_online: 1, throughput: "not-an-array" }),
+    );
+
+    await expect(getOverview()).rejects.toThrow(
+      "malformed response from /metrics/overview",
+    );
+  });
+
+  it("rejects a malformed decompose payload as a normal request error", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { plan_id: "pln_1", steps: [], total_usdc: "0.03" }),
+    );
+
+    await expect(decompose("x")).rejects.toThrow(
+      "malformed response from /orchestrator/decompose",
+    );
+  });
+
+  it("resolves a well-formed guarded payload untouched", async () => {
+    const overview = {
+      agents_online: 12,
+      tasks_per_sec: 0.4,
+      avg_completion: 0.97,
+      avg_trust: 4.6,
+      throughput: [1, 2, 3],
+      skills: [{ name: "code", pct: 62, tone: "violet" }],
+    };
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, overview));
+
+    await expect(getOverview()).resolves.toEqual(overview);
+  });
+});
+
+describe("get dedupe cache", () => {
+  it("shares one fetch across concurrent requests for the same path", async () => {
+    const agents = [{ id: "agt_01", name: "copywrite.v3" }];
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, agents));
+
+    const [a, b] = await Promise.all([listAgents(), listAgents()]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(a).toEqual(agents);
+    expect(b).toBe(a); // same underlying promise → same resolved value
+  });
+
+  it("reuses a resolved response inside the dedupe window and refetches after it", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    fetchMock.mockResolvedValue(jsonResponse(200, []));
+
+    await listAgents();
+    await listAgents();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    nowSpy.mockReturnValue(1_000_000 + GET_DEDUPE_MS + 1);
+    await listAgents();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("evicts rejected requests so the next call retries the network", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(500, { detail: "boom" }));
+    await expect(listAgents()).rejects.toThrow("GET /agents → 500");
+
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, []));
+    await expect(listAgents()).resolves.toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not dedupe across different paths", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(200, []));
+
+    await Promise.all([listAgents(), getReputationParams()]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("post (via decompose)", () => {
   it("sends a JSON body with content-type header and resolves parsed JSON", async () => {
     const plan = { plan_id: "pln_1", intent: "tetris", steps: [], total_usdc: 0, total_eta: 0 };
@@ -184,6 +270,43 @@ describe("post (via decompose)", () => {
 
     await expect(decompose("x")).rejects.toThrow(
       "POST /orchestrator/decompose → 422 — plan too vague",
+    );
+  });
+
+  it("prefers the standardized error-envelope message over detail", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(402, {
+        error: { code: "payment_required", message: "authorization expired" },
+        detail: "legacy detail",
+      }),
+    );
+
+    await expect(decompose("x")).rejects.toThrow(
+      "POST /orchestrator/decompose → 402 — authorization expired",
+    );
+  });
+
+  it("falls back to detail when the envelope carries no message", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(422, { error: { code: "invalid_plan" }, detail: "plan too vague" }),
+    );
+
+    await expect(decompose("x")).rejects.toThrow(
+      "POST /orchestrator/decompose → 422 — plan too vague",
+    );
+  });
+
+  it("falls back to statusText when the body is unreadable", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      statusText: "Service Unavailable",
+      json: () => Promise.reject(new Error("no body")),
+      text: () => Promise.reject(new Error("no body")),
+    });
+
+    await expect(decompose("x")).rejects.toThrow(
+      "POST /orchestrator/decompose → 503 — Service Unavailable",
     );
   });
 

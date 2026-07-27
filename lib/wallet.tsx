@@ -3,8 +3,10 @@
  * Multi-wallet context, powered by StellarWalletsKit.
  *
  * Yellow Belt requirement: support more than just Freighter.
- * The kit ships built-in modules for Freighter, xBull, Albedo, Lobstr,
- * Hana, and Hot Wallet, exposed via a single `authModal()` picker.
+ * The kit's `defaultModules()` bundles nine wallets; we pass an explicit
+ * allowlist filter so the `authModal()` picker only offers the six we
+ * actually support and test: Freighter, xBull, Albedo, LOBSTR, Hana,
+ * and Rabet.
  *
  *   const { address, walletName, connect, disconnect, signXdr } = useWallet();
  *
@@ -20,27 +22,17 @@ import {
   useState,
 } from "react";
 import type { Networks as KitNetworks } from "@creit.tech/stellar-wallets-kit";
-import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
+import {
+  classifyError,
+  wrongNetworkError,
+  type FriendlyError,
+} from "@/lib/wallet-errors";
 
-// Env-driven network config — falls back to Stellar testnet when unset.
-// Exported so tx-building pages and network guards stay on the same config.
-export const NETWORK_PASSPHRASE =
-  process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE ||
-  "Test SDF Network ; September 2015";
-export const HORIZON_URL =
-  process.env.NEXT_PUBLIC_HORIZON_URL || "https://horizon-testnet.stellar.org";
-// Friendly label for the passphrase — "TESTNET" for the default config.
-// Mirrors the kit's `Networks` enum so the label resolves without pulling
-// the (lazily loaded) kit into the initial bundle.
-const NETWORK_NAMES: Record<string, string> = {
-  "Public Global Stellar Network ; September 2015": "PUBLIC",
-  "Test SDF Network ; September 2015": "TESTNET",
-  "Test SDF Future Network ; October 2022": "FUTURENET",
-  "Local Sandbox Stellar Network ; September 2022": "SANDBOX",
-  "Standalone Network ; February 2017": "STANDALONE",
-};
-/** Expected wallet network name for this build — "TESTNET", "PUBLIC", … */
-export const NETWORK_NAME = NETWORK_NAMES[NETWORK_PASSPHRASE] ?? "CUSTOM";
+import { HORIZON_URL, NETWORK_NAME, NETWORK_PASSPHRASE } from "@/lib/env";
+
+// Network config lives in lib/env.ts (validated at build time); re-exported
+// here so tx-building pages and network guards keep their existing imports.
+export { HORIZON_URL, NETWORK_NAME, NETWORK_PASSPHRASE };
 const STORAGE_KEY = "orizon.wallet.v2";
 
 type StoredSession = {
@@ -61,7 +53,19 @@ type WalletState = {
   walletId: string | null;
   /** Friendly display name — `Freighter`, `xBull`, etc. */
   walletName: string | null;
+  /** The network this build is configured for (env-driven). */
   network: NetworkDetails | null;
+  /**
+   * The network the connected wallet itself reported via the kit's
+   * getNetwork(). Null while disconnected or when the wallet doesn't
+   * support the call (e.g. Albedo, Lobstr) — unknown, not assumed.
+   */
+  walletNetwork: NetworkDetails | null;
+  /**
+   * True only when connected AND the wallet reported a passphrase that
+   * differs from the app's. Unknown wallet network → false (no warning).
+   */
+  walletNetworkMismatch: boolean;
   error: FriendlyError | null;
   loading: boolean;
   xlmBalance: string | null;
@@ -84,6 +88,19 @@ const WalletCtx = createContext<WalletState | null>(null);
 type KitModule = typeof import("@creit.tech/stellar-wallets-kit");
 type Kit = KitModule["StellarWalletsKit"];
 
+/**
+ * The wallets we support and test, by the kit's stable `productId`.
+ * Keep in sync with the doc comment above and the `prettyName` map below.
+ */
+const SUPPORTED_WALLET_IDS: ReadonlySet<string> = new Set([
+  "freighter",
+  "xbull",
+  "albedo",
+  "lobstr",
+  "hana",
+  "rabet",
+]);
+
 let kitPromise: Promise<Kit> | null = null;
 
 function loadKit(): Promise<Kit> {
@@ -95,7 +112,10 @@ function loadKit(): Promise<Kit> {
     ])
       .then(([{ StellarWalletsKit }, { defaultModules }, { FREIGHTER_ID }]) => {
         StellarWalletsKit.init({
-          modules: defaultModules(),
+          // defaultModules bundles 9 wallets; keep only the allowlisted six.
+          modules: defaultModules({
+            filterBy: (m) => SUPPORTED_WALLET_IDS.has(m.productId),
+          }),
           selectedWalletId: FREIGHTER_ID,
           network: NETWORK_PASSPHRASE as KitNetworks,
         });
@@ -133,6 +153,26 @@ function saveSession(s: StoredSession | null) {
   }
 }
 
+/**
+ * Ask the active wallet which network it is on. Not every wallet implements
+ * getNetwork() (Albedo and Lobstr reject with code -3), so any failure or
+ * malformed response resolves to null — "unknown", never a false alarm.
+ */
+async function probeWalletNetwork(kit: Kit): Promise<NetworkDetails | null> {
+  try {
+    const net = await kit.getNetwork();
+    if (net && typeof net.networkPassphrase === "string" && net.networkPassphrase) {
+      return {
+        network: typeof net.network === "string" ? net.network : "",
+        networkPassphrase: net.networkPassphrase,
+      };
+    }
+  } catch {
+    // wallet doesn't support getNetwork (or the call failed) — unknown.
+  }
+  return null;
+}
+
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const installed = true; // kit modal handles the "no wallet" state inline
   const [address, setAddress] = useState<string | null>(null);
@@ -142,10 +182,20 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [xlmBalance, setXlmBalance] = useState<string | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  // What the connected wallet itself reported via getNetwork() — null = unknown.
+  const [walletNetwork, setWalletNetwork] = useState<NetworkDetails | null>(null);
 
   const network = useMemo<NetworkDetails>(
     () => ({ network: NETWORK_NAME, networkPassphrase: NETWORK_PASSPHRASE }),
     [],
+  );
+
+  // Mismatch is only asserted when connected and the wallet actually reported
+  // a passphrase; wallets that can't report one never trigger the warning.
+  const walletNetworkMismatch = Boolean(
+    address &&
+      walletNetwork &&
+      walletNetwork.networkPassphrase !== NETWORK_PASSPHRASE,
   );
 
   const fetchBalance = useCallback(async (g: string) => {
@@ -202,6 +252,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         setWalletId(saved.walletId);
         setAddress(saved.address);
         setWalletName(prettyName(saved.walletId));
+        // Ask the restored wallet which network it is really on.
+        const net = await probeWalletNetwork(kit);
+        if (!cancelled) setWalletNetwork(net);
       } catch {
         // module not available in this browser — silently ignore.
       }
@@ -226,6 +279,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setWalletId(id);
       setWalletName(name ?? prettyName(id));
       saveSession({ walletId: id, address: addr });
+      // Ask the chosen wallet which network it is really on.
+      setWalletNetwork(await probeWalletNetwork(kit));
     } catch (e) {
       const f = classifyError(e);
       setError(f);
@@ -248,6 +303,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setAddress(null);
     setWalletId(null);
     setWalletName(null);
+    setWalletNetwork(null);
     setError(null);
     saveSession(null);
   }, []);
@@ -255,6 +311,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const signXdr = useCallback(
     async (xdr: string, opts?: { networkPassphrase?: string }) => {
       if (!address) throw new Error("wallet not connected");
+      // Pre-flight: if the wallet already told us it is on a different
+      // network, fail fast with a classified error instead of opening the
+      // signing popup and letting the tx die on-chain with tx_bad_auth.
+      if (walletNetworkMismatch && walletNetwork) {
+        throw wrongNetworkError(
+          `wallet reports ${walletNetwork.network || walletNetwork.networkPassphrase}; app expects ${NETWORK_NAME} (${NETWORK_PASSPHRASE})`,
+        );
+      }
       try {
         const kit = await loadKit();
         const res = await kit.signTransaction(xdr, {
@@ -267,7 +331,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         throw e instanceof Error ? e : new Error(String(e));
       }
     },
-    [address],
+    [address, walletNetwork, walletNetworkMismatch],
   );
 
   const value = useMemo<WalletState>(
@@ -278,6 +342,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       walletId,
       walletName,
       network,
+      walletNetwork,
+      walletNetworkMismatch,
       error,
       loading,
       xlmBalance,
@@ -293,6 +359,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       walletId,
       walletName,
       network,
+      walletNetwork,
+      walletNetworkMismatch,
       error,
       loading,
       xlmBalance,
@@ -313,6 +381,8 @@ export function useWallet() {
   return ctx;
 }
 
+// Fallback display names for every allowlisted wallet (used when the kit's
+// selectedModule.productName is unavailable, e.g. on session restore).
 function prettyName(id: string): string {
   const map: Record<string, string> = {
     freighter: "Freighter",
@@ -320,7 +390,7 @@ function prettyName(id: string): string {
     albedo: "Albedo",
     lobstr: "LOBSTR",
     hana: "Hana",
-    "hot-wallet": "Hot Wallet",
+    rabet: "Rabet",
   };
   return map[id] ?? id;
 }
