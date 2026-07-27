@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { classifyError } from "./wallet-errors";
+import { classifyError, isFriendlyError, wrongNetworkError } from "./wallet-errors";
 
 describe("classifyError", () => {
   it("maps Freighter user-rejected message to user_rejected", () => {
@@ -65,5 +65,45 @@ describe("classifyError", () => {
     const f = classifyError(e);
     expect(f.kind).toBe("wallet_not_found");
     expect(f.detail).toMatch(/install/i);
+  });
+
+  it("maps wallet wrong-network messages to wrong_network", () => {
+    const f = classifyError(new Error("Wrong network selected in the wallet"));
+    expect(f.kind).toBe("wrong_network");
+    expect(f.detail).toMatch(/switch/i);
+  });
+
+  it("passes an already-classified FriendlyError through unchanged", () => {
+    const pre = wrongNetworkError("wallet reports PUBLIC; app expects TESTNET");
+    const f = classifyError(pre);
+    expect(f).toBe(pre);
+    expect(f.kind).toBe("wrong_network");
+    expect(f.raw).toContain("PUBLIC");
+  });
+});
+
+describe("wrongNetworkError", () => {
+  it("builds the canonical wrong_network shape with switch-network advice", () => {
+    const f = wrongNetworkError("raw detail");
+    expect(f.kind).toBe("wrong_network");
+    expect(f.title).toMatch(/wrong network/i);
+    expect(f.detail).toMatch(/switch to .*(test net|public network)/i);
+    expect(f.raw).toBe("raw detail");
+  });
+});
+
+describe("isFriendlyError", () => {
+  it("accepts a well-formed FriendlyError", () => {
+    expect(isFriendlyError(wrongNetworkError())).toBe(true);
+  });
+
+  it("rejects plain Errors, partial shapes, and unknown kinds", () => {
+    expect(isFriendlyError(new Error("wrong network"))).toBe(false);
+    expect(isFriendlyError({ kind: "wrong_network", title: "x" })).toBe(false);
+    expect(
+      isFriendlyError({ kind: "nonsense", title: "x", detail: "y", raw: "z" }),
+    ).toBe(false);
+    expect(isFriendlyError(null)).toBe(false);
+    expect(isFriendlyError("wrong network")).toBe(false);
   });
 });
