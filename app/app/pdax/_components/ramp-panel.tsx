@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ErrorNote } from "@/components/ui/error-note";
 import {
   pdaxRampEstimate,
   pdaxStartOffRamp,
@@ -13,7 +14,7 @@ import type {
   PdaxRampRecord,
   RampDirection,
 } from "@/lib/pdax-types";
-import { inputCls, statusTone } from "@/lib/ui";
+import { focusRing, inputCls, statusTone } from "@/lib/ui";
 import { useAsyncAction } from "@/lib/use-async-action";
 
 const DEPOSIT_METHODS = [
@@ -99,9 +100,9 @@ export function RampPanel() {
                 setEst(null);
                 setRecord(null);
               }}
-              className={`px-2 py-1 text-[10px] font-mono uppercase tracking-widest border ${
+              className={`px-2 py-1 text-[10px] font-mono uppercase tracking-widest border ${focusRing} ${
                 dir === d
-                  ? "border-violet bg-violet/15 text-violet"
+                  ? "border-violet bg-violet/15 text-violet-readable"
                   : "border-border text-muted"
               }`}
             >
@@ -168,7 +169,9 @@ export function RampPanel() {
         </Button>
       </div>
 
-      {err && <div className="mt-3 text-xs font-mono text-magenta">{err}</div>}
+      {err && (
+        <ErrorNote className="mt-3 border-0 bg-transparent p-0">{err}</ErrorNote>
+      )}
 
       {record && (
         <div className="mt-4 border border-border bg-bg/40 p-4 space-y-2">
@@ -177,7 +180,7 @@ export function RampPanel() {
             <Badge tone={statusTone(record.status)}>{record.status}</Badge>
           </div>
           {record.checkout_url && (
-            <a href={record.checkout_url} target="_blank" rel="noreferrer" className="block font-mono text-xs text-cyan underline break-all">
+            <a href={record.checkout_url} target="_blank" rel="noreferrer" className={`block font-mono text-xs text-cyan underline break-all ${focusRing}`}>
               ▸ pay here: {record.checkout_url}
             </a>
           )}
@@ -198,7 +201,11 @@ export function RampPanel() {
               </div>
             ))}
           </div>
-          {record.error && <div className="text-[11px] font-mono text-magenta">{record.error}</div>}
+          {record.error && (
+            <ErrorNote className="border-0 bg-transparent p-0 text-[11px]">
+              {record.error}
+            </ErrorNote>
+          )}
         </div>
       )}
     </Card>
