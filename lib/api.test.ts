@@ -12,12 +12,17 @@ import {
   GET_DEDUPE_MS,
   clearGetCache,
   decompose,
+  execute,
+  getArtifact,
   getOverview,
   getReputation,
   getReputationParams,
+  getTrace,
   listAgents,
   listReputation,
+  openTraceStream,
 } from "./api";
+import { rememberTaskToken } from "./task-tokens";
 
 type FetchMockResponse = {
   ok: boolean;
@@ -29,6 +34,29 @@ type FetchMockResponse = {
 
 const fetchMock = vi.fn<(input: string, init?: RequestInit) => Promise<FetchMockResponse>>();
 vi.stubGlobal("fetch", fetchMock);
+
+// This suite runs in node (no DOM): give lib/task-tokens a window with a
+// Map-backed sessionStorage so token wiring is testable, and stub a minimal
+// EventSource so openTraceStream's URL construction is observable.
+const sessionStore = new Map<string, string>();
+vi.stubGlobal("window", {
+  sessionStorage: {
+    getItem: (k: string) => sessionStore.get(k) ?? null,
+    setItem: (k: string, v: string) => void sessionStore.set(k, v),
+    removeItem: (k: string) => void sessionStore.delete(k),
+    clear: () => sessionStore.clear(),
+  },
+});
+
+class FakeEventSource {
+  static urls: string[] = [];
+  constructor(url: string) {
+    FakeEventSource.urls.push(url);
+  }
+  addEventListener(): void {}
+  close(): void {}
+}
+vi.stubGlobal("EventSource", FakeEventSource);
 
 function jsonResponse(status: number, body: unknown): FetchMockResponse {
   return {
@@ -43,6 +71,8 @@ afterEach(() => {
   fetchMock.mockReset();
   // GETs dedupe per path for ~1s — flush so each test controls its fetches.
   clearGetCache();
+  sessionStore.clear();
+  FakeEventSource.urls = [];
   vi.restoreAllMocks();
 });
 
@@ -355,5 +385,86 @@ describe("post (via decompose)", () => {
     fetchMock.mockRejectedValueOnce(new Error("socket hang up"));
 
     await expect(decompose("x")).rejects.toThrow("socket hang up");
+  });
+});
+
+describe("task read tokens", () => {
+  it("attaches X-Task-Token to getTrace when a token is known", async () => {
+    rememberTaskToken("tsk_tok", "tok_1");
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, []));
+
+    await getTrace("tsk_tok");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/trace/tsk_tok",
+      expect.objectContaining({ headers: { "X-Task-Token": "tok_1" } }),
+    );
+  });
+
+  it("attaches X-Task-Token to getArtifact when a token is known", async () => {
+    rememberTaskToken("tsk_tok", "tok_1");
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { artifact: null }));
+
+    await getArtifact("tsk_tok");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/tasks/tsk_tok/artifact",
+      expect.objectContaining({ headers: { "X-Task-Token": "tok_1" } }),
+    );
+  });
+
+  it("sends no headers when no token is known for the task", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(200, []));
+
+    await getTrace("tsk_unknown");
+
+    expect(fetchMock.mock.calls[0][1]?.headers).toBeUndefined();
+  });
+
+  it("remembers the token from an execute response for later reads", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { task_id: "tsk_9", read_token: "tok_9" }),
+    );
+    await expect(execute("pln_1")).resolves.toEqual({
+      task_id: "tsk_9",
+      read_token: "tok_9",
+    });
+
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, []));
+    await getTrace("tsk_9");
+
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/trace/tsk_9",
+      expect.objectContaining({ headers: { "X-Task-Token": "tok_9" } }),
+    );
+  });
+
+  it("leaves reads bare when the execute response ships no token", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { task_id: "tsk_10" }));
+    await execute("pln_1");
+
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, []));
+    await getTrace("tsk_10");
+
+    expect(fetchMock.mock.lastCall?.[1]?.headers).toBeUndefined();
+  });
+
+  it("appends the token as a query param on the SSE stream url", () => {
+    // EventSource cannot set headers — the token rides the query string,
+    // encoded so reserved characters survive.
+    rememberTaskToken("tsk_sse", "tok se/1");
+    const dispose = openTraceStream("tsk_sse", () => {});
+
+    expect(FakeEventSource.urls).toEqual([
+      "/api/trace/tsk_sse/stream?token=tok%20se%2F1",
+    ]);
+    dispose();
+  });
+
+  it("opens the SSE stream without a query param when no token is known", () => {
+    const dispose = openTraceStream("tsk_plain", () => {});
+
+    expect(FakeEventSource.urls).toEqual(["/api/trace/tsk_plain/stream"]);
+    dispose();
   });
 });
