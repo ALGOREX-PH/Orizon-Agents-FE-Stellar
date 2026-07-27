@@ -20,7 +20,11 @@ import {
   useState,
 } from "react";
 import type { Networks as KitNetworks } from "@creit.tech/stellar-wallets-kit";
-import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
+import {
+  classifyError,
+  wrongNetworkError,
+  type FriendlyError,
+} from "@/lib/wallet-errors";
 
 // Env-driven network config — falls back to Stellar testnet when unset.
 // Exported so tx-building pages and network guards stay on the same config.
@@ -61,7 +65,19 @@ type WalletState = {
   walletId: string | null;
   /** Friendly display name — `Freighter`, `xBull`, etc. */
   walletName: string | null;
+  /** The network this build is configured for (env-driven). */
   network: NetworkDetails | null;
+  /**
+   * The network the connected wallet itself reported via the kit's
+   * getNetwork(). Null while disconnected or when the wallet doesn't
+   * support the call (e.g. Albedo, Lobstr) — unknown, not assumed.
+   */
+  walletNetwork: NetworkDetails | null;
+  /**
+   * True only when connected AND the wallet reported a passphrase that
+   * differs from the app's. Unknown wallet network → false (no warning).
+   */
+  walletNetworkMismatch: boolean;
   error: FriendlyError | null;
   loading: boolean;
   xlmBalance: string | null;
@@ -133,6 +149,26 @@ function saveSession(s: StoredSession | null) {
   }
 }
 
+/**
+ * Ask the active wallet which network it is on. Not every wallet implements
+ * getNetwork() (Albedo and Lobstr reject with code -3), so any failure or
+ * malformed response resolves to null — "unknown", never a false alarm.
+ */
+async function probeWalletNetwork(kit: Kit): Promise<NetworkDetails | null> {
+  try {
+    const net = await kit.getNetwork();
+    if (net && typeof net.networkPassphrase === "string" && net.networkPassphrase) {
+      return {
+        network: typeof net.network === "string" ? net.network : "",
+        networkPassphrase: net.networkPassphrase,
+      };
+    }
+  } catch {
+    // wallet doesn't support getNetwork (or the call failed) — unknown.
+  }
+  return null;
+}
+
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const installed = true; // kit modal handles the "no wallet" state inline
   const [address, setAddress] = useState<string | null>(null);
@@ -142,10 +178,20 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [xlmBalance, setXlmBalance] = useState<string | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  // What the connected wallet itself reported via getNetwork() — null = unknown.
+  const [walletNetwork, setWalletNetwork] = useState<NetworkDetails | null>(null);
 
   const network = useMemo<NetworkDetails>(
     () => ({ network: NETWORK_NAME, networkPassphrase: NETWORK_PASSPHRASE }),
     [],
+  );
+
+  // Mismatch is only asserted when connected and the wallet actually reported
+  // a passphrase; wallets that can't report one never trigger the warning.
+  const walletNetworkMismatch = Boolean(
+    address &&
+      walletNetwork &&
+      walletNetwork.networkPassphrase !== NETWORK_PASSPHRASE,
   );
 
   const fetchBalance = useCallback(async (g: string) => {
@@ -202,6 +248,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         setWalletId(saved.walletId);
         setAddress(saved.address);
         setWalletName(prettyName(saved.walletId));
+        // Ask the restored wallet which network it is really on.
+        const net = await probeWalletNetwork(kit);
+        if (!cancelled) setWalletNetwork(net);
       } catch {
         // module not available in this browser — silently ignore.
       }
@@ -226,6 +275,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setWalletId(id);
       setWalletName(name ?? prettyName(id));
       saveSession({ walletId: id, address: addr });
+      // Ask the chosen wallet which network it is really on.
+      setWalletNetwork(await probeWalletNetwork(kit));
     } catch (e) {
       const f = classifyError(e);
       setError(f);
@@ -248,6 +299,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setAddress(null);
     setWalletId(null);
     setWalletName(null);
+    setWalletNetwork(null);
     setError(null);
     saveSession(null);
   }, []);
@@ -255,6 +307,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const signXdr = useCallback(
     async (xdr: string, opts?: { networkPassphrase?: string }) => {
       if (!address) throw new Error("wallet not connected");
+      // Pre-flight: if the wallet already told us it is on a different
+      // network, fail fast with a classified error instead of opening the
+      // signing popup and letting the tx die on-chain with tx_bad_auth.
+      if (walletNetworkMismatch && walletNetwork) {
+        throw wrongNetworkError(
+          `wallet reports ${walletNetwork.network || walletNetwork.networkPassphrase}; app expects ${NETWORK_NAME} (${NETWORK_PASSPHRASE})`,
+        );
+      }
       try {
         const kit = await loadKit();
         const res = await kit.signTransaction(xdr, {
@@ -267,7 +327,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         throw e instanceof Error ? e : new Error(String(e));
       }
     },
-    [address],
+    [address, walletNetwork, walletNetworkMismatch],
   );
 
   const value = useMemo<WalletState>(
@@ -278,6 +338,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       walletId,
       walletName,
       network,
+      walletNetwork,
+      walletNetworkMismatch,
       error,
       loading,
       xlmBalance,
@@ -293,6 +355,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       walletId,
       walletName,
       network,
+      walletNetwork,
+      walletNetworkMismatch,
       error,
       loading,
       xlmBalance,
