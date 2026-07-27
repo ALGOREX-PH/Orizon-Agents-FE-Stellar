@@ -106,6 +106,12 @@ function TracePageInner() {
         setStreamError(true);
         fetchArtifact();
       },
+      () => {
+        // Reconnecting — the backend replays full history to the new
+        // subscriber, so drop what we have or every line (and the spent
+        // sum) doubles.
+        setLines([]);
+      },
     );
     return close;
   }, [taskId]);

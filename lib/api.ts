@@ -140,12 +140,18 @@ export const submitSigned = (signedXdr: string) =>
  *
  * Transient drops auto-reconnect up to 3 times (1s/2s/4s backoff) before
  * surfacing the error; once `done` arrives no reconnect is attempted.
+ *
+ * The backend replays the full trace history to every new subscriber, so a
+ * reconnect re-delivers already-seen lines. onReset fires immediately before
+ * each reconnect opens its EventSource — consumers must drop accumulated
+ * lines there or the replay double-renders (and double-counts spend).
  */
 export function openTraceStream(
   taskId: string,
   onEvent: (line: TraceLine) => void,
   onDone?: () => void,
   onError?: () => void,
+  onReset?: () => void,
 ): () => void {
   const MAX_RECONNECTS = 3;
   const BACKOFF_MS = [1_000, 2_000, 4_000];
@@ -177,6 +183,7 @@ export function openTraceStream(
         attempts += 1;
         retryTimer = setTimeout(() => {
           retryTimer = null;
+          onReset?.();
           connect();
         }, delay);
       } else {
