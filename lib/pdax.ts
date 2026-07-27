@@ -24,21 +24,33 @@ import type {
   PdaxSide,
   RampDirection,
 } from "./pdax-types";
+import { fetchWithTimeout, GET_TIMEOUT_MS, POST_TIMEOUT_MS } from "./api";
 
-const base = "/api/pdax";
+// fetchWithTimeout prepends the shared "/api" base, so only "/pdax" is added here.
+const base = "/pdax";
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${base}${path}`, { cache: "no-store" });
+  const res = await fetchWithTimeout(
+    "GET",
+    `${base}${path}`,
+    { cache: "no-store" },
+    GET_TIMEOUT_MS,
+  );
   if (!res.ok) throw new Error(`GET ${path} → ${res.status}${await detail(res)}`);
   return res.json();
 }
 
 async function post<T, B>(path: string, body: B): Promise<T> {
-  const res = await fetch(`${base}${path}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const res = await fetchWithTimeout(
+    "POST",
+    `${base}${path}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    POST_TIMEOUT_MS,
+  );
   if (!res.ok) throw new Error(`POST ${path} → ${res.status}${await detail(res)}`);
   return res.json();
 }
