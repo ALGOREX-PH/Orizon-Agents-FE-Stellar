@@ -226,7 +226,7 @@ export function Sidebar() {
           <div className="font-mono text-[11px] text-muted leading-5">
             {overview ? `${overview.agents_online.toLocaleString()} agents online` : "— agents online"}
             <br />
-            {overview ? `avg completion ${Math.round(overview.avg_completion)}s` : "avg completion —"}
+            {overview ? `avg completion ${(overview.avg_completion * 100).toFixed(0)}%` : "avg completion —"}
           </div>
         </div>
         <div className="mt-3 flex items-center gap-3 px-1">
