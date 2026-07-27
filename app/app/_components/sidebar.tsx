@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { Logo } from "@/components/ui/logo";
 import { getOverview } from "@/lib/api";
+import { focusRing } from "@/lib/ui";
 import { useFetch } from "@/lib/use-fetch";
 import { cn } from "@/lib/utils";
 import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
@@ -165,6 +166,7 @@ export function Sidebar() {
         onClick={() => setOpen(false)}
         className={cn(
           "fixed inset-0 z-30 bg-black/60 backdrop-blur-sm md:hidden transition-opacity",
+          focusRing,
           open ? "opacity-100" : "pointer-events-none opacity-0",
         )}
       />
@@ -202,6 +204,7 @@ export function Sidebar() {
               aria-current={active ? "page" : undefined}
               className={cn(
                 "relative flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm transition-all",
+                focusRing,
                 active
                   ? "bg-violet/10 text-text"
                   : "text-muted hover:text-text hover:bg-white/5",
