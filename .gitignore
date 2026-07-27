@@ -29,3 +29,7 @@ backend/.mypy_cache/
 whitepaper/
 tsconfig.tsbuildinfo
 coverage
+
+# Playwright artifacts
+test-results/
+playwright-report/
