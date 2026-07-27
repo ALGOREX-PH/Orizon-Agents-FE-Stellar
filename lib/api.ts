@@ -13,16 +13,18 @@ import type {
 
 const base = "/api";
 
-const GET_TIMEOUT_MS = 30_000;
+export const GET_TIMEOUT_MS = 30_000;
 // execute/decompose can be slow, so POSTs get a much longer leash.
-const POST_TIMEOUT_MS = 90_000;
+export const POST_TIMEOUT_MS = 90_000;
 
 /**
  * fetch with an AbortController deadline so a hung backend cannot stall
  * loading states forever. Timeouts reject with a clear message; every
  * other failure (network drop, non-OK status) propagates untouched.
+ * Exported so sibling clients (e.g. lib/pdax.ts) share the same plumbing;
+ * `path` is relative to the shared `/api` base.
  */
-async function fetchWithTimeout(
+export async function fetchWithTimeout(
   method: "GET" | "POST",
   path: string,
   init: RequestInit,
