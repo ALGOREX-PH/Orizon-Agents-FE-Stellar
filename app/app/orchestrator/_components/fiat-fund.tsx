@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { pdaxFundingQuote, pdaxReconcileRamp, pdaxStartOnRamp } from "@/lib/pdax";
 import type { PdaxFundingQuote, PdaxRampRecord } from "@/lib/pdax-types";
 import { inputCls } from "@/lib/ui";
 import { toMessage, useAsyncAction } from "@/lib/use-async-action";
+import { usePolling } from "@/lib/use-polling";
 
 const METHODS = [
   ["instapay_upay_cashin", "Bank / e-wallet (QRPh)"],
@@ -67,33 +68,36 @@ export function FiatFund({
 
   // Once a ramp is started, poll our backend (which reconciles against PDAX)
   // so status updates here — no dependence on PDAX's redirect page.
-  useEffect(() => {
-    if (!record || record.status === "completed" || record.status === "failed") {
-      return;
-    }
-    let failures = 0;
-    const id = setInterval(() => {
-      // Skip polls while the tab is hidden — resume on return.
-      if (typeof document !== "undefined" && document.hidden) return;
-      pdaxReconcileRamp(record.ramp_id)
-        .then((r) => {
-          failures = 0;
-          setPollStale(false);
-          setRecord(r);
-        })
-        .catch(() => {
-          // One missed poll is transient; only surface a persistent outage.
-          failures += 1;
-          if (failures >= 3) setPollStale(true);
-        });
-    }, 6000);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [record?.ramp_id, record?.status]);
+  // usePolling only re-schedules after the previous reconcile settles (the
+  // POST has a long timeout, so a raw interval could stack requests), backs
+  // off while the backend is failing, pauses in hidden tabs, and stops once
+  // the ramp reaches a terminal state or the component unmounts.
+  const rampPending =
+    record !== null && record.status !== "completed" && record.status !== "failed";
+  const pollFailures = useRef(0);
+  usePolling(
+    async () => {
+      if (!record) return;
+      try {
+        const r = await pdaxReconcileRamp(record.ramp_id);
+        pollFailures.current = 0;
+        setPollStale(false);
+        setRecord(r);
+      } catch (e) {
+        // One missed poll is transient; only surface a persistent outage.
+        pollFailures.current += 1;
+        if (pollFailures.current >= 3) setPollStale(true);
+        throw e; // let usePolling apply its backoff
+      }
+    },
+    6000,
+    { enabled: rampPending },
+  );
 
   const fund = async () => {
     setQuoteErr(null);
     setRecord(null);
+    pollFailures.current = 0; // a new ramp starts with a clean streak
     const r = await runFund({
       php_amount: php,
       stellar_address: address,
