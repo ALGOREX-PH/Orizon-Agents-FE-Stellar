@@ -9,8 +9,7 @@ export const focusRing =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan";
 
 /** Shared form-input styling used across the PDAX panels. */
-export const inputCls =
-  "w-full bg-bg/60 border border-border px-3 py-2 text-sm font-mono outline-none focus:border-violet";
+export const inputCls = `w-full bg-bg/60 border border-input px-3 py-2 text-sm font-mono outline-none focus:border-violet ${focusRing}`;
 
 /** Badge tones used for status rendering (subset of the Badge component's Tone). */
 export type StatusTone = "success" | "magenta" | "cyan" | "muted";
