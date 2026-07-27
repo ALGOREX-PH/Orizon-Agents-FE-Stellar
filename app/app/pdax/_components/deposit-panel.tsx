@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getPdaxCryptoDeposit } from "@/lib/pdax";
@@ -30,6 +30,17 @@ export function DepositPanel() {
 
   const err = loadErr ?? copyErr;
 
+  // Single owner of the "copied ✓" reset timer: a re-click replaces the
+  // pending timer instead of racing it, and unmount clears it so no
+  // setState fires on an unmounted component.
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    },
+    [],
+  );
+
   const copy = async () => {
     if (!addr) return;
     try {
@@ -38,7 +49,8 @@ export function DepositPanel() {
     } catch {
       setCopyErr("copy failed — clipboard unavailable");
     }
-    setTimeout(() => setCopied(false), 1500);
+    if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    copiedTimer.current = setTimeout(() => setCopied(false), 1500);
   };
 
   return (
