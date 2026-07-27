@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ReputationBadge } from "@/components/ui/reputation-badge";
 import { listAgents, listReputation } from "@/lib/api";
+import { focusRing } from "@/lib/ui";
 import { useFetch } from "@/lib/use-fetch";
 import type { Agent } from "@/lib/types";
 
@@ -81,7 +82,7 @@ export default function AgentsPage() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="search name or skill…"
-              className="clip-cyber-sm w-full border border-border bg-bg/60 pl-10 pr-4 h-10 text-sm placeholder:text-muted focus:border-violet focus:outline-none focus:shadow-neon-violet transition"
+              className={`clip-cyber-sm w-full border border-input bg-bg/60 pl-10 pr-4 h-10 text-sm placeholder:text-muted focus:border-violet transition ${focusRing}`}
             />
           </div>
           <div className="flex gap-2">
@@ -90,7 +91,7 @@ export default function AgentsPage() {
                 key={f}
                 onClick={() => setFilter(f)}
                 className={
-                  "clip-cyber-sm border px-3 h-10 font-mono text-[10px] uppercase tracking-widest transition " +
+                  `clip-cyber-sm border px-3 h-10 font-mono text-[10px] uppercase tracking-widest transition ${focusRing} ` +
                   (filter === f
                     ? "border-violet bg-violet/20 text-text"
                     : "border-border text-muted hover:text-text")
