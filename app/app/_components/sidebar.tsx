@@ -160,6 +160,8 @@ export function Sidebar() {
       {/* Mobile-only backdrop, visible when the drawer is open. */}
       <button
         aria-label="close menu"
+        aria-hidden={!open}
+        tabIndex={open ? 0 : -1}
         onClick={() => setOpen(false)}
         className={cn(
           "fixed inset-0 z-30 bg-black/60 backdrop-blur-sm md:hidden transition-opacity",
