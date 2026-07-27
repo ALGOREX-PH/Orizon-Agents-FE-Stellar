@@ -40,6 +40,17 @@ export type DecomposeResponse = {
   total_eta: number;
 };
 
+/** Response of POST /api/orchestrator/execute. */
+export type ExecuteResponse = {
+  task_id: string;
+  /**
+   * Capability token for reading this task's trace/artifact. Replayed via
+   * `X-Task-Token` (or `?token=` on the SSE stream) once backend enforcement
+   * turns on; absent/null while enforcement is off.
+   */
+  read_token?: string | null;
+};
+
 export type TraceLevel =
   | "input"
   | "exec"
