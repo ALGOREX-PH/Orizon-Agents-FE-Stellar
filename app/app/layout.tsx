@@ -4,16 +4,13 @@ import { Topbar } from "./_components/topbar";
 import { GridBg } from "@/components/ui/grid-bg";
 import { MobileNavProvider } from "./_components/mobile-nav-context";
 
-// Origins the console talks to from the browser — derived exactly as
-// lib/wallet.tsx (HORIZON_URL) and lib/stellar-events.ts (RPC_URL) do, so the
-// preconnect hints below always match the endpoints actually fetched.
-const HORIZON_ORIGIN = new URL(
-  process.env.NEXT_PUBLIC_HORIZON_URL || "https://horizon-testnet.stellar.org",
-).origin;
-const SOROBAN_RPC_ORIGIN = new URL(
-  process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ||
-    "https://soroban-testnet.stellar.org",
-).origin;
+import { HORIZON_URL, SOROBAN_RPC_URL } from "@/lib/env";
+
+// Origins the console talks to from the browser — sourced from the shared
+// validated network config, so the preconnect hints below always match the
+// endpoints actually fetched.
+const HORIZON_ORIGIN = new URL(HORIZON_URL).origin;
+const SOROBAN_RPC_ORIGIN = new URL(SOROBAN_RPC_URL).origin;
 
 export const metadata: Metadata = {
   title: {
