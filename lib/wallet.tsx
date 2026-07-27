@@ -28,25 +28,11 @@ import {
   type FriendlyError,
 } from "@/lib/wallet-errors";
 
-// Env-driven network config — falls back to Stellar testnet when unset.
-// Exported so tx-building pages and network guards stay on the same config.
-export const NETWORK_PASSPHRASE =
-  process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE ||
-  "Test SDF Network ; September 2015";
-export const HORIZON_URL =
-  process.env.NEXT_PUBLIC_HORIZON_URL || "https://horizon-testnet.stellar.org";
-// Friendly label for the passphrase — "TESTNET" for the default config.
-// Mirrors the kit's `Networks` enum so the label resolves without pulling
-// the (lazily loaded) kit into the initial bundle.
-const NETWORK_NAMES: Record<string, string> = {
-  "Public Global Stellar Network ; September 2015": "PUBLIC",
-  "Test SDF Network ; September 2015": "TESTNET",
-  "Test SDF Future Network ; October 2022": "FUTURENET",
-  "Local Sandbox Stellar Network ; September 2022": "SANDBOX",
-  "Standalone Network ; February 2017": "STANDALONE",
-};
-/** Expected wallet network name for this build — "TESTNET", "PUBLIC", … */
-export const NETWORK_NAME = NETWORK_NAMES[NETWORK_PASSPHRASE] ?? "CUSTOM";
+import { HORIZON_URL, NETWORK_NAME, NETWORK_PASSPHRASE } from "@/lib/env";
+
+// Network config lives in lib/env.ts (validated at build time); re-exported
+// here so tx-building pages and network guards keep their existing imports.
+export { HORIZON_URL, NETWORK_NAME, NETWORK_PASSPHRASE };
 const STORAGE_KEY = "orizon.wallet.v2";
 
 type StoredSession = {
