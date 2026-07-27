@@ -8,6 +8,7 @@ import { TxStatus, type TxState } from "@/components/ui/tx-status";
 import { HORIZON_URL, NETWORK_PASSPHRASE, useWallet } from "@/lib/wallet";
 import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
 import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
+import { focusRing } from "@/lib/ui";
 
 // Display label for the configured network — "mainnet" | "testnet".
 const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
@@ -186,7 +187,7 @@ export default function SendPage() {
                 spellCheck={false}
                 autoComplete="off"
                 disabled={submitting}
-                className="mt-1.5 w-full bg-bg/60 border border-border p-3 font-mono text-sm placeholder:text-muted focus:border-violet focus:outline-none focus:shadow-neon-violet transition disabled:opacity-50"
+                className={`mt-1.5 w-full bg-bg/60 border border-input p-3 font-mono text-sm placeholder:text-muted focus:border-violet transition disabled:opacity-50 ${focusRing}`}
               />
             </div>
 
@@ -207,7 +208,7 @@ export default function SendPage() {
                   placeholder="1.0000000"
                   inputMode="decimal"
                   disabled={submitting}
-                  className="mt-1.5 w-full bg-bg/60 border border-border p-3 font-mono text-sm placeholder:text-muted focus:border-violet focus:outline-none focus:shadow-neon-violet transition disabled:opacity-50"
+                  className={`mt-1.5 w-full bg-bg/60 border border-input p-3 font-mono text-sm placeholder:text-muted focus:border-violet transition disabled:opacity-50 ${focusRing}`}
                 />
                 <div className="mt-1.5 flex items-center justify-between font-mono text-[10px] uppercase tracking-widest text-muted">
                   <span>
@@ -218,8 +219,9 @@ export default function SendPage() {
                   </span>
                   {balanceNum !== null && balanceNum > 1 && (
                     <button
+                      type="button"
                       onClick={() => setAmount("1")}
-                      className="hover:text-text transition"
+                      className={`hover:text-text transition ${focusRing}`}
                     >
                       ▸ 1 XLM
                     </button>
@@ -241,7 +243,7 @@ export default function SendPage() {
                   placeholder="Yellow Belt"
                   maxLength={28}
                   disabled={submitting}
-                  className="mt-1.5 w-full bg-bg/60 border border-border p-3 font-mono text-sm placeholder:text-muted focus:border-violet focus:outline-none focus:shadow-neon-violet transition disabled:opacity-50"
+                  className={`mt-1.5 w-full bg-bg/60 border border-input p-3 font-mono text-sm placeholder:text-muted focus:border-violet transition disabled:opacity-50 ${focusRing}`}
                 />
               </div>
             </div>
