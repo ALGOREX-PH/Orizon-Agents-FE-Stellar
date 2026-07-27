@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { CodeArtifact } from "@/lib/types";
+import { focusRing } from "@/lib/ui";
 import { cn } from "@/lib/utils";
 
 // react-syntax-highlighter dominates this route's JS — load it only when
@@ -59,6 +60,7 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
             onClick={() => setTab("preview")}
             className={cn(
               "clip-cyber-sm border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition",
+              focusRing,
               tab === "preview"
                 ? "border-violet bg-violet/20 text-text"
                 : "border-border text-muted hover:text-text",
@@ -72,6 +74,7 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
             onClick={() => setTab("files")}
             className={cn(
               "clip-cyber-sm border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition",
+              focusRing,
               tab === "files"
                 ? "border-violet bg-violet/20 text-text"
                 : "border-border text-muted hover:text-text",
@@ -107,6 +110,7 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
                   onClick={() => setActiveFile(f.path)}
                   className={cn(
                     "w-full text-left px-3 py-1.5 font-mono text-xs truncate transition",
+                    focusRing,
                     f.path === activeFile
                       ? "bg-violet/20 text-text border-l-2 border-violet"
                       : "text-muted hover:text-text hover:bg-white/5",
