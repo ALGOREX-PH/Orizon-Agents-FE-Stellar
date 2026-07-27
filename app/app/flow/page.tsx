@@ -3,6 +3,7 @@ import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ErrorNote } from "@/components/ui/error-note";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getFlow } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
@@ -22,8 +23,12 @@ export default function FlowPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">↻ Reset</Button>
-          <Button size="sm">+ Save workflow</Button>
+          <Button variant="outline" size="sm" disabled title="coming soon">
+            ↻ Reset
+          </Button>
+          <Button size="sm" disabled title="coming soon">
+            + Save workflow
+          </Button>
         </div>
       </div>
 
@@ -50,8 +55,10 @@ export default function FlowPage() {
             </div>
           )}
           {error && (
-            <div className="absolute inset-0 grid place-items-center font-mono text-xs text-magenta">
-              backend offline — {error}
+            <div className="absolute inset-0 grid place-items-center">
+              <ErrorNote className="border-0 bg-transparent p-0">
+                backend offline — {error}
+              </ErrorNote>
             </div>
           )}
           {flow && (
