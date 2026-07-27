@@ -1,3 +1,13 @@
+/**
+ * Keyboard-focus ring shared by every interactive element.
+ *
+ * Uses an INSET ring: the cyber clip-paths (`clip-cyber`/`clip-cyber-sm`)
+ * clip any box-shadow painted outside the element, so an offset ring would
+ * be invisible. An inset ring survives the clip.
+ */
+export const focusRing =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan";
+
 /** Shared form-input styling used across the PDAX panels. */
 export const inputCls =
   "w-full bg-bg/60 border border-border px-3 py-2 text-sm font-mono outline-none focus:border-violet";
