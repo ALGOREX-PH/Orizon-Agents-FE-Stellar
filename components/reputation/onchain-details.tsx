@@ -12,7 +12,8 @@ const FALLBACK_CONTRACT_IDS = {
   testnet: "CDCSOBEVZUPQZV5GV4D6KYHZCLNGW2KXY74RUHSZ3EZUXF34DPW422ZT",
 } as const;
 const FALLBACK_CONTRACT_ID =
-  FALLBACK_CONTRACT_IDS[defaultExplorerNetwork] ?? FALLBACK_CONTRACT_IDS.testnet;
+  FALLBACK_CONTRACT_IDS[defaultExplorerNetwork] ??
+  FALLBACK_CONTRACT_IDS.testnet;
 
 const METHODS = [
   {
@@ -61,8 +62,14 @@ const ERRORS = [
  * method interface, error codes, and a constants strip driven by the
  * /reputation/params response (em dashes while params is null).
  */
-export function OnchainDetails({ params }: { params: ReputationParams | null }) {
-  const contractId = params?.contract_id ? params.contract_id : FALLBACK_CONTRACT_ID;
+export function OnchainDetails({
+  params,
+}: {
+  params: ReputationParams | null;
+}) {
+  const contractId = params?.contract_id
+    ? params.contract_id
+    : FALLBACK_CONTRACT_ID;
   const network = params?.network ?? defaultExplorerNetwork;
   const constants = [
     {
@@ -120,7 +127,10 @@ export function OnchainDetails({ params }: { params: ReputationParams | null }) 
           </thead>
           <tbody>
             {METHODS.map((row) => (
-              <tr key={row.method} className="border-b border-border/50 last:border-0">
+              <tr
+                key={row.method}
+                className="border-b border-border/50 last:border-0"
+              >
                 <th
                   scope="row"
                   className="py-3 pr-4 text-left font-mono font-normal text-cyan"

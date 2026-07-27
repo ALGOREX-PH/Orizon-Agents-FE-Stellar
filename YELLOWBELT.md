@@ -27,7 +27,7 @@ Action list for completing **Level 2 — Yellow Belt** of the Stellar Composabil
 
 - [ ] **Wallet not found:** open the dApp in a browser without any Stellar wallet extension installed (or use a fresh Chrome profile) → click Connect Wallet → modal shows "No wallets detected" or install links → if you click outside the modal, the friendly `wallet_not_found` state appears (red banner, not a raw error).
 - [ ] **User rejected:** on `/app/send`, fill in destination + 1 XLM → click **Send XLM** → in the Freighter popup, **click Reject** → the failed card shows **"Signature cancelled"** (not the raw Freighter message).
-- [ ] **Insufficient balance:** on `/app/send`, type an amount **greater than your balance** → submit blocked client-side with `amount exceeds balance`. *Optional advanced check:* set the amount equal to balance + 0.0001 (just under client guard), submit → Horizon rejects → red card shows **"Insufficient XLM balance"** (mapped from `tx_insufficient_balance`).
+- [ ] **Insufficient balance:** on `/app/send`, type an amount **greater than your balance** → submit blocked client-side with `amount exceeds balance`. _Optional advanced check:_ set the amount equal to balance + 0.0001 (just under client guard), submit → Horizon rejects → red card shows **"Insufficient XLM balance"** (mapped from `tx_insufficient_balance`).
 
 ## 3. Verify the live event feed (~3 min)
 
@@ -122,21 +122,21 @@ git push origin main
 
 ## Requirements ↔ where it's implemented
 
-| Yellow Belt requirement | Status | File / location |
-| --- | --- | --- |
-| StellarWalletsKit (multi-wallet) | ✅ | `lib/wallet.tsx` |
-| Error: wallet not found | ✅ | `lib/wallet-errors.ts` (`wallet_not_found`) |
-| Error: user rejected sign | ✅ | `lib/wallet-errors.ts` (`user_rejected`) |
-| Error: insufficient balance | ✅ | `lib/wallet-errors.ts` (`insufficient_balance`) |
-| Contract deployed on testnet | ✅ | `contract/addresses.json`, `README.md#testnet-deployment` |
-| Contract called from FE | ✅ | `app/app/orchestrator/page.tsx` (PaymentEscrow.authorize) |
-| Read + write contract data | ✅ | reads via `getEvents` (`/app/events`) + REST; writes via signed XDR |
-| Event listening + state sync | ✅ | `lib/stellar-events.ts` + `app/app/events/page.tsx` |
-| Tx status (pending/success/fail) | ✅ | `components/ui/tx-status.tsx` |
-| 2+ meaningful commits | ⚠️ pending push | see step 7 |
-| Folder named `contract` (reviewer revision) | ✅ | `contract/contract/` (mirror) + canonical contracts repo `contract/` |
-| README — wallet-options screenshot | ✅ | `public/wallet-options.png` |
-| README — events-feed screenshot | ✅ | `public/events-feed.png` |
-| README — tx-status screenshot | ✅ | `public/tx-status.png` |
-| README — deployed contract address | ✅ | `README.md#-deployed-contracts-stellar-testnet` |
-| README — contract-call tx hash | ✅ | `47a13c4b…78299a` (PaymentEscrow.authorize), pinned in README |
+| Yellow Belt requirement                     | Status          | File / location                                                      |
+| ------------------------------------------- | --------------- | -------------------------------------------------------------------- |
+| StellarWalletsKit (multi-wallet)            | ✅              | `lib/wallet.tsx`                                                     |
+| Error: wallet not found                     | ✅              | `lib/wallet-errors.ts` (`wallet_not_found`)                          |
+| Error: user rejected sign                   | ✅              | `lib/wallet-errors.ts` (`user_rejected`)                             |
+| Error: insufficient balance                 | ✅              | `lib/wallet-errors.ts` (`insufficient_balance`)                      |
+| Contract deployed on testnet                | ✅              | `contract/addresses.json`, `README.md#testnet-deployment`            |
+| Contract called from FE                     | ✅              | `app/app/orchestrator/page.tsx` (PaymentEscrow.authorize)            |
+| Read + write contract data                  | ✅              | reads via `getEvents` (`/app/events`) + REST; writes via signed XDR  |
+| Event listening + state sync                | ✅              | `lib/stellar-events.ts` + `app/app/events/page.tsx`                  |
+| Tx status (pending/success/fail)            | ✅              | `components/ui/tx-status.tsx`                                        |
+| 2+ meaningful commits                       | ⚠️ pending push | see step 7                                                           |
+| Folder named `contract` (reviewer revision) | ✅              | `contract/contract/` (mirror) + canonical contracts repo `contract/` |
+| README — wallet-options screenshot          | ✅              | `public/wallet-options.png`                                          |
+| README — events-feed screenshot             | ✅              | `public/events-feed.png`                                             |
+| README — tx-status screenshot               | ✅              | `public/tx-status.png`                                               |
+| README — deployed contract address          | ✅              | `README.md#-deployed-contracts-stellar-testnet`                      |
+| README — contract-call tx hash              | ✅              | `47a13c4b…78299a` (PaymentEscrow.authorize), pinned in README        |

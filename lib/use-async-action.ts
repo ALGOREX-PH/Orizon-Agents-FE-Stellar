@@ -11,9 +11,12 @@
  *   "Error: " prefix that `String(e)` produces.
  * - `data` is retained across failures and re-runs; call `reset()` first
  *   when the UI should drop stale results while a new run is in flight.
+ * - Overlapping runs: only the latest `run()` commits state — a slower older
+ *   run's settle is discarded (its returned promise still resolves to its own
+ *   value). Settles that land after unmount never set state.
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /** Normalize a thrown value into a user-facing message. */
 export function toMessage(e: unknown): string {
@@ -36,21 +39,39 @@ export function useAsyncAction<Args extends unknown[], T>(
   const [pending, setPending] = useState(false);
 
   // Always call the latest `fn` without forcing callers to memoize it.
+  // Synced in an effect — not during render — so render stays side-effect
+  // free (concurrent renders may be thrown away).
   const fnRef = useRef(fn);
-  fnRef.current = fn;
+  useEffect(() => {
+    fnRef.current = fn;
+  });
+
+  // Monotonic id of the latest run(): an earlier run that settles after a
+  // newer one started must not commit its result/error over the newer run's.
+  const runIdRef = useRef(0);
+  // Cleared on unmount so a late settle never sets state on a dead component.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const run = useCallback(async (...args: Args): Promise<T | undefined> => {
+    const id = ++runIdRef.current;
+    const current = () => mountedRef.current && runIdRef.current === id;
     setError(null);
     setPending(true);
     try {
       const result = await fnRef.current(...args);
-      setData(result);
+      if (current()) setData(result);
       return result;
     } catch (e) {
-      setError(toMessage(e));
+      if (current()) setError(toMessage(e));
       return undefined;
     } finally {
-      setPending(false);
+      if (current()) setPending(false);
     }
   }, []);
 

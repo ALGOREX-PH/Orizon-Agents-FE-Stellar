@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
-import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
+import { NETWORK_LABEL } from "@/components/ui/stellar-link";
 
 // Display label for the configured network — "mainnet" | "testnet".
-const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 const cols = [
   {
@@ -23,7 +22,10 @@ const cols = [
       ["ERC-8004", "https://eips.ethereum.org/EIPS/eip-8004"],
       ["x402", "https://www.x402.org"],
       ["Registry", "/app/agents"],
-      ["Contracts", "https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar#readme"],
+      [
+        "Contracts",
+        "https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar#readme",
+      ],
     ],
   },
   {
@@ -32,7 +34,10 @@ const cols = [
       ["Docs", "https://github.com/ALGOREX-PH/Orizon-Agents-BE-Stellar#readme"],
       ["API", "https://orizon-agents-be-stellar.onrender.com/docs"],
       ["Status", "https://orizon-agents-be-stellar.onrender.com/health"],
-      ["Changelog", "https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/commits"],
+      [
+        "Changelog",
+        "https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/commits",
+      ],
     ],
   },
   {
@@ -40,9 +45,18 @@ const cols = [
     l: [
       ["GitHub", "https://github.com/ALGOREX-PH"],
       ["LinkedIn", "https://www.linkedin.com/in/algorexph/"],
-      ["Frontend repo", "https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar"],
-      ["Backend repo", "https://github.com/ALGOREX-PH/Orizon-Agents-BE-Stellar"],
-      ["Contracts repo", "https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar"],
+      [
+        "Frontend repo",
+        "https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar",
+      ],
+      [
+        "Backend repo",
+        "https://github.com/ALGOREX-PH/Orizon-Agents-BE-Stellar",
+      ],
+      [
+        "Contracts repo",
+        "https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar",
+      ],
     ],
   },
 ];
@@ -88,7 +102,9 @@ export function Footer() {
         </div>
 
         <div className="mt-14 flex flex-col gap-3 border-t border-border pt-6 font-mono text-[10px] uppercase tracking-[0.25em] text-muted md:flex-row md:items-center md:justify-between">
-          <span>© {new Date().getFullYear()} Orizon Agents — all rights reserved</span>
+          <span>
+            © {new Date().getFullYear()} Orizon Agents — all rights reserved
+          </span>
           <span>built on stellar {NETWORK_LABEL} · mit licensed</span>
         </div>
       </div>

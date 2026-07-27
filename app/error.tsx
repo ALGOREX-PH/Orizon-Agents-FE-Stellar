@@ -24,7 +24,11 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+    // <main id="main"> keeps the root layout's skip link functional here.
+    <main
+      id="main"
+      className="flex min-h-screen flex-col items-center justify-center px-6 text-center"
+    >
       <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-magenta">
         {"// system fault"}
       </p>
@@ -32,14 +36,14 @@ export default function Error({
         SYSTEM FAULT
       </h1>
       <p className="mt-4 max-w-sm font-mono text-xs leading-relaxed text-muted">
-        An unexpected error interrupted this process. The rest of the network
-        is unaffected — retry the operation.
+        An unexpected error interrupted this process. The rest of the network is
+        unaffected — retry the operation.
       </p>
       <div className="mt-8">
         <Button variant="outline" onClick={reset}>
           Try again
         </Button>
       </div>
-    </div>
+    </main>
   );
 }

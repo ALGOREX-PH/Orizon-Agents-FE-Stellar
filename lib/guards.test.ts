@@ -114,7 +114,11 @@ describe("isReputationBatch", () => {
     dispute_rate_bps: 0,
     source: "prior",
   };
-  const valid = { reputations: { agt_01: rep }, floor_bps: 5500, prior_bps: 7000 };
+  const valid = {
+    reputations: { agt_01: rep },
+    floor_bps: 5500,
+    prior_bps: 7000,
+  };
 
   it("accepts a valid batch (empty reputations included)", () => {
     expect(isReputationBatch(valid)).toBe(true);
@@ -123,7 +127,9 @@ describe("isReputationBatch", () => {
 
   it("rejects an entry with a non-numeric smoothed_bps", () => {
     const bad = { ...rep, smoothed_bps: null };
-    expect(isReputationBatch({ ...valid, reputations: { agt_01: bad } })).toBe(false);
+    expect(isReputationBatch({ ...valid, reputations: { agt_01: bad } })).toBe(
+      false,
+    );
   });
 
   it("rejects a batch without a numeric floor_bps", () => {
@@ -141,7 +147,9 @@ describe("isArtifactResponse", () => {
   };
 
   it("accepts a sealed artifact and a null artifact", () => {
-    expect(isArtifactResponse({ artifact, charge_tx: "abc", proof_tx: null })).toBe(true);
+    expect(
+      isArtifactResponse({ artifact, charge_tx: "abc", proof_tx: null }),
+    ).toBe(true);
     expect(isArtifactResponse({ artifact: null })).toBe(true);
   });
 
@@ -173,7 +181,9 @@ describe("isStellarNetworkInfo", () => {
   });
 
   it("rejects non-string contract ids", () => {
-    expect(isStellarNetworkInfo({ ...valid, contracts: { reputation: 7 } })).toBe(false);
+    expect(
+      isStellarNetworkInfo({ ...valid, contracts: { reputation: 7 } }),
+    ).toBe(false);
   });
 
   it("rejects a missing asset_sac", () => {

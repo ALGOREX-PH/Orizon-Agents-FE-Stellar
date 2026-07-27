@@ -9,7 +9,12 @@ const stages = [
     v: "MVP",
     status: "now" as const,
     title: "Prove it works",
-    bullets: ["Agent registry", "Simple chaining", "x402 payments", "Basic trace"],
+    bullets: [
+      "Agent registry",
+      "Simple chaining",
+      "x402 payments",
+      "Basic trace",
+    ],
   },
   {
     v: "V1",
@@ -21,17 +26,28 @@ const stages = [
     v: "V2",
     status: "later" as const,
     title: "Dynamic routing",
-    bullets: ["Best-agent selection", "Parallel execution", "Cost↔perf optimizer"],
+    bullets: [
+      "Best-agent selection",
+      "Parallel execution",
+      "Cost↔perf optimizer",
+    ],
   },
   {
     v: "V3",
     status: "vision" as const,
     title: "Digital labor market",
-    bullets: ["Self-improving networks", "Agent specialization", "Autonomous economics"],
+    bullets: [
+      "Self-improving networks",
+      "Agent specialization",
+      "Autonomous economics",
+    ],
   },
 ];
 
-const toneByStatus: Record<(typeof stages)[number]["status"], "cyan" | "violet" | "magenta" | "muted"> = {
+const toneByStatus: Record<
+  (typeof stages)[number]["status"],
+  "cyan" | "violet" | "magenta" | "muted"
+> = {
   now: "cyan",
   next: "violet",
   later: "magenta",
@@ -65,14 +81,18 @@ export function Roadmap() {
                   className={cn(
                     "relative mx-auto mb-6 hidden h-5 w-5 rounded-full md:block",
                     s.status === "now" && "bg-cyan shadow-[0_0_16px_#00FFD1]",
-                    s.status === "next" && "bg-violet shadow-[0_0_16px_#B026FF]",
-                    s.status === "later" && "bg-magenta shadow-[0_0_16px_#FF2E9A]",
+                    s.status === "next" &&
+                      "bg-violet shadow-[0_0_16px_#B026FF]",
+                    s.status === "later" &&
+                      "bg-magenta shadow-[0_0_16px_#FF2E9A]",
                     s.status === "vision" && "bg-muted/50 ring-2 ring-border",
                   )}
                 />
                 <div className="clip-cyber border border-border bg-surface/60 p-5">
                   <div className="mb-3 flex items-center justify-between">
-                    <span className="font-mono text-xl font-semibold">{s.v}</span>
+                    <span className="font-mono text-xl font-semibold">
+                      {s.v}
+                    </span>
                     <Badge tone={toneByStatus[s.status]} dot>
                       {s.status}
                     </Badge>

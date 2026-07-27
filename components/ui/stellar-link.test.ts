@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  defaultExplorerNetwork,
-  stellarExpertUrl,
-} from "./stellar-link";
+import { defaultExplorerNetwork, stellarExpertUrl } from "./stellar-link";
 
 // NEXT_PUBLIC_* vars are inlined at build time, so the env-driven branch is
 // covered by the default (passphrase unset → testnet) plus the explicit

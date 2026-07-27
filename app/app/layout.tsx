@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Sidebar } from "./_components/sidebar";
 import { Topbar } from "./_components/topbar";
 import { GridBg } from "@/components/ui/grid-bg";
+import { ConsoleContent } from "./_components/console-content";
 import { MobileNavProvider } from "./_components/mobile-nav-context";
 
 import { HORIZON_URL, SOROBAN_RPC_URL } from "@/lib/env";
@@ -23,11 +24,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <MobileNavProvider>
       <link rel="preconnect" href={HORIZON_ORIGIN} crossOrigin="" />
@@ -37,12 +34,15 @@ export default function AppLayout({
       <div className="relative min-h-screen">
         <GridBg fade={false} className="opacity-40" />
         <Sidebar />
-        <div className="md:pl-60">
+        <ConsoleContent>
           <Topbar />
-          <main id="main" className="relative px-4 sm:px-6 md:px-8 py-6 md:py-8">
+          <main
+            id="main"
+            className="relative px-4 sm:px-6 md:px-8 py-6 md:py-8"
+          >
             {children}
           </main>
-        </div>
+        </ConsoleContent>
       </div>
     </MobileNavProvider>
   );

@@ -6,10 +6,12 @@ import {
   isStellarNetworkInfo,
   isTaskList,
 } from "./guards";
+import { getTaskToken, rememberTaskToken } from "./task-tokens";
 import type {
   Agent,
   ArtifactResponse,
   DecomposeResponse,
+  ExecuteResponse,
   Flow,
   Overview,
   ReputationBatch,
@@ -42,7 +44,10 @@ export async function fetchWithTimeout(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(`${base}${path}`, { ...init, signal: controller.signal });
+    return await fetch(`${base}${path}`, {
+      ...init,
+      signal: controller.signal,
+    });
   } catch (err) {
     if (controller.signal.aborted) {
       throw new Error(`${method} ${path} → timeout after ${timeoutMs / 1000}s`);
@@ -67,13 +72,25 @@ export function clearGetCache(): void {
   getCache.clear();
 }
 
-function get<T>(path: string, parse?: (v: unknown) => T): Promise<T> {
+function get<T>(
+  path: string,
+  parse?: (v: unknown) => T,
+  headers?: Record<string, string>,
+): Promise<T> {
   const hit = getCache.get(path);
-  if (hit && (hit.settledAt === null || Date.now() - hit.settledAt < GET_DEDUPE_MS)) {
+  if (
+    hit &&
+    (hit.settledAt === null || Date.now() - hit.settledAt < GET_DEDUPE_MS)
+  ) {
     return hit.promise as Promise<T>;
   }
   const promise = (async () => {
-    const res = await fetchWithTimeout("GET", path, { cache: "no-store" }, GET_TIMEOUT_MS);
+    const res = await fetchWithTimeout(
+      "GET",
+      path,
+      { cache: "no-store", ...(headers ? { headers } : {}) },
+      GET_TIMEOUT_MS,
+    );
     if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
     const json: unknown = await res.json();
     return parse ? parse(json) : (json as T);
@@ -137,19 +154,35 @@ async function post<T, B>(
  * page's normal error state, instead of crashing mid-render on
  * `undefined.toFixed(...)`.
  */
-function ensure<T>(path: string, guard: (v: unknown) => v is T): (v: unknown) => T {
+function ensure<T>(
+  path: string,
+  guard: (v: unknown) => v is T,
+): (v: unknown) => T {
   return (v) => {
     if (!guard(v)) throw new Error(`malformed response from ${path}`);
     return v;
   };
 }
 
+/**
+ * `X-Task-Token` header for per-task reads when this session holds the
+ * task's read token (stored at execute time). Undefined — today's exact
+ * behavior — when no token is known; required by the backend only once its
+ * enforcement flag flips.
+ */
+function taskAuthHeaders(taskId: string): Record<string, string> | undefined {
+  const token = getTaskToken(taskId);
+  return token ? { "X-Task-Token": token } : undefined;
+}
+
 export const listAgents = () => get<Agent[]>("/agents");
-export const listTasks = () => get<Task[]>("/tasks", ensure("/tasks", isTaskList));
+export const listTasks = () =>
+  get<Task[]>("/tasks", ensure("/tasks", isTaskList));
 export const getOverview = () =>
   get<Overview>("/metrics/overview", ensure("/metrics/overview", isOverview));
 export const getFlow = () => get<Flow>("/flow/default");
-export const getTrace = (taskId: string) => get<TraceLine[]>(`/trace/${taskId}`);
+export const getTrace = (taskId: string) =>
+  get<TraceLine[]>(`/trace/${taskId}`, undefined, taskAuthHeaders(taskId));
 
 export const decompose = (intent: string) =>
   post<DecomposeResponse, { intent: string }>(
@@ -162,15 +195,22 @@ export const execute = (
   planId: string,
   opts?: { auth_id_hex?: string; payer?: string },
 ) =>
-  post<{ task_id: string }, { plan_id: string; auth_id_hex?: string; payer?: string }>(
-    "/orchestrator/execute",
-    { plan_id: planId, ...opts },
-  );
+  post<
+    ExecuteResponse,
+    { plan_id: string; auth_id_hex?: string; payer?: string }
+  >("/orchestrator/execute", { plan_id: planId, ...opts }).then((res) => {
+    // Remember the read token at the API seam so every execute caller
+    // (simulated and on-chain paths alike) gets later task reads authorized
+    // without extra wiring. No-op while the backend ships no token.
+    rememberTaskToken(res.task_id, res.read_token);
+    return res;
+  });
 
 export const getArtifact = (taskId: string) =>
   get<ArtifactResponse>(
     `/tasks/${taskId}/artifact`,
     ensure(`/tasks/${taskId}/artifact`, isArtifactResponse),
+    taskAuthHeaders(taskId),
   );
 
 // ── Stellar / x402 ──────────────────────────────────────────
@@ -241,8 +281,13 @@ export function openTraceStream(
   let attempts = 0;
   let settled = false; // done received, terminally errored, or disposed
 
+  // EventSource cannot set headers, so the task read token (when this
+  // session holds one) rides along as a query param instead.
+  const token = getTaskToken(taskId);
+  const query = token ? `?token=${encodeURIComponent(token)}` : "";
+
   const connect = () => {
-    es = new EventSource(`${base}/trace/${taskId}/stream`);
+    es = new EventSource(`${base}/trace/${taskId}/stream${query}`);
     es.addEventListener("trace", (e) => {
       try {
         const line = JSON.parse((e as MessageEvent).data) as TraceLine;

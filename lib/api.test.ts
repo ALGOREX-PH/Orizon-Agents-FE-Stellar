@@ -12,12 +12,17 @@ import {
   GET_DEDUPE_MS,
   clearGetCache,
   decompose,
+  execute,
+  getArtifact,
   getOverview,
   getReputation,
   getReputationParams,
+  getTrace,
   listAgents,
   listReputation,
+  openTraceStream,
 } from "./api";
+import { rememberTaskToken } from "./task-tokens";
 
 type FetchMockResponse = {
   ok: boolean;
@@ -27,8 +32,32 @@ type FetchMockResponse = {
   text: () => Promise<string>;
 };
 
-const fetchMock = vi.fn<(input: string, init?: RequestInit) => Promise<FetchMockResponse>>();
+const fetchMock =
+  vi.fn<(input: string, init?: RequestInit) => Promise<FetchMockResponse>>();
 vi.stubGlobal("fetch", fetchMock);
+
+// This suite runs in node (no DOM): give lib/task-tokens a window with a
+// Map-backed sessionStorage so token wiring is testable, and stub a minimal
+// EventSource so openTraceStream's URL construction is observable.
+const sessionStore = new Map<string, string>();
+vi.stubGlobal("window", {
+  sessionStorage: {
+    getItem: (k: string) => sessionStore.get(k) ?? null,
+    setItem: (k: string, v: string) => void sessionStore.set(k, v),
+    removeItem: (k: string) => void sessionStore.delete(k),
+    clear: () => sessionStore.clear(),
+  },
+});
+
+class FakeEventSource {
+  static urls: string[] = [];
+  constructor(url: string) {
+    FakeEventSource.urls.push(url);
+  }
+  addEventListener(): void {}
+  close(): void {}
+}
+vi.stubGlobal("EventSource", FakeEventSource);
 
 function jsonResponse(status: number, body: unknown): FetchMockResponse {
   return {
@@ -43,6 +72,8 @@ afterEach(() => {
   fetchMock.mockReset();
   // GETs dedupe per path for ~1s — flush so each test controls its fetches.
   clearGetCache();
+  sessionStore.clear();
+  FakeEventSource.urls = [];
   vi.restoreAllMocks();
 });
 
@@ -56,7 +87,10 @@ describe("get (via listAgents)", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/agents",
-      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
+      expect.objectContaining({
+        cache: "no-store",
+        signal: expect.any(AbortSignal),
+      }),
     );
   });
 
@@ -99,14 +133,21 @@ describe("listReputation", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/stellar/reputation",
-      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
+      expect.objectContaining({
+        cache: "no-store",
+        signal: expect.any(AbortSignal),
+      }),
     );
   });
 
   it("rejects on a non-OK response with method, path and status in the message", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(502, { detail: "horizon down" }));
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(502, { detail: "horizon down" }),
+    );
 
-    await expect(listReputation()).rejects.toThrow("GET /stellar/reputation → 502");
+    await expect(listReputation()).rejects.toThrow(
+      "GET /stellar/reputation → 502",
+    );
   });
 });
 
@@ -119,12 +160,17 @@ describe("getReputation", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/stellar/reputation/agt_01h8",
-      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
+      expect.objectContaining({
+        cache: "no-store",
+        signal: expect.any(AbortSignal),
+      }),
     );
   });
 
   it("rejects on a non-OK response with method, path and status in the message", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(404, { detail: "unknown agent" }));
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(404, { detail: "unknown agent" }),
+    );
 
     await expect(getReputation("agt_nope")).rejects.toThrow(
       "GET /stellar/reputation/agt_nope → 404",
@@ -155,7 +201,10 @@ describe("getReputationParams", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/stellar/reputation/params",
-      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
+      expect.objectContaining({
+        cache: "no-store",
+        signal: expect.any(AbortSignal),
+      }),
     );
   });
 
@@ -249,7 +298,13 @@ describe("get dedupe cache", () => {
 
 describe("post (via decompose)", () => {
   it("sends a JSON body with content-type header and resolves parsed JSON", async () => {
-    const plan = { plan_id: "pln_1", intent: "tetris", steps: [], total_usdc: 0, total_eta: 0 };
+    const plan = {
+      plan_id: "pln_1",
+      intent: "tetris",
+      steps: [],
+      total_usdc: 0,
+      total_eta: 0,
+    };
     fetchMock.mockResolvedValueOnce(jsonResponse(200, plan));
 
     await expect(decompose("tetris")).resolves.toEqual(plan);
@@ -266,7 +321,9 @@ describe("post (via decompose)", () => {
   });
 
   it("surfaces the backend `detail` field in the rejection message", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(422, { detail: "plan too vague" }));
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(422, { detail: "plan too vague" }),
+    );
 
     await expect(decompose("x")).rejects.toThrow(
       "POST /orchestrator/decompose → 422 — plan too vague",
@@ -288,7 +345,10 @@ describe("post (via decompose)", () => {
 
   it("falls back to detail when the envelope carries no message", async () => {
     fetchMock.mockResolvedValueOnce(
-      jsonResponse(422, { error: { code: "invalid_plan" }, detail: "plan too vague" }),
+      jsonResponse(422, {
+        error: { code: "invalid_plan" },
+        detail: "plan too vague",
+      }),
     );
 
     await expect(decompose("x")).rejects.toThrow(
@@ -348,12 +408,95 @@ describe("post (via decompose)", () => {
       text: () => Promise.reject(new Error("no body")),
     });
 
-    await expect(decompose("x")).rejects.toThrow("POST /orchestrator/decompose → 500");
+    await expect(decompose("x")).rejects.toThrow(
+      "POST /orchestrator/decompose → 500",
+    );
   });
 
   it("propagates a network-level rejection untouched", async () => {
     fetchMock.mockRejectedValueOnce(new Error("socket hang up"));
 
     await expect(decompose("x")).rejects.toThrow("socket hang up");
+  });
+});
+
+describe("task read tokens", () => {
+  it("attaches X-Task-Token to getTrace when a token is known", async () => {
+    rememberTaskToken("tsk_tok", "tok_1");
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, []));
+
+    await getTrace("tsk_tok");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/trace/tsk_tok",
+      expect.objectContaining({ headers: { "X-Task-Token": "tok_1" } }),
+    );
+  });
+
+  it("attaches X-Task-Token to getArtifact when a token is known", async () => {
+    rememberTaskToken("tsk_tok", "tok_1");
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { artifact: null }));
+
+    await getArtifact("tsk_tok");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/tasks/tsk_tok/artifact",
+      expect.objectContaining({ headers: { "X-Task-Token": "tok_1" } }),
+    );
+  });
+
+  it("sends no headers when no token is known for the task", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(200, []));
+
+    await getTrace("tsk_unknown");
+
+    expect(fetchMock.mock.calls[0][1]?.headers).toBeUndefined();
+  });
+
+  it("remembers the token from an execute response for later reads", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { task_id: "tsk_9", read_token: "tok_9" }),
+    );
+    await expect(execute("pln_1")).resolves.toEqual({
+      task_id: "tsk_9",
+      read_token: "tok_9",
+    });
+
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, []));
+    await getTrace("tsk_9");
+
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/trace/tsk_9",
+      expect.objectContaining({ headers: { "X-Task-Token": "tok_9" } }),
+    );
+  });
+
+  it("leaves reads bare when the execute response ships no token", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { task_id: "tsk_10" }));
+    await execute("pln_1");
+
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, []));
+    await getTrace("tsk_10");
+
+    expect(fetchMock.mock.lastCall?.[1]?.headers).toBeUndefined();
+  });
+
+  it("appends the token as a query param on the SSE stream url", () => {
+    // EventSource cannot set headers — the token rides the query string,
+    // encoded so reserved characters survive.
+    rememberTaskToken("tsk_sse", "tok se/1");
+    const dispose = openTraceStream("tsk_sse", () => {});
+
+    expect(FakeEventSource.urls).toEqual([
+      "/api/trace/tsk_sse/stream?token=tok%20se%2F1",
+    ]);
+    dispose();
+  });
+
+  it("opens the SSE stream without a query param when no token is known", () => {
+    const dispose = openTraceStream("tsk_plain", () => {});
+
+    expect(FakeEventSource.urls).toEqual(["/api/trace/tsk_plain/stream"]);
+    dispose();
   });
 });

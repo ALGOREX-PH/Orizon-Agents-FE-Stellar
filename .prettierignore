@@ -1,0 +1,11 @@
+# Mirrors of other repos — formatted by their own toolchains.
+backend/
+contract/
+# Build and generated output.
+.next/
+coverage/
+test-results/
+playwright-report/
+package-lock.json
+docs/
+whitepaper/

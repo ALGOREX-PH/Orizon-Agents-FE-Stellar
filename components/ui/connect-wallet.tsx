@@ -2,6 +2,7 @@
 import { useWallet } from "@/lib/wallet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { focusRing } from "@/lib/ui";
 import { cn } from "@/lib/utils";
 
 function short(addr: string) {
@@ -32,7 +33,11 @@ export function ConnectWallet({
     // Compare what the wallet itself reported against this build's network.
     // Unknown wallet network (unsupported getNetwork) → no false alarm.
     const wrongNet = walletNetworkMismatch;
-    const netLabel = (walletNetwork?.network || network?.network || "stellar").toLowerCase();
+    const netLabel = (
+      walletNetwork?.network ||
+      network?.network ||
+      "stellar"
+    ).toLowerCase();
     return (
       <div className={cn("flex items-center gap-2", className)}>
         {walletName && (
@@ -46,7 +51,7 @@ export function ConnectWallet({
         <button
           onClick={disconnect}
           title={`${walletName ?? "wallet"} · ${address} · click to disconnect`}
-          className="clip-cyber-sm border border-violet/60 bg-violet/10 h-8 px-3 font-mono text-[11px] uppercase tracking-[0.2em] text-text hover:border-violet hover:shadow-neon-violet transition"
+          className={`clip-cyber-sm border border-violet/60 bg-violet/10 h-8 px-3 font-mono text-[11px] uppercase tracking-[0.2em] text-text hover:border-violet hover:shadow-neon-violet transition ${focusRing}`}
         >
           ◆ {short(address)}
         </button>
@@ -61,7 +66,7 @@ export function ConnectWallet({
           href="https://freighter.app"
           target="_blank"
           rel="noreferrer"
-          className="font-mono text-[10px] uppercase tracking-[0.2em] text-magenta hover:text-text"
+          className={`font-mono text-[10px] uppercase tracking-[0.2em] text-magenta hover:text-text ${focusRing}`}
         >
           install a wallet ▸
         </a>

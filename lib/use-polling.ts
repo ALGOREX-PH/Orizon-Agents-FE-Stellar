@@ -23,8 +23,13 @@ export function usePolling(
   const enabled = opts?.enabled ?? true;
 
   // Always call the latest `fn` without forcing callers to memoize it.
+  // Synced in an effect — not during render — so render stays side-effect
+  // free (concurrent renders may be thrown away). Declared before the poll
+  // effect below so it runs first after each commit.
   const fnRef = useRef(fn);
-  fnRef.current = fn;
+  useEffect(() => {
+    fnRef.current = fn;
+  });
 
   useEffect(() => {
     if (!enabled) return;

@@ -22,9 +22,17 @@ const LEDGER_CONTRACT_URL = stellarExpertUrl(
 );
 
 const stats = [
-  { value: "★ 3.50", label: "newcomer prior", note: "cheap pseudonyms priced in" },
+  {
+    value: "★ 3.50",
+    label: "newcomer prior",
+    note: "cheap pseudonyms priced in",
+  },
   { value: "~9 wk", label: "evidence half-life", note: "recency wins" },
-  { value: "100 USDC", label: "whale cap per rating", note: "one voice, bounded" },
+  {
+    value: "100 USDC",
+    label: "whale cap per rating",
+    note: "one voice, bounded",
+  },
   { value: "★ 2.75", label: "routing floor", note: "wilson lower bound" },
 ];
 

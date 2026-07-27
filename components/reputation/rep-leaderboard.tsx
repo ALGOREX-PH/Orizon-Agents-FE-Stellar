@@ -77,7 +77,9 @@ function SortableTh({
   return (
     <th
       className={cn("pb-3", align === "right" ? "text-right" : "text-left")}
-      aria-sort={active ? (sort.dir === "desc" ? "descending" : "ascending") : undefined}
+      aria-sort={
+        active ? (sort.dir === "desc" ? "descending" : "ascending") : undefined
+      }
     >
       <button
         type="button"
@@ -88,7 +90,9 @@ function SortableTh({
         )}
       >
         {label}
-        <span aria-hidden="true">{active ? (sort.dir === "desc" ? " ▾" : " ▴") : ""}</span>
+        <span aria-hidden="true">
+          {active ? (sort.dir === "desc" ? " ▾" : " ▴") : ""}
+        </span>
       </button>
     </th>
   );
@@ -118,7 +122,9 @@ export function RepLeaderboard({
 
   const onSort = (col: SortCol) =>
     setSort((s) =>
-      s.col === col ? { col, dir: s.dir === "desc" ? "asc" : "desc" } : { col, dir: "desc" },
+      s.col === col
+        ? { col, dir: s.dir === "desc" ? "asc" : "desc" }
+        : { col, dir: "desc" },
     );
 
   const rows = useMemo<Row[]>(() => {
@@ -160,14 +166,40 @@ export function RepLeaderboard({
             <tr className="border-b border-border font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
               <th className="pb-3 text-left">#</th>
               <th className="pb-3 text-left">agent</th>
-              <SortableTh label="score" col="score" sort={sort} onSort={onSort} align="left" />
+              <SortableTh
+                label="score"
+                col="score"
+                sort={sort}
+                onSort={onSort}
+                align="left"
+              />
               <th className="pb-3 text-left">
                 <span className="sr-only">score meter</span>
               </th>
-              <SortableTh label="lower bound" col="lower" sort={sort} onSort={onSort} />
-              <SortableTh label="evidence" col="evidence" sort={sort} onSort={onSort} />
-              <SortableTh label="ratings" col="ratings" sort={sort} onSort={onSort} />
-              <SortableTh label="disputes" col="disputes" sort={sort} onSort={onSort} />
+              <SortableTh
+                label="lower bound"
+                col="lower"
+                sort={sort}
+                onSort={onSort}
+              />
+              <SortableTh
+                label="evidence"
+                col="evidence"
+                sort={sort}
+                onSort={onSort}
+              />
+              <SortableTh
+                label="ratings"
+                col="ratings"
+                sort={sort}
+                onSort={onSort}
+              />
+              <SortableTh
+                label="disputes"
+                col="disputes"
+                sort={sort}
+                onSort={onSort}
+              />
             </tr>
           </thead>
           <tbody>
@@ -204,10 +236,14 @@ export function RepLeaderboard({
                       belowFloor && "border-l-2 border-l-magenta/50",
                     )}
                   >
-                    <td className="py-3 pr-2 font-mono text-xs text-muted">{i + 1}</td>
+                    <td className="py-3 pr-2 font-mono text-xs text-muted">
+                      {i + 1}
+                    </td>
                     <td className="py-3 pr-4">
                       <div className="font-mono">{agent.name}</div>
-                      <div className="font-mono text-xs text-muted">{agent.id}</div>
+                      <div className="font-mono text-xs text-muted">
+                        {agent.id}
+                      </div>
                     </td>
                     <td className="py-3 pr-4">
                       <ReputationBadge
@@ -256,7 +292,10 @@ export function RepLeaderboard({
 
             {!loading && agents && rows.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-10 text-center text-muted font-mono text-xs">
+                <td
+                  colSpan={8}
+                  className="py-10 text-center text-muted font-mono text-xs"
+                >
                   no agents in the registry.
                 </td>
               </tr>

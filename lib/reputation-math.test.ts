@@ -44,9 +44,9 @@ describe("lowerBoundBps", () => {
   });
 
   it("lets a prior-only newcomer clear the default floor", () => {
-    expect(lowerBoundBps(DEFAULT_REP_PARAMS.prior_bps, 0)).toBeGreaterThanOrEqual(
-      DEFAULT_REP_PARAMS.floor_bps,
-    );
+    expect(
+      lowerBoundBps(DEFAULT_REP_PARAMS.prior_bps, 0),
+    ).toBeGreaterThanOrEqual(DEFAULT_REP_PARAMS.floor_bps);
   });
 
   it("sits below the mean and tightens with evidence", () => {
@@ -60,7 +60,9 @@ describe("lowerBoundBps", () => {
 
   it("sinks heavy negative evidence below the floor", () => {
     const smoothed = smoothedBps(1000, 20);
-    expect(lowerBoundBps(smoothed, 20)).toBeLessThan(DEFAULT_REP_PARAMS.floor_bps);
+    expect(lowerBoundBps(smoothed, 20)).toBeLessThan(
+      DEFAULT_REP_PARAMS.floor_bps,
+    );
   });
 });
 

@@ -40,14 +40,19 @@ export type DecomposeResponse = {
   total_eta: number;
 };
 
+/** Response of POST /api/orchestrator/execute. */
+export type ExecuteResponse = {
+  task_id: string;
+  /**
+   * Capability token for reading this task's trace/artifact. Replayed via
+   * `X-Task-Token` (or `?token=` on the SSE stream) once backend enforcement
+   * turns on; absent/null while enforcement is off.
+   */
+  read_token?: string | null;
+};
+
 export type TraceLevel =
-  | "input"
-  | "exec"
-  | "proof"
-  | "cost"
-  | "out"
-  | "error"
-  | "artifact";
+  "input" | "exec" | "proof" | "cost" | "out" | "error" | "artifact";
 export type TraceLine = { t: string; level: TraceLevel; msg: string };
 
 export type ArtifactFile = {
@@ -70,7 +75,13 @@ export type ArtifactResponse = {
   proof_tx?: string | null;
 };
 
-export type FlowNode = { id: string; label: string; sub: string; x: number; y: number };
+export type FlowNode = {
+  id: string;
+  label: string;
+  sub: string;
+  x: number;
+  y: number;
+};
 export type Flow = { nodes: FlowNode[]; edges: [string, string][] };
 
 export type Overview = {

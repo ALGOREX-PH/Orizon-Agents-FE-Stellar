@@ -58,59 +58,62 @@ export function useStellarEvents(
   const startLedgerRef = useRef<number | null>(null);
   const stoppedRef = useRef(false);
 
-  const tick = useCallback(async (server: RpcNs.Server, scValToNative: ScValToNativeFn) => {
-    if (!contractIds || contractIds.length === 0) return;
-    try {
-      // First call: anchor on a recent ledger; later: advance with cursor.
-      const useCursor = cursorRef.current !== null;
-      const req = useCursor
-        ? {
-            filters: [{ type: "contract" as const, contractIds }],
-            cursor: cursorRef.current!,
-            limit: 100,
-          }
-        : {
-            filters: [{ type: "contract" as const, contractIds }],
-            startLedger: startLedgerRef.current!,
-            limit: 100,
-          };
+  const tick = useCallback(
+    async (server: RpcNs.Server, scValToNative: ScValToNativeFn) => {
+      if (!contractIds || contractIds.length === 0) return;
+      try {
+        // First call: anchor on a recent ledger; later: advance with cursor.
+        const useCursor = cursorRef.current !== null;
+        const req = useCursor
+          ? {
+              filters: [{ type: "contract" as const, contractIds }],
+              cursor: cursorRef.current!,
+              limit: 100,
+            }
+          : {
+              filters: [{ type: "contract" as const, contractIds }],
+              startLedger: startLedgerRef.current!,
+              limit: 100,
+            };
 
-      const resp = await server.getEvents(req);
-      cursorRef.current = resp.cursor;
-      setLatestLedger(resp.latestLedger);
-      setLastTickAt(Date.now());
-      // A successful poll clears any stale error from a prior transient failure.
-      setError(null);
+        const resp = await server.getEvents(req);
+        cursorRef.current = resp.cursor;
+        setLatestLedger(resp.latestLedger);
+        setLastTickAt(Date.now());
+        // A successful poll clears any stale error from a prior transient failure.
+        setError(null);
 
-      if (resp.events.length === 0) return;
+        if (resp.events.length === 0) return;
 
-      const mapped: FeedEvent[] = resp.events.map((e) => ({
-        id: e.id,
-        ledger: e.ledger,
-        ledgerClosedAt: e.ledgerClosedAt,
-        contractId: e.contractId?.toString() ?? "",
-        txHash: e.txHash,
-        topics: e.topic.map((t) => safeScValToString(scValToNative, t)),
-        value: tryScValToNative(scValToNative, e.value),
-      }));
+        const mapped: FeedEvent[] = resp.events.map((e) => ({
+          id: e.id,
+          ledger: e.ledger,
+          ledgerClosedAt: e.ledgerClosedAt,
+          contractId: e.contractId?.toString() ?? "",
+          txHash: e.txHash,
+          topics: e.topic.map((t) => safeScValToString(scValToNative, t)),
+          value: tryScValToNative(scValToNative, e.value),
+        }));
 
-      setEvents((prev) => {
-        // newest first, then prior, capped at `max`. dedupe by id.
-        const seen = new Set(prev.map((p) => p.id));
-        const additions = mapped.filter((m) => !seen.has(m.id));
-        return [...additions.reverse(), ...prev].slice(0, max);
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
-      // If the cursor expired (RPC retention window), drop it and re-anchor.
-      if (/cursor|retention|out of range|invalid/i.test(msg)) {
-        cursorRef.current = null;
+        setEvents((prev) => {
+          // newest first, then prior, capped at `max`. dedupe by id.
+          const seen = new Set(prev.map((p) => p.id));
+          const additions = mapped.filter((m) => !seen.has(m.id));
+          return [...additions.reverse(), ...prev].slice(0, max);
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+        // If the cursor expired (RPC retention window), drop it and re-anchor.
+        if (/cursor|retention|out of range|invalid/i.test(msg)) {
+          cursorRef.current = null;
+        }
+        return false;
       }
-      return false;
-    }
-    return true;
-  }, [contractIds, max]);
+      return true;
+    },
+    [contractIds, max],
+  );
 
   useEffect(() => {
     if (!contractIds || contractIds.length === 0) return;
@@ -187,12 +190,19 @@ export function useStellarEvents(
   return { status, events, latestLedger, lastTickAt, error };
 }
 
-function safeScValToString(scValToNative: ScValToNativeFn, sv: unknown): string {
+function safeScValToString(
+  scValToNative: ScValToNativeFn,
+  sv: unknown,
+): string {
   try {
     const v = scValToNative(sv as Parameters<ScValToNativeFn>[0]);
     if (v == null) return "";
     if (typeof v === "string") return v;
-    if (typeof v === "number" || typeof v === "bigint" || typeof v === "boolean")
+    if (
+      typeof v === "number" ||
+      typeof v === "bigint" ||
+      typeof v === "boolean"
+    )
       return String(v);
     if (v instanceof Uint8Array) return bytesToHex(v).slice(0, 16) + "…";
     return JSON.stringify(v).slice(0, 32);
@@ -201,7 +211,10 @@ function safeScValToString(scValToNative: ScValToNativeFn, sv: unknown): string 
   }
 }
 
-function tryScValToNative(scValToNative: ScValToNativeFn, sv: unknown): unknown {
+function tryScValToNative(
+  scValToNative: ScValToNativeFn,
+  sv: unknown,
+): unknown {
   try {
     return scValToNative(sv as Parameters<ScValToNativeFn>[0]);
   } catch {

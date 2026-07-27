@@ -6,7 +6,19 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { statusTone } from "./ui";
+import { focusRing, inputCls, statusTone } from "./ui";
+
+describe("focusRing", () => {
+  it("uses an inset ring so the indicator survives the cyber clip-paths", () => {
+    expect(focusRing).toContain("focus-visible:ring-inset");
+    expect(focusRing).toContain("focus-visible:ring-2");
+  });
+
+  it("is applied to the shared input class", () => {
+    expect(inputCls).toContain(focusRing);
+    expect(inputCls).toContain("border-input");
+  });
+});
 
 describe("statusTone", () => {
   it("maps known statuses to their Badge tones", () => {

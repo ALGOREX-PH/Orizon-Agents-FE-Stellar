@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ErrorNote } from "@/components/ui/error-note";
 import {
   pdaxRampEstimate,
   pdaxStartOffRamp,
@@ -13,7 +14,7 @@ import type {
   PdaxRampRecord,
   RampDirection,
 } from "@/lib/pdax-types";
-import { inputCls, statusTone } from "@/lib/ui";
+import { focusRing, inputCls, statusTone } from "@/lib/ui";
 import { useAsyncAction } from "@/lib/use-async-action";
 
 const DEPOSIT_METHODS = [
@@ -99,9 +100,9 @@ export function RampPanel() {
                 setEst(null);
                 setRecord(null);
               }}
-              className={`px-2 py-1 text-[10px] font-mono uppercase tracking-widest border ${
+              className={`px-2 py-1 text-[10px] font-mono uppercase tracking-widest border ${focusRing} ${
                 dir === d
-                  ? "border-violet bg-violet/15 text-violet"
+                  ? "border-violet bg-violet/15 text-violet-readable"
                   : "border-border text-muted"
               }`}
             >
@@ -123,8 +124,17 @@ export function RampPanel() {
             amount ({onRamp ? "PHP" : "USDC"})
           </span>
           <div className="flex gap-2">
-            <input value={amount} onChange={(e) => setAmount(e.target.value)} className={inputCls} />
-            <Button size="sm" variant="outline" onClick={estimate} disabled={busy}>
+            <input
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className={inputCls}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={estimate}
+              disabled={busy}
+            >
               {busy ? "◉" : "estimate"}
             </Button>
           </div>
@@ -138,14 +148,37 @@ export function RampPanel() {
         )}
 
         <div className="grid grid-cols-2 gap-2">
-          <input aria-label="First name" value={first} onChange={(e) => setFirst(e.target.value)} className={inputCls} placeholder="first name" />
-          <input aria-label="Last name" value={last} onChange={(e) => setLast(e.target.value)} className={inputCls} placeholder="last name" />
+          <input
+            aria-label="First name"
+            value={first}
+            onChange={(e) => setFirst(e.target.value)}
+            className={inputCls}
+            placeholder="first name"
+          />
+          <input
+            aria-label="Last name"
+            value={last}
+            onChange={(e) => setLast(e.target.value)}
+            className={inputCls}
+            placeholder="last name"
+          />
         </div>
 
         {onRamp ? (
           <>
-            <input aria-label="Stellar address to receive USDCXLM" value={stellar} onChange={(e) => setStellar(e.target.value)} className={inputCls} placeholder="Stellar address (G…) to receive USDCXLM" />
-            <select aria-label="Deposit method" value={method} onChange={(e) => setMethod(e.target.value)} className={inputCls}>
+            <input
+              aria-label="Stellar address to receive USDCXLM"
+              value={stellar}
+              onChange={(e) => setStellar(e.target.value)}
+              className={inputCls}
+              placeholder="Stellar address (G…) to receive USDCXLM"
+            />
+            <select
+              aria-label="Deposit method"
+              value={method}
+              onChange={(e) => setMethod(e.target.value)}
+              className={inputCls}
+            >
               {DEPOSIT_METHODS.map((m) => (
                 <option key={m} value={m}>
                   {m}
@@ -155,50 +188,114 @@ export function RampPanel() {
           </>
         ) : (
           <>
-            <input aria-label="Bank code" value={bankCode} onChange={(e) => setBankCode(e.target.value.toUpperCase())} className={inputCls} placeholder="bank code (e.g. BAUBPPH)" />
+            <input
+              aria-label="Bank code"
+              value={bankCode}
+              onChange={(e) => setBankCode(e.target.value.toUpperCase())}
+              className={inputCls}
+              placeholder="bank code (e.g. BAUBPPH)"
+            />
             <div className="grid grid-cols-2 gap-2">
-              <input aria-label="Account name" value={accName} onChange={(e) => setAccName(e.target.value)} className={inputCls} placeholder="account name" />
-              <input aria-label="Account number" value={accNumber} onChange={(e) => setAccNumber(e.target.value)} className={inputCls} placeholder="account number" />
+              <input
+                aria-label="Account name"
+                value={accName}
+                onChange={(e) => setAccName(e.target.value)}
+                className={inputCls}
+                placeholder="account name"
+              />
+              <input
+                aria-label="Account number"
+                value={accNumber}
+                onChange={(e) => setAccNumber(e.target.value)}
+                className={inputCls}
+                placeholder="account number"
+              />
             </div>
           </>
         )}
 
-        <Button variant="cyan" onClick={start} disabled={busy} className="w-full">
-          {busy ? "◉ starting…" : onRamp ? "start on-ramp ▸" : "start off-ramp ▸"}
+        <Button
+          variant="cyan"
+          onClick={start}
+          disabled={busy}
+          className="w-full"
+        >
+          {busy
+            ? "◉ starting…"
+            : onRamp
+              ? "start on-ramp ▸"
+              : "start off-ramp ▸"}
         </Button>
       </div>
 
-      {err && <div className="mt-3 text-xs font-mono text-magenta">{err}</div>}
+      {err && (
+        <ErrorNote className="mt-3 border-0 bg-transparent p-0">
+          {err}
+        </ErrorNote>
+      )}
 
       {record && (
         <div className="mt-4 border border-border bg-bg/40 p-4 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-[11px] text-muted">{record.ramp_id}</span>
+            <span className="font-mono text-[11px] text-muted">
+              {record.ramp_id}
+            </span>
             <Badge tone={statusTone(record.status)}>{record.status}</Badge>
           </div>
           {record.checkout_url && (
-            <a href={record.checkout_url} target="_blank" rel="noreferrer" className="block font-mono text-xs text-cyan underline break-all">
+            <a
+              href={record.checkout_url}
+              target="_blank"
+              rel="noreferrer"
+              className={`block font-mono text-xs text-cyan underline break-all ${focusRing}`}
+            >
               ▸ pay here: {record.checkout_url}
             </a>
           )}
           {record.deposit_address && (
             <div className="font-mono text-xs break-all">
-              send USDCXLM → <span className="text-cyan">{record.deposit_address}</span>
-              {record.deposit_tag && <div className="text-[10px] text-muted">memo: {record.deposit_tag}</div>}
+              send USDCXLM →{" "}
+              <span className="text-cyan">{record.deposit_address}</span>
+              {record.deposit_tag && (
+                <div className="text-[10px] text-muted">
+                  memo: {record.deposit_tag}
+                </div>
+              )}
             </div>
           )}
           <div className="space-y-1 pt-1">
             {record.stages.map((s, i) => (
-              <div key={i} className="flex items-center gap-2 font-mono text-[10px]">
-                <span className={s.status === "success" ? "text-cyan" : s.status === "failed" ? "text-magenta" : "text-muted"}>
-                  {s.status === "success" ? "✓" : s.status === "failed" ? "✕" : "•"}
+              <div
+                key={i}
+                className="flex items-center gap-2 font-mono text-[10px]"
+              >
+                <span
+                  className={
+                    s.status === "success"
+                      ? "text-cyan"
+                      : s.status === "failed"
+                        ? "text-magenta"
+                        : "text-muted"
+                  }
+                >
+                  {s.status === "success"
+                    ? "✓"
+                    : s.status === "failed"
+                      ? "✕"
+                      : "•"}
                 </span>
                 <span className="text-muted">{s.name}</span>
-                {s.detail && <span className="text-muted/70">— {s.detail}</span>}
+                {s.detail && (
+                  <span className="text-muted/70">— {s.detail}</span>
+                )}
               </div>
             ))}
           </div>
-          {record.error && <div className="text-[11px] font-mono text-magenta">{record.error}</div>}
+          {record.error && (
+            <ErrorNote className="border-0 bg-transparent p-0 text-[11px]">
+              {record.error}
+            </ErrorNote>
+          )}
         </div>
       )}
     </Card>

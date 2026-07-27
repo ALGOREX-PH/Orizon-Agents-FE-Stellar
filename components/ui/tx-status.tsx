@@ -104,7 +104,8 @@ function StepTrail({ state }: { state: TxState }) {
                   className={[
                     "h-3 w-3 rounded-full transition-all",
                     done && "bg-cyan shadow-[0_0_8px_#00FFD1]",
-                    active && "bg-violet shadow-[0_0_12px_#B026FF] animate-pulse",
+                    active &&
+                      "bg-violet shadow-[0_0_12px_#B026FF] animate-pulse",
                     !done && !active && "bg-border",
                   ]
                     .filter(Boolean)
@@ -159,10 +160,19 @@ function SuccessCard({
       </div>
       <div className="space-y-2 font-mono text-sm">
         {amount && destination && (
-          <KVRow k="sent" value={`${amount} → ${shortG(destination)}`} divider={false} />
+          <KVRow
+            k="sent"
+            value={`${amount} → ${shortG(destination)}`}
+            divider={false}
+          />
         )}
         {memo && <KVRow k="memo" value={memo} divider={false} />}
-        <KVRow k="tx hash" value={hash} divider={false} valueClassName="text-cyan" />
+        <KVRow
+          k="tx hash"
+          value={hash}
+          divider={false}
+          valueClassName="text-cyan"
+        />
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         <StellarExpertLink
@@ -196,7 +206,9 @@ function FailedCard({ error }: { error: FriendlyError }) {
       </div>
       {error.raw && error.raw !== error.detail && (
         <details className="mt-3 font-mono text-[11px] text-muted">
-          <summary className="cursor-pointer hover:text-text">raw error</summary>
+          <summary className="cursor-pointer hover:text-text">
+            raw error
+          </summary>
           <pre className="mt-2 whitespace-pre-wrap break-all text-magenta/80">
             {error.raw}
           </pre>
@@ -205,8 +217,6 @@ function FailedCard({ error }: { error: FriendlyError }) {
     </Card>
   );
 }
-
-
 
 function shortG(g: string): string {
   if (g.length <= 12) return g;

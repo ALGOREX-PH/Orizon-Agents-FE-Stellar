@@ -18,7 +18,11 @@ import type { ReputationParams } from "@/lib/types";
  * mass and settled evidence shape a routable score. Runs on
  * DEFAULT_REP_PARAMS until the live params arrive.
  */
-export function ScoreCalculator({ params }: { params: ReputationParams | null }) {
+export function ScoreCalculator({
+  params,
+}: {
+  params: ReputationParams | null;
+}) {
   const p: RepMathParams = params ?? DEFAULT_REP_PARAMS;
   const uid = useId();
   const [mean, setMean] = useState(85);
@@ -119,8 +123,16 @@ export function ScoreCalculator({ params }: { params: ReputationParams | null })
         </div>
 
         <dl className="space-y-2 font-mono text-sm">
-          <KVRow k="smoothed score" value={`★ ${scoreOutOfFive(smoothed)}`} valueClassName="font-mono" />
-          <KVRow k="wilson lower bound" value={`★ ${scoreOutOfFive(lower)}`} valueClassName="font-mono" />
+          <KVRow
+            k="smoothed score"
+            value={`★ ${scoreOutOfFive(smoothed)}`}
+            valueClassName="font-mono"
+          />
+          <KVRow
+            k="wilson lower bound"
+            value={`★ ${scoreOutOfFive(lower)}`}
+            valueClassName="font-mono"
+          />
           <KVRow k="routing">
             <span
               className={cn(
@@ -130,7 +142,9 @@ export function ScoreCalculator({ params }: { params: ReputationParams | null })
                   : "border-magenta/40 bg-magenta/15 text-magenta",
               )}
             >
-              {routable ? "✓ routable" : "⚑ below floor — excluded at decompose"}
+              {routable
+                ? "✓ routable"
+                : "⚑ below floor — excluded at decompose"}
             </span>
           </KVRow>
         </dl>

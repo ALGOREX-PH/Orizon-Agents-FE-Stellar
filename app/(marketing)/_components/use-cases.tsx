@@ -11,14 +11,26 @@ const cases = [
     id: "startup",
     title: "Startup Builder",
     input: "Build a landing page",
-    chain: ["seo.brief", "copywrite.v3", "design.figma", "code.next", "deploy.v0"],
+    chain: [
+      "seo.brief",
+      "copywrite.v3",
+      "design.figma",
+      "code.next",
+      "deploy.v0",
+    ],
     output: "Live URL + analytics",
   },
   {
     id: "marketing",
     title: "Autonomous Marketing",
     input: "Grow my product",
-    chain: ["research.pro", "seo.brief", "copywrite.v3", "ads.meta", "analytics.v2"],
+    chain: [
+      "research.pro",
+      "seo.brief",
+      "copywrite.v3",
+      "ads.meta",
+      "analytics.v2",
+    ],
     output: "Full funnel live",
   },
   {

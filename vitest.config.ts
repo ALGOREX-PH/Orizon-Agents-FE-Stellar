@@ -13,7 +13,32 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["**/*.test.ts", "**/*.test.tsx"],
-    exclude: ["node_modules/**", ".next/**", "contract/**", "backend/**"],
+    exclude: [
+      "node_modules/**",
+      ".next/**",
+      "contract/**",
+      "backend/**",
+      "e2e/**",
+    ],
     reporters: "verbose",
+    coverage: {
+      // Gate only what the unit suite is meant to cover: the lib layer (pure
+      // logic + hooks) and the one tested UI module. Client components are
+      // exercised by the Playwright smoke suite, not unit tests — pulling
+      // them in would collapse the number into noise.
+      include: ["lib/**/*.ts", "components/ui/stellar-link.tsx"],
+      exclude: [
+        "lib/types.ts",
+        "lib/pdax-types.ts",
+        "lib/mock-data.ts",
+        "**/*.test.*",
+      ],
+      thresholds: {
+        statements: 80,
+        branches: 72,
+        functions: 70,
+        lines: 80,
+      },
+    },
   },
 });

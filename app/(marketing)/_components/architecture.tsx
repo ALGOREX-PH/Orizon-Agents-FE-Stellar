@@ -58,11 +58,7 @@ export function Architecture() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.5, delay: i * 0.06 }}
-              className={
-                i < 2
-                  ? "md:col-span-3"
-                  : "md:col-span-2"
-              }
+              className={i < 2 ? "md:col-span-3" : "md:col-span-2"}
             >
               <Card className="h-full">
                 <div className="flex items-center justify-between mb-5">

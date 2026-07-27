@@ -21,14 +21,3 @@ export function Card({
     </div>
   );
 }
-
-export function CardCorner() {
-  return (
-    <>
-      <span className="pointer-events-none absolute -top-px -left-px h-3 w-3 border-t border-l border-cyan/70" />
-      <span className="pointer-events-none absolute -top-px -right-px h-3 w-3 border-t border-r border-cyan/70" />
-      <span className="pointer-events-none absolute -bottom-px -left-px h-3 w-3 border-b border-l border-cyan/70" />
-      <span className="pointer-events-none absolute -bottom-px -right-px h-3 w-3 border-b border-r border-cyan/70" />
-    </>
-  );
-}

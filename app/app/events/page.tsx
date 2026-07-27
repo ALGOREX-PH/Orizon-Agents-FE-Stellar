@@ -3,8 +3,10 @@ import { memo, useMemo } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { StellarExpertLink, defaultExplorerNetwork } from "@/components/ui/stellar-link";
+import { ErrorNote } from "@/components/ui/error-note";
+import { NETWORK_LABEL, StellarExpertLink } from "@/components/ui/stellar-link";
 import { getStellarNetwork } from "@/lib/api";
+import { focusRing } from "@/lib/ui";
 import { useFetch } from "@/lib/use-fetch";
 import { useStellarEvents, type FeedEvent } from "@/lib/stellar-events";
 import { prettyName } from "@/lib/utils";
@@ -12,7 +14,6 @@ import { prettyName } from "@/lib/utils";
 const FEED_OPTIONS = { intervalMs: 5000, max: 60 };
 
 // Display label for the configured network — "mainnet" | "testnet".
-const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 export default function EventsPage() {
   const { data: info, error: loadError } = useFetch(getStellarNetwork, []);
@@ -38,7 +39,9 @@ export default function EventsPage() {
   );
 
   const ageSec =
-    lastTickAt !== null ? Math.max(0, Math.floor((Date.now() - lastTickAt) / 1000)) : null;
+    lastTickAt !== null
+      ? Math.max(0, Math.floor((Date.now() - lastTickAt) / 1000))
+      : null;
 
   // The feed isn't ready while the contract list is still being fetched or
   // the stellar-sdk chunk is loading ("starting") — during that window an
@@ -53,7 +56,8 @@ export default function EventsPage() {
           <h1 className="text-3xl font-semibold tracking-tight">Events</h1>
           <p className="mt-1 text-sm text-muted">
             Live Soroban contract events for Orizon's four contracts. Polling{" "}
-            <code className="text-cyan">getEvents</code> from {NETWORK_LABEL} RPC every 5 s.
+            <code className="text-cyan">getEvents</code> from {NETWORK_LABEL}{" "}
+            RPC every 5 s.
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -81,18 +85,20 @@ export default function EventsPage() {
 
       {loadError && (
         <Card>
-          <div className="font-mono text-[11px] text-magenta">
+          <ErrorNote className="border-0 bg-transparent p-0 text-[11px]">
             backend offline — {loadError}
-          </div>
+          </ErrorNote>
         </Card>
       )}
 
       {error && (
         <Card>
-          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-magenta mb-2">
-            ▸ rpc error
-          </div>
-          <div className="font-mono text-[11px] text-magenta break-all">{error}</div>
+          <ErrorNote className="border-0 bg-transparent p-0">
+            <div className="text-[10px] uppercase tracking-[0.25em] mb-2">
+              ▸ rpc error
+            </div>
+            <div className="text-[11px] break-all">{error}</div>
+          </ErrorNote>
         </Card>
       )}
 
@@ -124,12 +130,15 @@ export default function EventsPage() {
           <div className="space-y-2">
             <div className="text-sm text-muted">
               No events yet. Run a workflow on{" "}
-              <Link href="/app/orchestrator" className="text-cyan hover:underline">
+              <Link
+                href="/app/orchestrator"
+                className={`text-cyan hover:underline ${focusRing}`}
+              >
                 /app/orchestrator
               </Link>{" "}
               — it'll publish <code className="text-cyan">charge</code> and{" "}
-              <code className="text-cyan">seal</code> events that show up here within a
-              ledger.
+              <code className="text-cyan">seal</code> events that show up here
+              within a ledger.
             </div>
             <div className="flex gap-3 pt-3">
               {[1, 2, 3, 4].map((i) => (
@@ -186,7 +195,11 @@ const EventRow = memo(function EventRow({
         <div className="font-mono text-[11px] text-muted break-all">
           {summarize(event.value)}
         </div>
-        <StellarExpertLink kind="tx" id={event.txHash} className="whitespace-nowrap">
+        <StellarExpertLink
+          kind="tx"
+          id={event.txHash}
+          className={`whitespace-nowrap ${focusRing}`}
+        >
           tx ▸ {event.txHash.slice(0, 8)}…
         </StellarExpertLink>
       </div>

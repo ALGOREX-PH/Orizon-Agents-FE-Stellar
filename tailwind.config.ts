@@ -9,10 +9,15 @@ const config: Config = {
         surface: "#0F0020",
         "surface-2": "#14002E",
         border: "rgba(176, 38, 255, 0.18)",
+        // Form-control border (`border-input`) — 3.19:1 over --bg, meets
+        // WCAG 1.4.11. Decorative card borders keep the softer `border` token.
+        input: "rgba(176, 38, 255, 0.80)",
         violet: {
           DEFAULT: "#B026FF",
           soft: "#7C3AED",
           deep: "#4C1D95",
+          // ≥4.5:1 over --bg — use for small violet text (WCAG 1.4.3).
+          readable: "#C77DFF",
         },
         cyan: {
           DEFAULT: "#00FFD1",
@@ -39,8 +44,7 @@ const config: Config = {
         "inner-glow": "inset 0 0 40px rgba(176, 38, 255, 0.12)",
       },
       backgroundImage: {
-        grid:
-          "linear-gradient(rgba(176, 38, 255, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(176, 38, 255, 0.08) 1px, transparent 1px)",
+        grid: "linear-gradient(rgba(176, 38, 255, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(176, 38, 255, 0.08) 1px, transparent 1px)",
         "grid-fade":
           "radial-gradient(ellipse at center, #0A0014 0%, #0A0014 40%, transparent 80%)",
         "violet-radial":

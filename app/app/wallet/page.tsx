@@ -2,19 +2,21 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
+import { ErrorNote } from "@/components/ui/error-note";
 import { NETWORK_NAME, useWallet } from "@/lib/wallet";
 import { KVRow } from "@/components/ui/kv-row";
 import {
+  NETWORK_LABEL,
   StellarExpertLink,
   defaultExplorerNetwork,
   stellarExpertUrl,
 } from "@/components/ui/stellar-link";
 import { getStellarNetwork } from "@/lib/api";
+import { focusRing } from "@/lib/ui";
 import { useFetch } from "@/lib/use-fetch";
 import { prettyName } from "@/lib/utils";
 
 // Display label for the configured network — "mainnet" | "testnet".
-const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 export default function WalletPage() {
   const {
@@ -26,7 +28,9 @@ export default function WalletPage() {
     balanceLoading,
     refreshBalance,
   } = useWallet();
-  const { data: info, error } = useFetch(getStellarNetwork, []);
+  const { data: info, error } = useFetch(getStellarNetwork, [], {
+    revalidateOnFocus: true,
+  });
 
   // Compare the network the wallet itself reported against the backend's
   // deploy. Wallets that can't report a network (walletNetwork null) show
@@ -50,18 +54,20 @@ export default function WalletPage() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Wallet</h1>
           <p className="mt-1 text-sm text-muted">
-            Freighter → Stellar {NETWORK_LABEL}. Sign Orizon contract calls with your key.
+            Freighter → Stellar {NETWORK_LABEL}. Sign Orizon contract calls with
+            your key.
           </p>
         </div>
         <ConnectWallet size="md" />
       </div>
 
       {networkMismatch && (
-        <div className="clip-cyber-sm border border-magenta/50 bg-magenta/5 p-4 font-mono text-xs text-magenta">
-          ⚠ your wallet is on <b>{walletNetwork?.network || "another network"}</b>{" "}
-          but Orizon deployed to <b>{info?.network}</b>. Switch networks in your
-          wallet extension.
-        </div>
+        <ErrorNote className="clip-cyber-sm border-magenta/50 p-4">
+          ⚠ your wallet is on{" "}
+          <b>{walletNetwork?.network || "another network"}</b> but Orizon
+          deployed to <b>{info?.network}</b>. Switch networks in your wallet
+          extension.
+        </ErrorNote>
       )}
 
       {connected && (
@@ -90,7 +96,7 @@ export default function WalletPage() {
                   href="https://friendbot.stellar.org"
                   target="_blank"
                   rel="noreferrer"
-                  className="clip-cyber-sm border border-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted hover:text-text hover:border-cyan/60 transition"
+                  className={`clip-cyber-sm border border-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted hover:text-text hover:border-cyan/60 transition ${focusRing}`}
                   title="Fund this account with testnet XLM via Friendbot"
                 >
                   ▸ fund testnet
@@ -100,13 +106,13 @@ export default function WalletPage() {
                 <StellarExpertLink
                   kind="account"
                   id={address}
-                  className="clip-cyber-sm border border-border px-3 py-1.5 text-muted hover:border-violet/60 transition"
+                  className={`clip-cyber-sm border border-border px-3 py-1.5 text-muted hover:border-violet/60 transition ${focusRing}`}
                 />
               )}
               <button
                 onClick={() => refreshBalance()}
                 disabled={balanceLoading}
-                className="clip-cyber-sm border border-cyan/60 bg-cyan/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-cyan hover:bg-cyan/20 disabled:opacity-50 transition"
+                className={`clip-cyber-sm border border-cyan/60 bg-cyan/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-cyan hover:bg-cyan/20 disabled:opacity-50 transition ${focusRing}`}
               >
                 {balanceLoading ? "◉ refreshing…" : "↻ refresh"}
               </button>
@@ -124,30 +130,37 @@ export default function WalletPage() {
             <dl className="space-y-3 text-sm font-mono">
               <KVRow k="address" value={address ?? ""} />
               <KVRow k="network" value={sessionNetwork?.network ?? ""} />
-              <KVRow k="passphrase" value={sessionNetwork?.networkPassphrase ?? ""} />
+              <KVRow
+                k="passphrase"
+                value={sessionNetwork?.networkPassphrase ?? ""}
+              />
             </dl>
           ) : (
             <div className="text-sm text-muted">
-              No wallet connected. Click <b className="text-text">Connect Wallet</b>{" "}
-              above to link Freighter.
+              No wallet connected. Click{" "}
+              <b className="text-text">Connect Wallet</b> above to link
+              Freighter.
             </div>
           )}
         </Card>
 
         <Card>
-          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-violet mb-4">
+          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-violet-readable mb-4">
             Orizon deploy ({info?.network ?? "…"})
           </div>
           {error && (
-            <div className="text-sm text-magenta mb-3 font-mono">
+            <ErrorNote className="border-0 bg-transparent p-0 text-sm mb-3">
               backend offline — {error}
-            </div>
+            </ErrorNote>
           )}
           {info ? (
             <dl className="space-y-3 text-sm font-mono">
               <KVRow k="rpc" value={info.rpc_url} />
               <KVRow k="admin" value={info.admin} />
-              <KVRow k="asset" value={`${info.asset} (${info.asset_sac.slice(0, 8)}…)`} />
+              <KVRow
+                k="asset"
+                value={`${info.asset} (${info.asset_sac.slice(0, 8)}…)`}
+              />
             </dl>
           ) : (
             !error && <div className="text-sm text-muted">loading…</div>
@@ -167,13 +180,17 @@ export default function WalletPage() {
                   href={stellarExpertUrl("contract", id, info.network)}
                   target="_blank"
                   rel="noreferrer"
-                  className="clip-cyber-sm border border-border bg-bg/40 p-4 hover:border-violet/60 hover:bg-violet/5 transition"
+                  className={`clip-cyber-sm border border-border bg-bg/40 p-4 hover:border-violet/60 hover:bg-violet/5 transition ${focusRing}`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold">{prettyName(name)}</span>
+                    <span className="text-sm font-semibold">
+                      {prettyName(name)}
+                    </span>
                     <Badge tone="cyan">live</Badge>
                   </div>
-                  <div className="font-mono text-[11px] text-muted break-all">{id}</div>
+                  <div className="font-mono text-[11px] text-muted break-all">
+                    {id}
+                  </div>
                   <div className="mt-2 font-mono text-[10px] text-cyan">
                     view on stellar.expert ▸
                   </div>

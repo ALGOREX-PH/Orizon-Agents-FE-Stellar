@@ -11,14 +11,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getPdaxBalances,
-  getPdaxBanks,
-  getPdaxOrder,
-  getPdaxOrders,
+  getPdaxCryptoTransactions,
+  getPdaxHealth,
   getPdaxPrice,
   getPdaxRamp,
-  getPdaxReference,
-  pdaxFiatWithdraw,
+  getPdaxRamps,
   pdaxFirmQuote,
+  pdaxFundingQuote,
   pdaxRampEstimate,
   pdaxReconcileRamp,
 } from "./pdax";
@@ -30,7 +29,8 @@ type FetchMockResponse = {
   text: () => Promise<string>;
 };
 
-const fetchMock = vi.fn<(input: string, init?: RequestInit) => Promise<FetchMockResponse>>();
+const fetchMock =
+  vi.fn<(input: string, init?: RequestInit) => Promise<FetchMockResponse>>();
 vi.stubGlobal("fetch", fetchMock);
 
 function jsonResponse(status: number, body: unknown): FetchMockResponse {
@@ -54,7 +54,10 @@ describe("query-string construction", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/pdax/balances?currency=PHP",
-      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
+      expect.objectContaining({
+        cache: "no-store",
+        signal: expect.any(AbortSignal),
+      }),
     );
   });
 
@@ -88,31 +91,24 @@ describe("query-string construction", () => {
     );
   });
 
-  it("drops undefined and empty-string params from the orders listing", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(200, { orders: [] }));
+  it("drops undefined and empty-string params from the transactions listing", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { transactions: [] }));
 
-    await getPdaxOrders({ page: 2, pageSize: 50, startDate: undefined, endDate: "" });
+    await getPdaxCryptoTransactions({
+      page: 2,
+      pageSize: 50,
+      identifier: undefined,
+      txn_hash: "",
+    });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/pdax/trade/orders?page=2&pageSize=50",
+      "/api/pdax/crypto/transactions?page=2&pageSize=50",
       expect.objectContaining({ cache: "no-store" }),
     );
   });
 });
 
 describe("path construction", () => {
-  it("interpolates the order id into the single-order path", async () => {
-    const order = { order_id: 42, status: "filled" };
-    fetchMock.mockResolvedValueOnce(jsonResponse(200, order));
-
-    await expect(getPdaxOrder(42)).resolves.toEqual(order);
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/pdax/trade/orders/42",
-      expect.objectContaining({ cache: "no-store", signal: expect.any(AbortSignal) }),
-    );
-  });
-
   it("interpolates the ramp id into the ramp lookup path", async () => {
     const ramp = { ramp_id: "rmp_9", status: "settled" };
     fetchMock.mockResolvedValueOnce(jsonResponse(200, ramp));
@@ -128,7 +124,11 @@ describe("path construction", () => {
 
 describe("POST endpoints", () => {
   it("sends the firm-quote body as JSON with content-type", async () => {
-    const body = { quote_currency: "PHP", side: "buy" as const, base_quantity: "10" };
+    const body = {
+      quote_currency: "PHP",
+      side: "buy" as const,
+      base_quantity: "10",
+    };
     const quote = { quote_id: "q_1", price: "57.00" };
     fetchMock.mockResolvedValueOnce(jsonResponse(200, quote));
 
@@ -145,27 +145,13 @@ describe("POST endpoints", () => {
     );
   });
 
-  it("posts fiat withdrawals to /fiat/withdraw", async () => {
-    const body = { identifier: "user-1", amount: "500", bank: "BDO" };
-    const result = { id: "wd_1", status: "pending" };
-    fetchMock.mockResolvedValueOnce(jsonResponse(200, result));
-
-    await expect(pdaxFiatWithdraw(body)).resolves.toEqual(result);
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/pdax/fiat/withdraw",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify(body),
-      }),
-    );
-  });
-
   it("posts the ramp estimate with params in the query string and an empty body", async () => {
     const estimate = { direction: "onramp", php_in: "1000", usdc_out: "17.2" };
     fetchMock.mockResolvedValueOnce(jsonResponse(200, estimate));
 
-    await expect(pdaxRampEstimate("onramp", "1000", "PHP")).resolves.toEqual(estimate);
+    await expect(pdaxRampEstimate("onramp", "1000", "PHP")).resolves.toEqual(
+      estimate,
+    );
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/pdax/ramp/estimate?direction=onramp&amount=1000&currency=PHP",
@@ -192,10 +178,12 @@ describe("POST endpoints", () => {
 
 describe("error detail extraction", () => {
   it("surfaces the backend detail field on a GET failure", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(503, { detail: "pdax maintenance" }));
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(503, { detail: "pdax maintenance" }),
+    );
 
-    await expect(getPdaxReference()).rejects.toThrow(
-      "GET /reference → 503 — pdax maintenance",
+    await expect(getPdaxHealth()).rejects.toThrow(
+      "GET /health → 503 — pdax maintenance",
     );
   });
 
@@ -203,14 +191,14 @@ describe("error detail extraction", () => {
     const noise = "z".repeat(400);
     fetchMock.mockResolvedValueOnce(jsonResponse(500, { error: noise }));
 
-    const err = await getPdaxBanks().then(
+    const err = await getPdaxRamps().then(
       () => {
         throw new Error("expected rejection");
       },
       (e: unknown) => e as Error,
     );
 
-    expect(err.message).toContain("GET /reference/banks → 500 — ");
+    expect(err.message).toContain("GET /ramp → 500 — ");
     expect(err.message).toContain('{"error":"zzz');
     expect(err.message.split(" — ")[1].length).toBe(300);
   });
@@ -223,11 +211,15 @@ describe("error detail extraction", () => {
       text: () => Promise.resolve("Bad Gateway"),
     });
 
-    await expect(getPdaxRamp("rmp_bad")).rejects.toThrow("GET /ramp/rmp_bad → 502");
+    await expect(getPdaxRamp("rmp_bad")).rejects.toThrow(
+      "GET /ramp/rmp_bad → 502",
+    );
   });
 
   it("includes the query string and detail in a POST failure message", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(422, { detail: "amount too small" }));
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(422, { detail: "amount too small" }),
+    );
 
     await expect(pdaxRampEstimate("offramp", "5")).rejects.toThrow(
       "POST /ramp/estimate?direction=offramp&amount=5 → 422 — amount too small",
@@ -237,6 +229,6 @@ describe("error detail extraction", () => {
   it("propagates a network-level rejection untouched", async () => {
     fetchMock.mockRejectedValueOnce(new Error("socket hang up"));
 
-    await expect(pdaxFiatWithdraw({ identifier: "u" })).rejects.toThrow("socket hang up");
+    await expect(pdaxFundingQuote("10")).rejects.toThrow("socket hang up");
   });
 });
