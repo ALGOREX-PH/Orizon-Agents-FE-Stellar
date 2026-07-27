@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { NETWORK_NAME, useWallet } from "@/lib/wallet";
 import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
+import { focusRing } from "@/lib/ui";
 import { useMobileNav } from "./mobile-nav-context";
 
 // Display label for the configured network — "mainnet" | "testnet".
@@ -42,7 +43,7 @@ export function Topbar() {
         <button
           aria-label="open menu"
           onClick={toggle}
-          className="md:hidden flex items-center justify-center h-9 w-9 -ml-1 clip-cyber-sm border border-border hover:border-violet/60 hover:bg-violet/5 transition"
+          className={`md:hidden flex items-center justify-center h-9 w-9 -ml-1 clip-cyber-sm border border-border hover:border-violet/60 hover:bg-violet/5 transition ${focusRing}`}
         >
           <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
             <path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
