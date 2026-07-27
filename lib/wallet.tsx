@@ -3,8 +3,10 @@
  * Multi-wallet context, powered by StellarWalletsKit.
  *
  * Yellow Belt requirement: support more than just Freighter.
- * The kit ships built-in modules for Freighter, xBull, Albedo, Lobstr,
- * Hana, and Hot Wallet, exposed via a single `authModal()` picker.
+ * The kit's `defaultModules()` bundles nine wallets; we pass an explicit
+ * allowlist filter so the `authModal()` picker only offers the six we
+ * actually support and test: Freighter, xBull, Albedo, LOBSTR, Hana,
+ * and Rabet.
  *
  *   const { address, walletName, connect, disconnect, signXdr } = useWallet();
  *
@@ -100,6 +102,19 @@ const WalletCtx = createContext<WalletState | null>(null);
 type KitModule = typeof import("@creit.tech/stellar-wallets-kit");
 type Kit = KitModule["StellarWalletsKit"];
 
+/**
+ * The wallets we support and test, by the kit's stable `productId`.
+ * Keep in sync with the doc comment above and the `prettyName` map below.
+ */
+const SUPPORTED_WALLET_IDS: ReadonlySet<string> = new Set([
+  "freighter",
+  "xbull",
+  "albedo",
+  "lobstr",
+  "hana",
+  "rabet",
+]);
+
 let kitPromise: Promise<Kit> | null = null;
 
 function loadKit(): Promise<Kit> {
@@ -111,7 +126,10 @@ function loadKit(): Promise<Kit> {
     ])
       .then(([{ StellarWalletsKit }, { defaultModules }, { FREIGHTER_ID }]) => {
         StellarWalletsKit.init({
-          modules: defaultModules(),
+          // defaultModules bundles 9 wallets; keep only the allowlisted six.
+          modules: defaultModules({
+            filterBy: (m) => SUPPORTED_WALLET_IDS.has(m.productId),
+          }),
           selectedWalletId: FREIGHTER_ID,
           network: NETWORK_PASSPHRASE as KitNetworks,
         });
@@ -377,6 +395,8 @@ export function useWallet() {
   return ctx;
 }
 
+// Fallback display names for every allowlisted wallet (used when the kit's
+// selectedModule.productName is unavailable, e.g. on session restore).
 function prettyName(id: string): string {
   const map: Record<string, string> = {
     freighter: "Freighter",
@@ -384,7 +404,7 @@ function prettyName(id: string): string {
     albedo: "Albedo",
     lobstr: "LOBSTR",
     hana: "Hana",
-    "hot-wallet": "Hot Wallet",
+    rabet: "Rabet",
   };
   return map[id] ?? id;
 }
