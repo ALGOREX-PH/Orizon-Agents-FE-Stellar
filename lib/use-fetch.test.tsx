@@ -148,6 +148,103 @@ describe("useFetch", () => {
     expect(first).toHaveBeenCalledTimes(1);
   });
 
+  describe("revalidateOnFocus", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    /** Mount with fake timers, resolve the initial fetch, return the fn mock. */
+    async function mountRevalidating(opts?: {
+      revalidateOnFocus?: boolean;
+      staleAfterMs?: number;
+    }) {
+      vi.useFakeTimers();
+      const fn = vi.fn(async () => "fresh");
+      const view = renderHook(() =>
+        useFetch(fn, [], { revalidateOnFocus: true, ...opts }),
+      );
+      await act(async () => {}); // flush the mount fetch (microtasks only)
+      expect(view.result.current.data).toBe("fresh");
+      expect(fn).toHaveBeenCalledTimes(1);
+      return { fn, ...view };
+    }
+
+    it("reloads on visibilitychange when the last success is stale", async () => {
+      const { fn, result } = await mountRevalidating();
+
+      act(() => vi.advanceTimersByTime(60_001));
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      expect(fn).toHaveBeenCalledTimes(2);
+      // reload semantics — the current data never flashes away.
+      expect(result.current.data).toBe("fresh");
+    });
+
+    it("reloads on window focus when stale, honoring a custom staleAfterMs", async () => {
+      const { fn } = await mountRevalidating({ staleAfterMs: 5_000 });
+
+      act(() => vi.advanceTimersByTime(5_001));
+      await act(async () => {
+        window.dispatchEvent(new Event("focus"));
+      });
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not reload while the last success is younger than staleAfterMs", async () => {
+      const { fn } = await mountRevalidating();
+
+      act(() => vi.advanceTimersByTime(59_000));
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+        window.dispatchEvent(new Event("focus"));
+      });
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not reload when the tab is still hidden", async () => {
+      const { fn } = await mountRevalidating();
+      vi.spyOn(document, "hidden", "get").mockReturnValue(true);
+
+      act(() => vi.advanceTimersByTime(120_000));
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+
+    it("stays inert by default (option off)", async () => {
+      vi.useFakeTimers();
+      const fn = vi.fn(async () => "fresh");
+      renderHook(() => useFetch(fn, []));
+      await act(async () => {});
+      expect(fn).toHaveBeenCalledTimes(1);
+
+      act(() => vi.advanceTimersByTime(600_000));
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+        window.dispatchEvent(new Event("focus"));
+      });
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not reload before any fetch has succeeded", async () => {
+      vi.useFakeTimers();
+      const fn = vi.fn(() => Promise.reject(new Error("down")));
+      const { result } = renderHook(() =>
+        useFetch(fn, [], { revalidateOnFocus: true }),
+      );
+      await act(async () => {});
+      expect(result.current.error).toBe("down");
+
+      act(() => vi.advanceTimersByTime(120_000));
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("ignores settlements that land after unmount — no state updates, no warnings", async () => {
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
