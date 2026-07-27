@@ -162,7 +162,7 @@ export default function OrchestratorPage() {
           onChange={(e) => setIntent(e.target.value)}
           placeholder='e.g. "code a calculator web app"'
           rows={3}
-          className="mt-2 w-full bg-bg/60 border border-border p-4 font-mono text-sm placeholder:text-muted/70 focus:border-violet focus:outline-none focus:shadow-neon-violet transition"
+          className="mt-2 w-full bg-bg/60 border border-border p-4 font-mono text-sm placeholder:text-muted focus:border-violet focus:outline-none focus:shadow-neon-violet transition"
         />
 
         <div className="mt-4 flex items-center justify-between flex-wrap gap-3">
