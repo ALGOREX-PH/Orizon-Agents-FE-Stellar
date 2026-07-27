@@ -17,7 +17,7 @@ const statusTone: Record<Task["status"], "cyan" | "violet" | "muted" | "magenta"
 
 function Sparkline({ points }: { points: number[] }) {
   if (!points.length) return <div className="h-36" />;
-  const max = Math.max(...points);
+  const max = Math.max(...points) || 1;
   const w = 600;
   const h = 140;
   const path = points
