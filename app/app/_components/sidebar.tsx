@@ -7,11 +7,10 @@ import { getOverview } from "@/lib/api";
 import { focusRing } from "@/lib/ui";
 import { useFetch } from "@/lib/use-fetch";
 import { cn } from "@/lib/utils";
-import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
+import { NETWORK_LABEL } from "@/components/ui/stellar-link";
 import { useMobileNav } from "./mobile-nav-context";
 
 // Display label for the configured network — "mainnet" | "testnet".
-const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 const items = [
   {

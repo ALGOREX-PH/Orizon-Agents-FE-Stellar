@@ -5,18 +5,13 @@ import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { ErrorNote } from "@/components/ui/error-note";
 import { NETWORK_NAME, useWallet } from "@/lib/wallet";
 import { KVRow } from "@/components/ui/kv-row";
-import {
-  StellarExpertLink,
-  defaultExplorerNetwork,
-  stellarExpertUrl,
-} from "@/components/ui/stellar-link";
+import { NETWORK_LABEL, StellarExpertLink, defaultExplorerNetwork, stellarExpertUrl } from "@/components/ui/stellar-link";
 import { getStellarNetwork } from "@/lib/api";
 import { focusRing } from "@/lib/ui";
 import { useFetch } from "@/lib/use-fetch";
 import { prettyName } from "@/lib/utils";
 
 // Display label for the configured network — "mainnet" | "testnet".
-const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 export default function WalletPage() {
   const {

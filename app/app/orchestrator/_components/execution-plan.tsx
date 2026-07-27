@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { ReputationBadge } from "@/components/ui/reputation-badge";
 import { TxStatus, type TxState } from "@/components/ui/tx-status";
-import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
+import { NETWORK_LABEL } from "@/components/ui/stellar-link";
 import { buildAuthorize, execute, submitSigned } from "@/lib/api";
 import { useAsyncAction } from "@/lib/use-async-action";
 import { useWallet } from "@/lib/wallet";
@@ -17,7 +17,6 @@ import type { DecomposeResponse } from "@/lib/types";
 import { FiatFund } from "./fiat-fund";
 
 // Display label for the configured network — "mainnet" | "testnet".
-const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 /** Which stage of the on-chain authorize flow is running (for button copy). */
 type ExecStep = "" | "sign" | "broadcast" | "execute";

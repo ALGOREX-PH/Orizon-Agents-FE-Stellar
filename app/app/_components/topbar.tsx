@@ -3,12 +3,11 @@ import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { NETWORK_NAME, useWallet } from "@/lib/wallet";
-import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
+import { NETWORK_LABEL } from "@/components/ui/stellar-link";
 import { focusRing } from "@/lib/ui";
 import { useMobileNav } from "./mobile-nav-context";
 
 // Display label for the configured network — "mainnet" | "testnet".
-const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 const titles: Record<string, { t: string; b: string[] }> = {
   "/app": { t: "Overview", b: ["console", "overview"] },

@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
-import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
+import { NETWORK_LABEL } from "@/components/ui/stellar-link";
 
 // Display label for the configured network — "mainnet" | "testnet".
-const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 const cols = [
   {

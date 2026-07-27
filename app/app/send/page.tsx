@@ -8,11 +8,10 @@ import { ErrorNote } from "@/components/ui/error-note";
 import { TxStatus, type TxState } from "@/components/ui/tx-status";
 import { HORIZON_URL, NETWORK_PASSPHRASE, useWallet } from "@/lib/wallet";
 import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
-import { defaultExplorerNetwork } from "@/components/ui/stellar-link";
+import { NETWORK_LABEL } from "@/components/ui/stellar-link";
 import { focusRing } from "@/lib/ui";
 
 // Display label for the configured network — "mainnet" | "testnet".
-const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 // stellar-sdk's BASE_FEE ("100" stroops) — inlined so the render path doesn't
 // need the SDK loaded.
 const BASE_FEE_STROOPS = "100";

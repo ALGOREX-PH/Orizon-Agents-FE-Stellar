@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorNote } from "@/components/ui/error-note";
-import { StellarExpertLink, defaultExplorerNetwork } from "@/components/ui/stellar-link";
+import { NETWORK_LABEL, StellarExpertLink } from "@/components/ui/stellar-link";
 import { getStellarNetwork } from "@/lib/api";
 import { focusRing } from "@/lib/ui";
 import { useFetch } from "@/lib/use-fetch";
@@ -14,7 +14,6 @@ import { prettyName } from "@/lib/utils";
 const FEED_OPTIONS = { intervalMs: 5000, max: 60 };
 
 // Display label for the configured network — "mainnet" | "testnet".
-const NETWORK_LABEL = defaultExplorerNetwork === "public" ? "mainnet" : "testnet";
 
 export default function EventsPage() {
   const { data: info, error: loadError } = useFetch(getStellarNetwork, []);

@@ -9,6 +9,9 @@ export type StellarExpertKind = "tx" | "account" | "contract";
  */
 export const defaultExplorerNetwork = IS_MAINNET ? "public" : "testnet";
 
+/** Short badge label for the active network — "mainnet" or "testnet". */
+export const NETWORK_LABEL = IS_MAINNET ? "mainnet" : "testnet";
+
 /** Canonical stellar.expert explorer URL for a tx / account / contract. */
 export function stellarExpertUrl(
   kind: StellarExpertKind,
