@@ -125,6 +125,9 @@ export default function OverviewPage() {
               {["1h", "24h", "7d"].map((t, i) => (
                 <button
                   key={t}
+                  type="button"
+                  disabled
+                  title="coming soon"
                   className={
                     "clip-cyber-sm border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition " +
                     (i === 1
