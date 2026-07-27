@@ -12,12 +12,10 @@
  */
 
 // Network-aware remediation copy — friendbot only exists on testnet, so the
-// advice must change on mainnet. Reads the same env var wallet.tsx uses
-// (kept inline so this module stays dependency-free for tests).
-const IS_MAINNET =
-  (process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE ||
-    "Test SDF Network ; September 2015") ===
-  "Public Global Stellar Network ; September 2015";
+// advice must change on mainnet. Network resolution lives in lib/env.ts
+// (validated at build time), shared with wallet.tsx and the explorer links.
+import { IS_MAINNET } from "@/lib/env";
+
 const NETWORK_LABEL = IS_MAINNET ? "Stellar Public network" : "Stellar Test Net";
 const TOP_UP_ADVICE = IS_MAINNET
   ? "Fund the wallet with XLM and retry."
