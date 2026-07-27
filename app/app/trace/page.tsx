@@ -185,6 +185,8 @@ function TracePageInner() {
       {artifact && (
         <div className="flex gap-2">
           <button
+            type="button"
+            aria-pressed={tab === "trace"}
             onClick={() => setTab("trace")}
             className={cn(
               "clip-cyber-sm border px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] transition",
@@ -196,6 +198,8 @@ function TracePageInner() {
             ▸ trace log
           </button>
           <button
+            type="button"
+            aria-pressed={tab === "artifact"}
             onClick={() => setTab("artifact")}
             className={cn(
               "clip-cyber-sm border px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] transition",
