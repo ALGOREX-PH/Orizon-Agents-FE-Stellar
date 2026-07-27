@@ -186,7 +186,7 @@ export default function SendPage() {
                 spellCheck={false}
                 autoComplete="off"
                 disabled={submitting}
-                className="mt-1.5 w-full bg-bg/60 border border-border p-3 font-mono text-sm placeholder:text-muted/70 focus:border-violet focus:outline-none focus:shadow-neon-violet transition disabled:opacity-50"
+                className="mt-1.5 w-full bg-bg/60 border border-border p-3 font-mono text-sm placeholder:text-muted focus:border-violet focus:outline-none focus:shadow-neon-violet transition disabled:opacity-50"
               />
             </div>
 
@@ -207,7 +207,7 @@ export default function SendPage() {
                   placeholder="1.0000000"
                   inputMode="decimal"
                   disabled={submitting}
-                  className="mt-1.5 w-full bg-bg/60 border border-border p-3 font-mono text-sm placeholder:text-muted/70 focus:border-violet focus:outline-none focus:shadow-neon-violet transition disabled:opacity-50"
+                  className="mt-1.5 w-full bg-bg/60 border border-border p-3 font-mono text-sm placeholder:text-muted focus:border-violet focus:outline-none focus:shadow-neon-violet transition disabled:opacity-50"
                 />
                 <div className="mt-1.5 flex items-center justify-between font-mono text-[10px] uppercase tracking-widest text-muted">
                   <span>
@@ -241,7 +241,7 @@ export default function SendPage() {
                   placeholder="Yellow Belt"
                   maxLength={28}
                   disabled={submitting}
-                  className="mt-1.5 w-full bg-bg/60 border border-border p-3 font-mono text-sm placeholder:text-muted/70 focus:border-violet focus:outline-none focus:shadow-neon-violet transition disabled:opacity-50"
+                  className="mt-1.5 w-full bg-bg/60 border border-border p-3 font-mono text-sm placeholder:text-muted focus:border-violet focus:outline-none focus:shadow-neon-violet transition disabled:opacity-50"
                 />
               </div>
             </div>
