@@ -102,6 +102,26 @@ describe("isOverview", () => {
   it("rejects a skills entry without a numeric pct", () => {
     expect(isOverview({ ...valid, skills: [{ name: "code" }] })).toBe(false);
   });
+
+  it("rejects a non-string skill tone", () => {
+    expect(
+      isOverview({ ...valid, skills: [{ name: "code", pct: 62, tone: 7 }] }),
+    ).toBe(false);
+  });
+
+  it("accepts a skill with an absent or unfamiliar tone", () => {
+    // The backend types skills as dict[str, Any] — tone is not contractually
+    // guaranteed, and the renderer color-falls-back on anything it knows.
+    expect(isOverview({ ...valid, skills: [{ name: "code", pct: 62 }] })).toBe(
+      true,
+    );
+    expect(
+      isOverview({
+        ...valid,
+        skills: [{ name: "code", pct: 62, tone: "amber" }],
+      }),
+    ).toBe(true);
+  });
 });
 
 describe("isFlow", () => {

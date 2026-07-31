@@ -64,7 +64,15 @@ export function isAgentList(v: unknown): v is Agent[] {
 }
 
 /** Dashboard + sidebar: stat tiles do `*100`/`.toFixed`, sparkline maps
- * `throughput`, the skills list maps `name`/`pct`. */
+ * `throughput`, the skills list maps `name`/`pct` and colors each bar from
+ * `tone`.
+ *
+ * `tone` is checked as a string only *when present*: the backend types skills
+ * as `list[dict[str, Any]]` (`OverviewMetrics`, app/schemas.py), so pydantic
+ * guarantees no key at all — requiring it (or pinning it to today's three
+ * tone names) would reject payloads the contract permits. The renderer already
+ * falls back to a default color for an unknown tone; the check only rules out
+ * a non-string sneaking into a comparison. */
 export function isOverview(v: unknown): v is Overview {
   return (
     isRecord(v) &&
@@ -74,7 +82,13 @@ export function isOverview(v: unknown): v is Overview {
     isNum(v.avg_trust) &&
     isNumArray(v.throughput) &&
     Array.isArray(v.skills) &&
-    v.skills.every((s) => isRecord(s) && isStr(s.name) && isNum(s.pct))
+    v.skills.every(
+      (s) =>
+        isRecord(s) &&
+        isStr(s.name) &&
+        isNum(s.pct) &&
+        (s.tone === undefined || s.tone === null || isStr(s.tone)),
+    )
   );
 }
 
