@@ -64,7 +64,10 @@ export default function FlowPage() {
           </span>
         </div>
 
-        <div className="relative h-[520px] w-full bg-[#060010] overflow-hidden">
+        {/* Nodes are positioned by percentage inside a clipped canvas and are
+            each ≥140px wide, so a node near x=96% has nowhere to render on a
+            narrow viewport. Below md the same graph is listed instead. */}
+        <div className="relative hidden h-[520px] w-full bg-[#060010] overflow-hidden md:block">
           <div className="absolute inset-0 grid-bg opacity-60" />
           {!flow && !error && (
             <div className="absolute inset-0 grid place-items-center">
@@ -144,6 +147,46 @@ export default function FlowPage() {
                   </div>
                 </m.div>
               ))}
+            </>
+          )}
+        </div>
+
+        <div className="bg-[#060010] p-4 md:hidden">
+          {!flow && !error && <Skeleton className="h-40 w-full" />}
+          {error && (
+            <ErrorNote onRetry={reload} retrying={loading}>
+              backend offline — {error}
+            </ErrorNote>
+          )}
+          {flow && (
+            <>
+              <ol className="space-y-2">
+                {flow.nodes.map((n, i) => (
+                  <li
+                    key={n.id}
+                    className="clip-cyber-sm border border-violet/60 bg-surface/80 px-4 py-2.5"
+                  >
+                    <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-cyan">
+                      {i + 1} ▸ {n.sub}
+                    </div>
+                    <div className="font-mono text-sm">{n.label}</div>
+                  </li>
+                ))}
+              </ol>
+              <div className="mt-4 font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
+                ▸ edges
+              </div>
+              <ul className="mt-2 space-y-1">
+                {flow.edges.map(([from, to]) => (
+                  <li
+                    key={`${from}-${to}`}
+                    className="font-mono text-[11px] text-muted break-words"
+                  >
+                    {nodeById[from]?.label ?? from} →{" "}
+                    {nodeById[to]?.label ?? to}
+                  </li>
+                ))}
+              </ul>
             </>
           )}
         </div>
