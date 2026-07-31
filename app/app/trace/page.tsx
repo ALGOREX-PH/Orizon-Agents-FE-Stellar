@@ -63,6 +63,10 @@ function TracePageInner() {
   );
   const [artifactError, setArtifactError] = useState<string | null>(null);
   const [streamError, setStreamError] = useState(false);
+  // Bumping this re-runs the subscribe effect, which tears the dead stream
+  // down and opens a fresh one — the manual counterpart to the 3 automatic
+  // reconnects openTraceStream spends before giving up.
+  const [streamAttempt, setStreamAttempt] = useState(0);
 
   const [demoCursor, setDemoCursor] = useState(0);
   const [demoPlaying, setDemoPlaying] = useState(true);
@@ -134,7 +138,7 @@ function TracePageInner() {
       alive = false;
       close();
     };
-  }, [taskId]);
+  }, [taskId, streamAttempt]);
 
   // Auto-switch tabs when an artifact arrives.
   useEffect(() => {
@@ -196,6 +200,11 @@ function TracePageInner() {
         : null;
 
   const artifact = artifactData?.artifact ?? null;
+
+  // The subscribe effect resets lines/done/error and opens a new EventSource,
+  // so a retry restarts from the backend's replayed history rather than
+  // appending onto a stale half-run.
+  const reconnect = () => setStreamAttempt((n) => n + 1);
 
   const summaryRows: Array<[string, ReactNode]> = [
     ["Task", taskId ?? "demo"],
@@ -359,6 +368,34 @@ function TracePageInner() {
                     wait
                   </span>
                   <span className="flex-1 text-muted">awaiting next step…</span>
+                </div>
+              )}
+              {taskId && streamError && (
+                <div
+                  className={cn(
+                    "flex",
+                    visible.length === 0 ? "h-full items-center" : "pt-4",
+                  )}
+                >
+                  <ErrorNote
+                    className="w-full leading-5"
+                    onRetry={reconnect}
+                    retryLabel="↻ reconnect"
+                  >
+                    <span className="block uppercase tracking-[0.2em] text-[10px]">
+                      ⚠ stream lost
+                    </span>
+                    <span className="mt-1.5 block text-magenta/80">
+                      the trace stream dropped and three automatic reconnects
+                      failed
+                      {visible.length === 0
+                        ? " before a single line arrived"
+                        : ` after ${visible.length} line${visible.length === 1 ? "" : "s"}`}
+                      . nothing further will arrive on this connection — the
+                      summary and attestation are incomplete until it is
+                      restored.
+                    </span>
+                  </ErrorNote>
                 </div>
               )}
             </div>
