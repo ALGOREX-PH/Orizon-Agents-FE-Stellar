@@ -29,6 +29,15 @@ const CHECK_TIMEOUT_MS = 30_000;
 /** @type {{path: string, expect: (body: unknown) => string | null}[]} */
 const CHECKS = [
   {
+    // Cheapest possible proof that the proxy reaches a live backend. If this
+    // 404s while the origin serves HTML fine, the rewrite target is wrong.
+    path: "/api/health",
+    expect: (body) =>
+      body?.status === "ok"
+        ? null
+        : `expected status "ok", got ${body?.status}`,
+  },
+  {
     path: "/api/agents",
     expect: (body) => {
       if (!Array.isArray(body)) return "expected an array";
