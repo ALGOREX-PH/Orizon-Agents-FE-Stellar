@@ -22,18 +22,28 @@ export function RepStats({
   batch,
   loading,
   error,
+  retrying = false,
   onRetry,
 }: {
   batch: ReputationBatch | null;
   loading: boolean;
   error: string | null;
+  /** An automatic retry is scheduled or in flight (`useFetch.retrying`). */
+  retrying?: boolean;
   onRetry?: () => void;
 }) {
   // Checked before `loading` so a retry keeps the alert on screen (and shows
-  // its retrying state) instead of flashing back to skeleton tiles.
+  // its retrying state) instead of flashing back to skeleton tiles: useFetch
+  // retries transient failures on its own and flips `loading` true for each
+  // attempt, so a loading-first branch would alternate error → skeleton →
+  // error for the whole recovery.
   if (error) {
     return (
-      <ErrorNote className="clip-cyber-sm" onRetry={onRetry} retrying={loading}>
+      <ErrorNote
+        className="clip-cyber-sm"
+        onRetry={onRetry}
+        retrying={retrying || loading}
+      >
         reputation ledger unavailable — no agent counts, settled evidence total
         or routing floor. {error}
       </ErrorNote>

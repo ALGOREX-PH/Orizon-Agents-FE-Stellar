@@ -27,11 +27,14 @@ export function ScoreCalculator({
   params,
   loading = false,
   error = null,
+  retrying = false,
   onRetry,
 }: {
   params: ReputationParams | null;
   loading?: boolean;
   error?: string | null;
+  /** An automatic retry is scheduled or in flight (`useFetch.retrying`). */
+  retrying?: boolean;
   onRetry?: () => void;
 }) {
   const p: RepMathParams = params ?? DEFAULT_REP_PARAMS;
@@ -53,11 +56,14 @@ export function ScoreCalculator({
         <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
           probe the math — smoothing · wilson bound · floor
         </p>
+        {/* The error wins over the "loading…" line: an automatic retry flips
+            `loading` back to true, and a loading-first branch would blink the
+            failure away and back once per attempt. */}
         {error ? (
           <ErrorNote
             className="mt-3 clip-cyber-sm"
             onRetry={onRetry}
-            retrying={loading}
+            retrying={retrying || loading}
           >
             params unavailable — the math below runs on built-in defaults, not
             the live routing parameters. {error}

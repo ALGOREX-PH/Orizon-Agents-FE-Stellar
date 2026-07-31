@@ -113,6 +113,7 @@ export function RepLeaderboard({
   agents,
   batch,
   loading,
+  retrying = false,
   agentsError,
   batchError,
   onRetryAgents,
@@ -121,6 +122,8 @@ export function RepLeaderboard({
   agents: Agent[] | null;
   batch: ReputationBatch | null;
   loading: boolean;
+  /** An automatic retry is scheduled or in flight (`useFetch.retrying`). */
+  retrying?: boolean;
   agentsError: string | null;
   batchError: string | null;
   onRetryAgents?: () => void;
@@ -163,13 +166,22 @@ export function RepLeaderboard({
     return joined.sort((a, b) => dir * (val(a) - val(b)));
   }, [agents, batch, sort]);
 
+  // Skeleton rows stand in for agent rows, so they are only right while the
+  // registry is genuinely still on its way: nothing to render yet and no
+  // failure to report. useFetch retries transient failures on its own and
+  // flips `loading` true for every attempt, so keying the placeholders off
+  // `loading` alone would swap the failure row out for skeletons and back
+  // once per attempt. A batch failure never reaches here — those rows fall
+  // back to seeded priors and render normally under their own error note.
+  const showSkeletons = loading && !agents && agentsError === null;
+
   return (
     <div>
       {agentsError && (
         <ErrorNote
           className="mb-4 clip-cyber-sm"
           onRetry={onRetryAgents}
-          retrying={loading}
+          retrying={retrying || loading}
         >
           agent registry unavailable — the table below is empty because the
           registry could not be read, not because no agents are registered.{" "}
@@ -181,7 +193,7 @@ export function RepLeaderboard({
         <ErrorNote
           className="mb-4 clip-cyber-sm"
           onRetry={onRetryBatch}
-          retrying={loading}
+          retrying={retrying || loading}
         >
           live reputation degraded to seeded prior — on-chain scores, settled
           evidence and the routing floor are not live. {batchError}
@@ -231,7 +243,7 @@ export function RepLeaderboard({
             </tr>
           </thead>
           <tbody>
-            {loading && (
+            {showSkeletons && (
               <>
                 <tr>
                   <td colSpan={8} className="p-0">
@@ -248,7 +260,7 @@ export function RepLeaderboard({
               </>
             )}
 
-            {!loading &&
+            {!showSkeletons &&
               rows.map(({ agent, rep }, i) => {
                 const prior = rep.source === "prior";
                 const belowFloor =
@@ -320,7 +332,7 @@ export function RepLeaderboard({
 
             {/* No agent list at all — an explicit failed row, never a blank
                 table body that reads as an empty registry. */}
-            {!loading && !agents && (
+            {!showSkeletons && !agents && (
               <tr>
                 <td
                   colSpan={8}
@@ -332,7 +344,7 @@ export function RepLeaderboard({
               </tr>
             )}
 
-            {!loading && agents && rows.length === 0 && (
+            {!showSkeletons && agents && rows.length === 0 && (
               <tr>
                 <td
                   colSpan={8}

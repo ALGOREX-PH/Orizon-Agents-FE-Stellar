@@ -26,12 +26,14 @@ export default function ReputationPage() {
     data: agents,
     error: agentsError,
     loading: agentsLoading,
+    retrying: agentsRetrying,
     reload: reloadAgents,
   } = useFetch(listAgents, [], { revalidateOnFocus: true });
   const {
     data: batch,
     error: batchError,
     loading: batchLoading,
+    retrying: batchRetrying,
     reload: reloadBatch,
   } = useFetch(listReputation, [], { revalidateOnFocus: true });
   // Static config. The calculator and ledger card fall back to built-in
@@ -41,6 +43,7 @@ export default function ReputationPage() {
     data: params,
     error: paramsError,
     loading: paramsLoading,
+    retrying: paramsRetrying,
     reload: reloadParams,
   } = useFetch(getReputationParams, [], {
     revalidateOnFocus: true,
@@ -57,10 +60,14 @@ export default function ReputationPage() {
         </p>
       </div>
 
+      {/* `retrying` is threaded into every card below so an automatic retry
+          reads as "retrying…" on a stable error surface instead of dropping
+          back to skeletons and placeholders once per attempt. */}
       <RepStats
         batch={batch}
         loading={batchLoading}
         error={batchError}
+        retrying={batchRetrying}
         onRetry={reloadBatch}
       />
 
@@ -81,6 +88,7 @@ export default function ReputationPage() {
           agents={agents}
           batch={batch}
           loading={agentsLoading || batchLoading}
+          retrying={agentsRetrying || batchRetrying}
           agentsError={agentsError}
           batchError={batchError}
           onRetryAgents={reloadAgents}
@@ -96,6 +104,7 @@ export default function ReputationPage() {
           params={params}
           loading={paramsLoading}
           error={paramsError}
+          retrying={paramsRetrying}
           onRetry={reloadParams}
         />
       </div>
@@ -104,6 +113,7 @@ export default function ReputationPage() {
         params={params}
         loading={paramsLoading}
         error={paramsError}
+        retrying={paramsRetrying}
         onRetry={reloadParams}
       />
 

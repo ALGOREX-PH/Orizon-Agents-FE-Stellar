@@ -72,11 +72,14 @@ export function OnchainDetails({
   params,
   loading = false,
   error = null,
+  retrying = false,
   onRetry,
 }: {
   params: ReputationParams | null;
   loading?: boolean;
   error?: string | null;
+  /** An automatic retry is scheduled or in flight (`useFetch.retrying`). */
+  retrying?: boolean;
   onRetry?: () => void;
 }) {
   // A hardcoded id is a guess about the chain, not a reading of it: the
@@ -195,11 +198,14 @@ export function OnchainDetails({
       </div>
 
       <div className="mt-5 border-t border-border/50 pt-4">
+        {/* Error before the constants strip, and it stays put across an
+            automatic retry — the alternative is five em dashes blinking in
+            and out of a card that claims to describe the live ledger. */}
         {error ? (
           <ErrorNote
             className="clip-cyber-sm"
             onRetry={onRetry}
-            retrying={loading}
+            retrying={retrying || loading}
           >
             ledger constants unavailable — epoch length, decay, weight cap and
             cache TTL could not be read from the backend. {error}
