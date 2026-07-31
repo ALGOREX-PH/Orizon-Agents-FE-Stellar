@@ -54,9 +54,14 @@ export default function SendPage() {
   const balanceNum = Number.isFinite(parsedBalance) ? parsedBalance : null;
   const amountNum = amount ? parseFloat(amount) : NaN;
   // The fetch finished and failed — distinct from "still loading", which must
-  // not flash a red box on first paint.
+  // not flash a red box on first paint. The wallet keeps the previous error
+  // while a retry is in flight, so this frame stays put for the whole
+  // recovery instead of alternating with the neutral "checking…" state.
   const balanceUnavailable =
     balanceNum === null && wallet.balanceError !== null;
+  // A recheck *after* a failure is still a failure until it resolves: the
+  // balance is unknown, the send stays blocked, and the surface stays red.
+  const balanceRechecking = balanceUnavailable && wallet.balanceLoading;
 
   const validation = useMemo(() => {
     if (!destination) return "destination required";
@@ -73,6 +78,13 @@ export default function SendPage() {
     // affordability check off and the user only learned the payment was
     // unaffordable after signing it.
     if (balanceNum === null) {
+      // Once the balance has failed, a recheck does not soften the block —
+      // saying "checking…" again would read like a fresh, healthy load.
+      if (wallet.balanceError !== null) {
+        return wallet.balanceLoading
+          ? "balance unavailable — rechecking with Horizon…"
+          : "balance unavailable — cannot verify this payment is affordable";
+      }
       return wallet.balanceLoading
         ? "checking your balance…"
         : "balance unavailable — cannot verify this payment is affordable";
@@ -88,6 +100,7 @@ export default function SendPage() {
     balanceNum,
     wallet.address,
     wallet.balanceLoading,
+    wallet.balanceError,
   ]);
 
   const send = async () => {
@@ -207,7 +220,7 @@ export default function SendPage() {
             <ErrorNote
               className="clip-cyber-sm mb-5"
               onRetry={() => void wallet.refreshBalance()}
-              retrying={wallet.balanceLoading}
+              retrying={balanceRechecking}
             >
               ⚠ balance unavailable — {wallet.balanceError}. Sending is blocked
               until Horizon confirms what you can afford.
@@ -268,12 +281,16 @@ export default function SendPage() {
                       {balanceNum === null ? (
                         <span
                           className={
-                            wallet.balanceLoading
+                            wallet.balanceLoading && !balanceUnavailable
                               ? "text-muted"
                               : "text-magenta"
                           }
                         >
-                          {wallet.balanceLoading ? "checking…" : "unknown"}
+                          {balanceRechecking
+                            ? "rechecking…"
+                            : wallet.balanceLoading
+                              ? "checking…"
+                              : "unknown"}
                         </span>
                       ) : (
                         <span className="text-cyan">
