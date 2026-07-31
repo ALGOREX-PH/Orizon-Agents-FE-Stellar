@@ -24,6 +24,13 @@
  * or the last attempt failed — the failed case being the one that matters
  * most, since a user tabbing back is usually doing it because the backend
  * has had time to wake up.
+ *
+ * A failed `reload()` keeps the last-good `data` on screen; `lastSuccessAt`
+ * dates it so pages can say so rather than showing frozen numbers as live:
+ *
+ *   {error && lastSuccessAt && (
+ *     <span>stale · updated {Math.round((Date.now() - lastSuccessAt) / 1000)}s ago</span>
+ *   )}
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -109,6 +116,18 @@ export type UseFetchResult<T> = {
    * "reconnecting…" instead of presenting a dead end.
    */
   retrying: boolean;
+  /**
+   * When the `data` currently on screen was fetched (epoch ms), or null when
+   * nothing has loaded yet. `data` survives a failed `reload()`, so this is
+   * what tells the UI those numbers are frozen:
+   *
+   * ```tsx
+   * {error && lastSuccessAt && (
+   *   <span>stale · updated {Math.round((Date.now() - lastSuccessAt) / 1000)}s ago</span>
+   * )}
+   * ```
+   */
+  lastSuccessAt: number | null;
 };
 
 export type UseFetchOptions = {
@@ -145,6 +164,7 @@ export function useFetch<T>(
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
+  const [lastSuccessAt, setLastSuccessAt] = useState<number | null>(null);
   const [nonce, setNonce] = useState(0);
 
   // Always call the latest `fn` without forcing callers to memoize it.
@@ -163,7 +183,8 @@ export function useFetch<T>(
   const prevDepsRef = useRef<unknown[] | null>(null);
 
   // When the last fetch succeeded — drives the focus-revalidation staleness
-  // check. Null until the first success.
+  // check. Mirrors the `lastSuccessAt` state, which the focus handler cannot
+  // read without resubscribing on every fetch.
   const lastSuccessRef = useRef<number | null>(null);
 
   // Whether the last settled attempt failed, when the last attempt *started*,
@@ -196,6 +217,9 @@ export function useFetch<T>(
       setData(null);
       setError(null);
       errorRef.current = null;
+      // `lastSuccessAt` dates the data on screen; that data is gone.
+      setLastSuccessAt(null);
+      lastSuccessRef.current = null;
     }
     markRetrying(false);
 
@@ -208,6 +232,7 @@ export function useFetch<T>(
         .then((d) => {
           if (!alive) return;
           lastSuccessRef.current = Date.now();
+          setLastSuccessAt(lastSuccessRef.current);
           setData(d);
           setError(null);
           errorRef.current = null;
@@ -285,5 +310,5 @@ export function useFetch<T>(
     };
   }, [revalidateOnFocus, staleAfterMs, reload]);
 
-  return { data, error, loading, reload, retrying };
+  return { data, error, loading, reload, retrying, lastSuccessAt };
 }

@@ -4,12 +4,12 @@
  *
  * Fake timers drive the self-scheduling loop; `document.hidden` is stubbed
  * with a configurable own-property getter so visibility pauses can be
- * simulated. The hook holds no React state, so no act() wrapping is needed
- * beyond what renderHook does itself.
+ * simulated. The hook holds no React state unless `trackStatus` is on, so
+ * only those tests wrap timer advances in act().
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, renderHook } from "@testing-library/react";
+import { act, cleanup, renderHook } from "@testing-library/react";
 import { usePolling } from "./use-polling";
 
 const INTERVAL = 1000;
@@ -190,6 +190,51 @@ describe("usePolling", () => {
     unmount();
     await vi.advanceTimersByTimeAsync(INTERVAL * 8);
     expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports lastSuccessAt and the failure streak when trackStatus is on", async () => {
+    let failing = false;
+    const fn = vi.fn(async () => {
+      if (failing) throw new Error("boom");
+    });
+    const { result } = renderHook(() =>
+      usePolling(fn, INTERVAL, { trackStatus: true }),
+    );
+    expect(result.current).toEqual({ lastSuccessAt: null, failures: 0 });
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+    const first = result.current.lastSuccessAt;
+    expect(first).toBe(Date.now());
+
+    // Failures accumulate while the timestamp stays put — it dates the data
+    // the page is still showing.
+    failing = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(INTERVAL);
+    });
+    expect(result.current).toEqual({ lastSuccessAt: first, failures: 1 });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(INTERVAL * 2);
+    });
+    expect(result.current.failures).toBe(2);
+
+    failing = false;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(INTERVAL * 4);
+    });
+    expect(result.current.failures).toBe(0);
+    expect(result.current.lastSuccessAt).toBeGreaterThan(first!);
+  });
+
+  it("holds no state unless trackStatus is asked for", async () => {
+    const fn = vi.fn(async () => {});
+    const { result } = renderHook(() => usePolling(fn, INTERVAL));
+    await vi.advanceTimersByTimeAsync(INTERVAL * 4);
+    expect(fn.mock.calls.length).toBeGreaterThan(1);
+    // No re-render, no timestamp: existing call sites poll exactly as before.
+    expect(result.current).toEqual({ lastSuccessAt: null, failures: 0 });
   });
 
   it("does nothing when disabled", async () => {

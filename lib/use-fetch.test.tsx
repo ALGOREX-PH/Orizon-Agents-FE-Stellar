@@ -297,6 +297,60 @@ describe("useFetch", () => {
     });
   });
 
+  describe("lastSuccessAt", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("only advances on success and dates the data left on screen", async () => {
+      vi.useFakeTimers();
+      let failing = false;
+      const fn = vi.fn(async () => {
+        if (failing) throw new Error("nope");
+        return "ok";
+      });
+      const { result } = renderHook(() => useFetch(fn, []));
+      expect(result.current.lastSuccessAt).toBeNull();
+
+      await act(async () => {});
+      const first = result.current.lastSuccessAt;
+      expect(first).toBe(Date.now());
+
+      // A failed reload keeps the data — and the timestamp that dates it.
+      failing = true;
+      act(() => vi.advanceTimersByTime(30_000));
+      await act(async () => {
+        result.current.reload();
+      });
+      expect(result.current.error).toBe("nope");
+      expect(result.current.data).toBe("ok");
+      expect(result.current.lastSuccessAt).toBe(first);
+
+      failing = false;
+      act(() => vi.advanceTimersByTime(30_000));
+      await act(async () => {
+        result.current.reload();
+      });
+      expect(result.current.lastSuccessAt).toBe(Date.now());
+      expect(result.current.lastSuccessAt).toBeGreaterThan(first!);
+    });
+
+    it("clears with the data when deps change", async () => {
+      const fn = vi.fn(async (dep: number) => `record-${dep}`);
+      const { result, rerender } = renderHook(
+        ({ dep }) => useFetch(() => fn(dep), [dep]),
+        { initialProps: { dep: 1 } },
+      );
+      await waitFor(() => expect(result.current.data).toBe("record-1"));
+      expect(result.current.lastSuccessAt).not.toBeNull();
+
+      rerender({ dep: 2 });
+      expect(result.current.data).toBeNull();
+      expect(result.current.lastSuccessAt).toBeNull();
+      await waitFor(() => expect(result.current.lastSuccessAt).not.toBeNull());
+    });
+  });
+
   describe("automatic retry", () => {
     afterEach(() => {
       vi.useRealTimers();
