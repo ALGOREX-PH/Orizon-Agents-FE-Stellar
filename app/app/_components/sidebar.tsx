@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
+import { ErrorNote } from "@/components/ui/error-note";
 import { Logo } from "@/components/ui/logo";
 import { getOverview } from "@/lib/api";
 import { focusRing } from "@/lib/ui";
@@ -279,8 +280,12 @@ export function Sidebar() {
   // freeze these counters at their first-mount values for the whole session.
   // Revalidating on focus refreshes them when the operator comes back to the
   // tab without adding a second poller alongside the Overview page's.
-  // Errors are ignored: the static fallback copy stays if metrics are unreachable.
-  const { data: overview } = useFetch(getOverview, [], {
+  const {
+    data: overview,
+    error,
+    loading,
+    reload,
+  } = useFetch(getOverview, [], {
     revalidateOnFocus: true,
   });
 
@@ -372,20 +377,53 @@ export function Sidebar() {
         <div className="border-t border-border p-4">
           <div className="clip-cyber border border-border bg-bg/60 p-3">
             <div className="flex items-center gap-2 mb-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-cyan shadow-[0_0_8px_#00FFD1]" />
-              <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan">
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full",
+                  error
+                    ? "bg-magenta shadow-[0_0_8px_#FF2E9A]"
+                    : "bg-cyan shadow-[0_0_8px_#00FFD1]",
+                )}
+              />
+              <span
+                className={cn(
+                  "font-mono text-[10px] uppercase tracking-[0.25em]",
+                  error ? "text-magenta" : "text-cyan",
+                )}
+              >
                 network
               </span>
             </div>
-            <div className="font-mono text-[11px] text-muted leading-5">
-              {overview
-                ? `${overview.agents_online.toLocaleString()} agents online`
-                : "— agents online"}
-              <br />
-              {overview
-                ? `avg completion ${(overview.avg_completion * 100).toFixed(0)}%`
-                : "avg completion —"}
-            </div>
+            {overview && (
+              <div className="font-mono text-[11px] text-muted leading-5">
+                {`${overview.agents_online.toLocaleString()} agents online`}
+                <br />
+                {`avg completion ${(overview.avg_completion * 100).toFixed(0)}%`}
+              </div>
+            )}
+            {!overview && !error && (
+              <div className="font-mono text-[11px] text-muted leading-5">
+                — agents online
+                <br />
+                avg completion —
+              </div>
+            )}
+            {error && (
+              <ErrorNote
+                className="mt-1 border-0 bg-transparent p-0 text-[10px] leading-4 break-words"
+                onRetry={reload}
+                retrying={loading}
+              >
+                <span className="block">
+                  {overview
+                    ? "counters are stale — refresh failed"
+                    : "network metrics unavailable"}
+                </span>
+                <span className="mt-0.5 block break-all opacity-80">
+                  {error}
+                </span>
+              </ErrorNote>
+            )}
           </div>
           <div className="mt-3 flex items-center gap-3 px-1">
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet to-magenta grid place-items-center font-mono text-xs">
