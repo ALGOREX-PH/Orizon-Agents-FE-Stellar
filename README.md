@@ -435,7 +435,7 @@ The repo ships a `vercel.json` that proxies `/api/*` to the Render backend.
    never work, so a bad one fails the build instead of shipping a dead console.
 
 5. Click **Deploy**. ~1 minute build → `https://<your-project>.vercel.app`.
-6. Edit `vercel.json`'s `destination` to match your Render URL — commit + push to finalize.
+6. Verify the deploy actually reaches the backend: `npm run smoke -- https://<your-project>.vercel.app`. Unit tests and a green build cannot catch a bad proxy target; this can.
 7. On the backend (Render), set `CORS_ORIGINS` to your Vercel URL. Preview URLs (`*.vercel.app`) are accepted via regex.
 
 > ⚠️ `NEXT_PUBLIC_*` env vars are baked at build time. Changing `NEXT_PUBLIC_API_BASE` requires clicking **Redeploy** — saving alone isn't enough.
