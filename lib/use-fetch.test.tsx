@@ -235,17 +235,62 @@ describe("useFetch", () => {
       expect(fn).toHaveBeenCalledTimes(1);
     });
 
-    it("does not reload before any fetch has succeeded", async () => {
+    it("revalidates after the very first fetch failed — there is no last success to age out", async () => {
       vi.useFakeTimers();
-      const fn = vi.fn(() => Promise.reject(new Error("down")));
+      // Non-transient so the automatic retry stays out of the way: the focus
+      // event is the only thing that can re-arm this fetch.
+      const fn = vi.fn(() => Promise.reject(new Error("GET /agents → 404")));
       const { result } = renderHook(() =>
         useFetch(fn, [], { revalidateOnFocus: true }),
       );
       await act(async () => {});
-      expect(result.current.error).toBe("down");
+      expect(result.current.error).toBe("GET /agents → 404");
 
+      act(() => vi.advanceTimersByTime(5_001));
+      await act(async () => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
+
+    it("throttles focus retries of a failed fetch", async () => {
+      vi.useFakeTimers();
+      const fn = vi.fn(() => Promise.reject(new Error("GET /agents → 404")));
+      renderHook(() => useFetch(fn, [], { revalidateOnFocus: true }));
+      await act(async () => {});
+
+      // Alt-tabbing straight back must not fire a second request.
+      act(() => vi.advanceTimersByTime(4_999));
+      await act(async () => {
+        window.dispatchEvent(new Event("focus"));
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      expect(fn).toHaveBeenCalledTimes(1);
+
+      act(() => vi.advanceTimersByTime(2));
+      await act(async () => {
+        window.dispatchEvent(new Event("focus"));
+      });
+      expect(fn).toHaveBeenCalledTimes(2);
+
+      // …and the fresh attempt restarts the throttle window.
+      await act(async () => {
+        window.dispatchEvent(new Event("focus"));
+      });
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not stack a focus refetch on an in-flight request", async () => {
+      vi.useFakeTimers();
+      const pending = deferred<string>();
+      const fn = vi.fn(() => pending.promise);
+      renderHook(() => useFetch(fn, [], { revalidateOnFocus: true }));
+      await act(async () => {});
+
+      // A cold backend holds the request open for the full 60s deadline.
       act(() => vi.advanceTimersByTime(120_000));
       await act(async () => {
+        window.dispatchEvent(new Event("focus"));
         document.dispatchEvent(new Event("visibilitychange"));
       });
       expect(fn).toHaveBeenCalledTimes(1);

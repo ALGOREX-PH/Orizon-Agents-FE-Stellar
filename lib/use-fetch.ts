@@ -19,8 +19,11 @@
  * reloaded the page. Pending retries are cancelled on unmount and on a deps
  * change; `reload()` starts a fresh budget.
  *
- * `{ revalidateOnFocus: true }` refetches via `reload()` when the tab
- * regains focus/visibility and the last success is older than `staleAfterMs`.
+ * `{ revalidateOnFocus: true }` refetches via `reload()` when the tab regains
+ * focus/visibility and either the last success is older than `staleAfterMs`
+ * or the last attempt failed — the failed case being the one that matters
+ * most, since a user tabbing back is usually doing it because the backend
+ * has had time to wake up.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -33,6 +36,8 @@ const DEFAULT_RETRY_BASE_MS = 2_000;
 const MAX_BACKOFF_MS = 30_000;
 /** Hard ceiling for any single retry delay, hint included. */
 const MAX_RETRY_DELAY_MS = 120_000;
+/** Minimum spacing between focus-triggered retries of a failed fetch. */
+const FOCUS_RETRY_MIN_MS = 5_000;
 
 /**
  * Is a rejection worth retrying automatically?
@@ -113,8 +118,9 @@ export type UseFetchOptions = {
    * Refetch when the tab becomes visible again (visibilitychange → visible,
    * window focus) and the last successful fetch is older than `staleAfterMs`.
    * Uses `reload()`, which keeps the current data — no flash. Off by default.
-   * Only kicks in after a first success: before that there is nothing stale
-   * to refresh (the mount fetch, or the page's error UI, covers it).
+   * Also fires — regardless of age — when the last attempt failed, including
+   * a first fetch that never succeeded; that path is throttled to one attempt
+   * per 5s and skipped while a fetch is already in flight.
    */
   revalidateOnFocus?: boolean;
   /** Age (ms) after which a focus revalidation refetches. Default 60_000. */
@@ -160,6 +166,13 @@ export function useFetch<T>(
   // check. Null until the first success.
   const lastSuccessRef = useRef<number | null>(null);
 
+  // Whether the last settled attempt failed, when the last attempt *started*,
+  // and whether one is running right now — read by the focus handler, which
+  // must not depend on state (it would resubscribe on every fetch).
+  const errorRef = useRef<string | null>(null);
+  const lastAttemptAtRef = useRef(0);
+  const inFlightRef = useRef(false);
+
   // Mirrors `retrying` so the effect can skip no-op state updates.
   const retryingRef = useRef(false);
   const markRetrying = (value: boolean) => {
@@ -182,11 +195,14 @@ export function useFetch<T>(
     if (depsChanged && !opts?.keepPreviousData) {
       setData(null);
       setError(null);
+      errorRef.current = null;
     }
     markRetrying(false);
 
     const run = () => {
       setLoading(true);
+      inFlightRef.current = true;
+      lastAttemptAtRef.current = Date.now();
       fnRef
         .current()
         .then((d) => {
@@ -194,11 +210,13 @@ export function useFetch<T>(
           lastSuccessRef.current = Date.now();
           setData(d);
           setError(null);
+          errorRef.current = null;
           markRetrying(false);
         })
         .catch((e) => {
           if (!alive) return;
-          setError(e instanceof Error ? e.message : String(e));
+          errorRef.current = e instanceof Error ? e.message : String(e);
+          setError(errorRef.current);
           const budget = optsRef.current?.maxRetries ?? DEFAULT_MAX_RETRIES;
           if (attempt >= budget || !isTransientFetchError(e)) {
             markRetrying(false);
@@ -217,13 +235,16 @@ export function useFetch<T>(
           }, delay);
         })
         .finally(() => {
-          if (alive) setLoading(false);
+          if (!alive) return;
+          inFlightRef.current = false;
+          setLoading(false);
         });
     };
     run();
 
     return () => {
       alive = false;
+      inFlightRef.current = false;
       if (timer) clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -237,6 +258,21 @@ export function useFetch<T>(
     if (!revalidateOnFocus) return;
     const maybeReload = () => {
       if (document.hidden) return;
+      // A fetch is already running — a focus event must not stack a second
+      // one on top of it (a cold backend holds the deadline open for 60s,
+      // and alt-tabbing would pile up a request per switch).
+      if (inFlightRef.current) return;
+      if (errorRef.current !== null) {
+        // The last attempt failed — possibly the very first one, in which
+        // case there is no "last success" to age out and this handler used
+        // to return here forever, leaving the page permanently dead. Coming
+        // back to the tab *is* the user asking for a retry; throttled so a
+        // burst of focus events cannot hammer a struggling backend.
+        if (Date.now() - lastAttemptAtRef.current >= FOCUS_RETRY_MIN_MS) {
+          reload();
+        }
+        return;
+      }
       const last = lastSuccessRef.current;
       if (last === null || Date.now() - last < staleAfterMs) return;
       reload();
