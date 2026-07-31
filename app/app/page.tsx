@@ -4,7 +4,7 @@ import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorNote } from "@/components/ui/error-note";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingStatus, Skeleton } from "@/components/ui/skeleton";
 import { getOverview, listTasks } from "@/lib/api";
 import type { Overview, Task } from "@/lib/types";
 import { focusRing } from "@/lib/ui";
@@ -150,6 +150,7 @@ export default function OverviewPage() {
       )}
 
       <div className="grid gap-4 md:grid-cols-4">
+        {!overview && !error && <LoadingStatus label="Loading metrics…" />}
         {!overview &&
           METRIC_KEYS.map((k) => (
             <Card key={k}>
@@ -224,7 +225,10 @@ export default function OverviewPage() {
               throughput unavailable — backend unreachable
             </div>
           ) : (
-            <Skeleton className="h-36 w-full" />
+            <>
+              <Skeleton className="h-36 w-full" />
+              <LoadingStatus label="Loading throughput chart…" />
+            </>
           )}
         </Card>
 
@@ -261,9 +265,12 @@ export default function OverviewPage() {
                   skill mix unavailable — backend unreachable
                 </p>
               ) : (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={i} className="h-4 w-full" />
-                ))
+                <>
+                  <LoadingStatus label="Loading network composition…" />
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-4 w-full" />
+                  ))}
+                </>
               ))}
           </div>
         </Card>
@@ -342,6 +349,9 @@ export default function OverviewPage() {
                     <tr key={i} className="border-b border-border/50">
                       <td colSpan={6} className="py-3">
                         <Skeleton className="h-5 w-full" />
+                        {i === 0 && (
+                          <LoadingStatus label="Loading recent tasks…" />
+                        )}
                       </td>
                     </tr>
                   ))
