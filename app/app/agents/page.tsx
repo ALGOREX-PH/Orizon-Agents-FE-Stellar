@@ -154,6 +154,7 @@ export default function AgentsPage() {
             </thead>
             <tbody>
               {!agents &&
+                !error &&
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i} className="border-b border-border/50">
                     <td colSpan={8} className="py-3">
@@ -161,6 +162,17 @@ export default function AgentsPage() {
                     </td>
                   </tr>
                 ))}
+
+              {!agents && error && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="py-10 text-center text-muted font-mono text-xs"
+                  >
+                    couldn&apos;t load agents — the registry is unreachable.
+                  </td>
+                </tr>
+              )}
 
               {rows.map((a, i) => (
                 <m.tr
