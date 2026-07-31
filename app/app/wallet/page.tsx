@@ -73,9 +73,12 @@ export default function WalletPage() {
   // fabricated money value the failure states were fixed to stop showing.
   const parsedBalance = xlmBalance === null ? NaN : parseFloat(xlmBalance);
   const balanceKnown = Number.isFinite(parsedBalance);
+  // The "…" belongs to a first load only. Once the fetch has failed, a
+  // recheck keeps the magenta "—": alternating ellipsis and dash on every
+  // retry animates the failure into looking like progress.
   const balanceFmt = balanceKnown
     ? parsedBalance.toFixed(7)
-    : balanceLoading
+    : balanceLoading && !balanceError
       ? "…"
       : "—";
 
