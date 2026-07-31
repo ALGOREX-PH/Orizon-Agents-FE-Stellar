@@ -16,7 +16,15 @@ const FEED_OPTIONS = { intervalMs: 5000, max: 60 };
 // Display label for the configured network — "mainnet" | "testnet".
 
 export default function EventsPage() {
-  const { data: info, error: loadError } = useFetch(getStellarNetwork, []);
+  // `reload` re-fetches the contract ids, which yields a fresh `contractIds`
+  // array — that restarts the events subscription too, so one retry control
+  // recovers from both a backend failure and an RPC failure.
+  const {
+    data: info,
+    error: loadError,
+    loading: infoLoading,
+    reload: retry,
+  } = useFetch(getStellarNetwork, []);
 
   const contractIds = useMemo(
     () => (info ? Object.values(info.contracts) : null),
@@ -91,7 +99,11 @@ export default function EventsPage() {
 
       {loadError && (
         <Card>
-          <ErrorNote className="border-0 bg-transparent p-0 text-[11px]">
+          <ErrorNote
+            className="border-0 bg-transparent p-0 text-[11px]"
+            onRetry={retry}
+            retrying={infoLoading}
+          >
             backend offline — {loadError}
           </ErrorNote>
         </Card>
@@ -99,11 +111,16 @@ export default function EventsPage() {
 
       {error && (
         <Card>
-          <ErrorNote className="border-0 bg-transparent p-0">
-            <div className="text-[10px] uppercase tracking-[0.25em] mb-2">
+          <ErrorNote
+            className="border-0 bg-transparent p-0"
+            onRetry={retry}
+            retryLabel="restart feed"
+            retrying={infoLoading}
+          >
+            <span className="block text-[10px] uppercase tracking-[0.25em] mb-2">
               ▸ rpc error
-            </div>
-            <div className="text-[11px] break-all">{error}</div>
+            </span>
+            <span className="block text-[11px] break-all">{error}</span>
           </ErrorNote>
         </Card>
       )}
@@ -137,7 +154,11 @@ export default function EventsPage() {
         ) : failureMessage !== null && events.length === 0 ? (
           // Never fall through to the "no events yet" copy on a failure: an
           // empty feed we could not even start is a broken feed, not an idle one.
-          <ErrorNote className="border-0 bg-transparent p-0">
+          <ErrorNote
+            className="border-0 bg-transparent p-0"
+            onRetry={retry}
+            retrying={infoLoading}
+          >
             <span className="block text-[10px] uppercase tracking-[0.25em] mb-2">
               ▸ feed unavailable
             </span>
