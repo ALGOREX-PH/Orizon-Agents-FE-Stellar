@@ -8,11 +8,15 @@
  * `reload()` always keeps the current data. Also verifies unmount safety
  * (a late settlement never sets state — no act warnings) and that the
  * latest `fn` is used without callers memoizing it.
+ *
+ * The retry suites use fake timers to drive the backoff sleeps: a transient
+ * failure must recover on its own, a permanent one must not be retried, and
+ * neither may outlive the effect that scheduled it.
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
-import { useFetch } from "./use-fetch";
+import { isTransientFetchError, retryAfterHintMs, useFetch } from "./use-fetch";
 
 afterEach(() => {
   cleanup();
@@ -248,6 +252,184 @@ describe("useFetch", () => {
     });
   });
 
+  describe("automatic retry", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    const TIMEOUT = () => new Error("GET /agents → timeout after 60s");
+
+    it("retries a transient failure until it succeeds, with no user action", async () => {
+      vi.useFakeTimers();
+      const fn = vi
+        .fn<() => Promise<string>>()
+        .mockRejectedValueOnce(TIMEOUT())
+        .mockResolvedValueOnce("agents");
+      const { result } = renderHook(() => useFetch(fn, []));
+      await act(async () => {});
+      expect(fn).toHaveBeenCalledTimes(1);
+      expect(result.current.error).toContain("timeout");
+      expect(result.current.retrying).toBe(true);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2_000);
+      });
+      expect(fn).toHaveBeenCalledTimes(2);
+      expect(result.current.data).toBe("agents");
+      expect(result.current.error).toBeNull();
+      expect(result.current.retrying).toBe(false);
+    });
+
+    it("spaces retries 2s → 4s → 8s and stops once the budget is spent", async () => {
+      vi.useFakeTimers();
+      const fn = vi.fn(() => Promise.reject(new Error("GET /agents → 503")));
+      const { result } = renderHook(() => useFetch(fn, []));
+      await act(async () => {});
+      expect(fn).toHaveBeenCalledTimes(1);
+
+      for (const delay of [2_000, 4_000, 8_000]) {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(delay - 1);
+        });
+        const before = fn.mock.calls.length;
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1);
+        });
+        expect(fn).toHaveBeenCalledTimes(before + 1);
+      }
+
+      // Budget spent: the error stands and nothing else is scheduled.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300_000);
+      });
+      expect(fn).toHaveBeenCalledTimes(4);
+      expect(result.current.error).toBe("GET /agents → 503");
+      expect(result.current.retrying).toBe(false);
+      expect(result.current.loading).toBe(false);
+    });
+
+    it("does not retry a non-transient failure such as a 404", async () => {
+      vi.useFakeTimers();
+      const fn = vi.fn(() => Promise.reject(new Error("GET /agents → 404")));
+      const { result } = renderHook(() => useFetch(fn, []));
+      await act(async () => {});
+      expect(result.current.retrying).toBe(false);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300_000);
+      });
+      expect(fn).toHaveBeenCalledTimes(1);
+      expect(result.current.error).toBe("GET /agents → 404");
+    });
+
+    it("resets the backoff budget on a manual reload()", async () => {
+      vi.useFakeTimers();
+      const fn = vi.fn(() => Promise.reject(TIMEOUT()));
+      const { result } = renderHook(() => useFetch(fn, []));
+      await act(async () => {});
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
+      expect(fn).toHaveBeenCalledTimes(4); // exhausted
+
+      await act(async () => {
+        result.current.reload();
+      });
+      expect(fn).toHaveBeenCalledTimes(5);
+      // A fresh budget: the first retry is one base delay away again.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2_000);
+      });
+      expect(fn).toHaveBeenCalledTimes(6);
+    });
+
+    it("cancels a pending retry on unmount", async () => {
+      vi.useFakeTimers();
+      const fn = vi.fn(() => Promise.reject(TIMEOUT()));
+      const { unmount } = renderHook(() => useFetch(fn, []));
+      await act(async () => {});
+      unmount();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300_000);
+      });
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+
+    it("cancels a pending retry when deps change", async () => {
+      vi.useFakeTimers();
+      const fn = vi.fn(async (dep: number) => {
+        if (dep === 1) throw TIMEOUT();
+        return "ok";
+      });
+      const { result, rerender } = renderHook(
+        ({ dep }) => useFetch(() => fn(dep), [dep]),
+        { initialProps: { dep: 1 } },
+      );
+      await act(async () => {});
+      expect(fn).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        rerender({ dep: 2 });
+      });
+      expect(result.current.data).toBe("ok");
+      expect(result.current.retrying).toBe(false);
+
+      // The dep-1 retry must not fire against the new deps.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300_000);
+      });
+      expect(fn).toHaveBeenCalledTimes(2);
+      expect(fn).toHaveBeenLastCalledWith(2);
+    });
+
+    it("waits for a Retry-After hint longer than the computed backoff", async () => {
+      vi.useFakeTimers();
+      const throttled = Object.assign(new Error("GET /agents → 429"), {
+        retryAfter: 45, // seconds, as the header carries it
+      });
+      const fn = vi.fn(() => Promise.reject(throttled));
+      renderHook(() => useFetch(fn, []));
+      await act(async () => {});
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(44_999);
+      });
+      expect(fn).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
+
+    it("honors maxRetries and retryBaseMs overrides", async () => {
+      vi.useFakeTimers();
+      const fn = vi.fn(() => Promise.reject(TIMEOUT()));
+      const { result, unmount } = renderHook(() =>
+        useFetch(fn, [], { maxRetries: 1, retryBaseMs: 100 }),
+      );
+      await act(async () => {});
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+      });
+      expect(fn).toHaveBeenCalledTimes(2);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300_000);
+      });
+      expect(fn).toHaveBeenCalledTimes(2);
+      expect(result.current.retrying).toBe(false);
+      unmount();
+
+      const never = vi.fn(() => Promise.reject(TIMEOUT()));
+      renderHook(() => useFetch(never, [], { maxRetries: 0 }));
+      await act(async () => {});
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300_000);
+      });
+      expect(never).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("ignores settlements that land after unmount — no state updates, no warnings", async () => {
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -266,5 +448,57 @@ describe("useFetch", () => {
     // them without touching state (would otherwise trigger act warnings).
     await new Promise((r) => setTimeout(r, 0));
     expect(errSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("isTransientFetchError", () => {
+  it.each([
+    ["client deadline", new Error("GET /agents → timeout after 60s")],
+    ["server error", new Error("GET /agents → 500")],
+    ["bad gateway", new Error("POST /x → 502 — upstream")],
+    ["gateway timeout", new Error("GET /agents → 504")],
+    ["request timeout", new Error("GET /agents → 408")],
+    ["rate limited", new Error("GET /agents → 429")],
+    ["chrome network drop", new TypeError("Failed to fetch")],
+    ["firefox network drop", new Error("NetworkError when fetching")],
+    ["safari network drop", new Error("Load failed")],
+  ])("retries a %s", (_label, err) => {
+    expect(isTransientFetchError(err)).toBe(true);
+  });
+
+  it.each([
+    ["missing resource", new Error("GET /agents → 404")],
+    ["bad request", new Error("POST /x → 400 — nope")],
+    ["unauthorized", new Error("GET /trace/1 → 401")],
+    ["failed response guard", new Error("malformed response from /tasks")],
+    ["a bug in fn", new Error("x is not a function")],
+    ["a thrown string", "kaboom"],
+  ])("does not retry a %s", (_label, err) => {
+    expect(isTransientFetchError(err)).toBe(false);
+  });
+});
+
+describe("retryAfterHintMs", () => {
+  it("reads a millisecond hint", () => {
+    expect(
+      retryAfterHintMs(Object.assign(new Error("x"), { retryAfterMs: 1_500 })),
+    ).toBe(1_500);
+  });
+
+  it("converts a seconds hint, as the HTTP header carries it", () => {
+    expect(
+      retryAfterHintMs(Object.assign(new Error("x"), { retryAfter: 60 })),
+    ).toBe(60_000);
+  });
+
+  it.each([
+    ["no hint", new Error("x")],
+    ["a non-numeric hint", Object.assign(new Error("x"), { retryAfter: "60" })],
+    ["a non-positive hint", Object.assign(new Error("x"), { retryAfterMs: 0 })],
+    ["a NaN hint", Object.assign(new Error("x"), { retryAfterMs: NaN })],
+    ["a non-object rejection", "kaboom"],
+    ["null", null],
+  ])("returns null for %s", (_label, err) => {
+    expect(retryAfterHintMs(err)).toBeNull();
   });
 });
