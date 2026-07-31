@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,13 +19,26 @@ const statusTone = {
 };
 
 export default function AgentsPage() {
-  const { data: agents, error } = useFetch(listAgents, [], {
+  const {
+    data: agents,
+    error,
+    loading,
+    reload: reloadAgents,
+  } = useFetch(listAgents, [], {
     revalidateOnFocus: true,
   });
   // On-chain reputation is best-effort: on error we silently keep seeded values.
-  const { data: repBatch } = useFetch(listReputation, [], {
-    revalidateOnFocus: true,
-  });
+  const { data: repBatch, reload: reloadReputation } = useFetch(
+    listReputation,
+    [],
+    { revalidateOnFocus: true },
+  );
+
+  // One outage takes down both reads, so a retry re-runs them together.
+  const retry = useCallback(() => {
+    reloadAgents();
+    reloadReputation();
+  }, [reloadAgents, reloadReputation]);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "online" | "idle" | "offline">(
     "all",
@@ -133,7 +146,11 @@ export default function AgentsPage() {
         </div>
 
         {error && (
-          <ErrorNote className="mb-4 clip-cyber-sm">
+          <ErrorNote
+            className="mb-4 clip-cyber-sm"
+            onRetry={retry}
+            retrying={loading}
+          >
             backend offline — {error}
           </ErrorNote>
         )}
