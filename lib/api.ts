@@ -37,10 +37,62 @@ export const GET_TIMEOUT_MS = 60_000;
 // unreachable, leaving the user a generic "timeout after 90s" instead.
 export const POST_TIMEOUT_MS = 105_000;
 
+// Methods that consume the response body. The deadline has to stay armed
+// across these — `fetch()` resolves as soon as HEADERS arrive, so clearing
+// the timer there left every body read (the artifact route alone returns
+// 30-76 kB) unguarded, and a stalled body hung the loading state forever.
+const BODY_READERS = new Set([
+  "json",
+  "text",
+  "arrayBuffer",
+  "blob",
+  "bytes",
+  "formData",
+]);
+
+/**
+ * Wraps a Response so its body readers run inside the same deadline that
+ * covered the headers: the timer is cleared when the body settles, and an
+ * abort that lands mid-body is reported as the timeout it is.
+ *
+ * A Proxy (rather than a rebuilt Response) keeps `ok`/`status`/`headers`
+ * and every other member reading exactly as the caller expects.
+ */
+function guardBody(
+  res: Response,
+  timer: ReturnType<typeof setTimeout>,
+  signal: AbortSignal,
+  expired: () => Error,
+): Response {
+  return new Proxy(res, {
+    get(target, prop) {
+      // `target` as receiver: Response's accessors are prototype getters
+      // that need the real instance, not the proxy.
+      const value: unknown = Reflect.get(target, prop, target);
+      if (typeof value !== "function") return value;
+      const fn = value as (...args: unknown[]) => unknown;
+      if (typeof prop !== "string" || !BODY_READERS.has(prop)) {
+        return fn.bind(target);
+      }
+      return async (...args: unknown[]) => {
+        try {
+          return await fn.apply(target, args);
+        } catch (err) {
+          if (signal.aborted) throw expired();
+          throw err;
+        } finally {
+          clearTimeout(timer);
+        }
+      };
+    },
+  });
+}
+
 /**
  * fetch with an AbortController deadline so a hung backend cannot stall
- * loading states forever. Timeouts reject with a clear message; every
- * other failure (network drop, non-OK status) propagates untouched.
+ * loading states forever. The deadline covers the whole exchange — headers
+ * AND body. Timeouts reject with a clear message; every other failure
+ * (network drop, non-OK status) propagates untouched.
  * Exported so sibling clients (e.g. lib/pdax.ts) share the same plumbing;
  * `path` is relative to the shared `/api` base.
  */
@@ -52,19 +104,23 @@ export async function fetchWithTimeout(
 ): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  // A caller that never reads the body would otherwise hold the event loop
+  // open for the full deadline (node only — browsers return a number).
+  (timer as unknown as { unref?: () => void }).unref?.();
+  const expired = () =>
+    new Error(`${method} ${path} → timeout after ${timeoutMs / 1000}s`);
+  let res: Response;
   try {
-    return await fetch(`${base}${path}`, {
+    res = await fetch(`${base}${path}`, {
       ...init,
       signal: controller.signal,
     });
   } catch (err) {
-    if (controller.signal.aborted) {
-      throw new Error(`${method} ${path} → timeout after ${timeoutMs / 1000}s`);
-    }
-    throw err;
-  } finally {
     clearTimeout(timer);
+    if (controller.signal.aborted) throw expired();
+    throw err;
   }
+  return guardBody(res, timer, controller.signal, expired);
 }
 
 // Several components fetch the same GET simultaneously on mount (/app fires

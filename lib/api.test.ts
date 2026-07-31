@@ -7,9 +7,10 @@
  * `openTraceStream` needs EventSource (DOM) and is deliberately untested here.
  */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   GET_DEDUPE_MS,
+  GET_TIMEOUT_MS,
   clearGetCache,
   decompose,
   execute,
@@ -117,6 +118,55 @@ describe("get (via listAgents)", () => {
     fetchMock.mockRejectedValueOnce(new Error("network down"));
 
     await expect(listAgents()).rejects.toThrow("network down");
+  });
+});
+
+describe("fetch deadline", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("stops the deadline once the body has been read", async () => {
+    let signal: AbortSignal | undefined;
+    fetchMock.mockImplementationOnce((_url, init) => {
+      signal = init?.signal ?? undefined;
+      return Promise.resolve(jsonResponse(200, []));
+    });
+
+    await expect(listAgents()).resolves.toEqual([]);
+
+    await vi.advanceTimersByTimeAsync(GET_TIMEOUT_MS * 2);
+    expect(signal?.aborted).toBe(false);
+  });
+
+  // fetch() resolves when HEADERS arrive: a body that never lands used to sit
+  // outside the guarded scope and hang the loading state forever.
+  it("covers a stalled response body and reports it as a timeout", async () => {
+    let signal: AbortSignal | undefined;
+    fetchMock.mockImplementationOnce((_url, init) => {
+      signal = init?.signal ?? undefined;
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          new Promise<never>((_resolve, reject) => {
+            signal?.addEventListener("abort", () =>
+              reject(new Error("The operation was aborted")),
+            );
+          }),
+        text: () => Promise.resolve(""),
+      });
+    });
+
+    const rejects = expect(listAgents()).rejects.toThrow(
+      "GET /agents → timeout after 60s",
+    );
+    await vi.advanceTimersByTimeAsync(GET_TIMEOUT_MS + 1);
+    await rejects;
+    expect(signal?.aborted).toBe(true);
   });
 });
 
