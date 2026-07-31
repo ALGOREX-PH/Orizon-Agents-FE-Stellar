@@ -68,11 +68,10 @@ export default function ReputationPage() {
           agents={agents}
           batch={batch}
           loading={agentsLoading || batchLoading}
-          error={agentsError ?? batchError}
-          onRetry={() => {
-            reloadAgents();
-            reloadBatch();
-          }}
+          agentsError={agentsError}
+          batchError={batchError}
+          onRetryAgents={reloadAgents}
+          onRetryBatch={reloadBatch}
         />
       </section>
 

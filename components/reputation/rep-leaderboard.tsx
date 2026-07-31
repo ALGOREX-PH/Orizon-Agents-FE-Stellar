@@ -102,21 +102,29 @@ function SortableTh({
 /**
  * Sortable reputation leaderboard joining the agent registry with live
  * on-chain scores. Agents without on-chain evidence fall back to their seeded
- * prior (same silent-fallback philosophy as the agents page), so a failed
- * batch fetch degrades the table instead of hiding it.
+ * prior, so a failed *batch* fetch genuinely degrades the table to priors.
+ *
+ * The two failures are reported separately because they mean opposite things:
+ * a batch failure leaves every row rendered against its seeded prior, while an
+ * agents failure leaves nothing to render at all — reporting that as
+ * "degraded to seeded prior" over an empty table would be a lie.
  */
 export function RepLeaderboard({
   agents,
   batch,
   loading,
-  error,
-  onRetry,
+  agentsError,
+  batchError,
+  onRetryAgents,
+  onRetryBatch,
 }: {
   agents: Agent[] | null;
   batch: ReputationBatch | null;
   loading: boolean;
-  error: string | null;
-  onRetry?: () => void;
+  agentsError: string | null;
+  batchError: string | null;
+  onRetryAgents?: () => void;
+  onRetryBatch?: () => void;
 }) {
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({
     col: "score",
@@ -157,13 +165,26 @@ export function RepLeaderboard({
 
   return (
     <div>
-      {error && (
+      {agentsError && (
         <ErrorNote
           className="mb-4 clip-cyber-sm"
-          onRetry={onRetry}
+          onRetry={onRetryAgents}
           retrying={loading}
         >
-          live reputation degraded to seeded prior — {error}
+          agent registry unavailable — the table below is empty because the
+          registry could not be read, not because no agents are registered.{" "}
+          {agentsError}
+        </ErrorNote>
+      )}
+
+      {batchError && (
+        <ErrorNote
+          className="mb-4 clip-cyber-sm"
+          onRetry={onRetryBatch}
+          retrying={loading}
+        >
+          live reputation degraded to seeded prior — on-chain scores, settled
+          evidence and the routing floor are not live. {batchError}
         </ErrorNote>
       )}
 
@@ -296,6 +317,20 @@ export function RepLeaderboard({
                   </m.tr>
                 );
               })}
+
+            {/* No agent list at all — an explicit failed row, never a blank
+                table body that reads as an empty registry. */}
+            {!loading && !agents && (
+              <tr>
+                <td
+                  colSpan={8}
+                  className="py-10 text-center font-mono text-xs text-magenta"
+                >
+                  agent registry unavailable — leaderboard could not be loaded.
+                  {agentsError ? ` ${agentsError}` : ""}
+                </td>
+              </tr>
+            )}
 
             {!loading && agents && rows.length === 0 && (
               <tr>
