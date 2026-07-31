@@ -4,7 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { NETWORK_NAME, useWallet } from "@/lib/wallet";
 import { NETWORK_LABEL } from "@/components/ui/stellar-link";
+import { getStellarNetwork } from "@/lib/api";
 import { focusRing } from "@/lib/ui";
+import { useFetch } from "@/lib/use-fetch";
 import { useMobileNav } from "./mobile-nav-context";
 
 // Display label for the configured network — "mainnet" | "testnet".
@@ -41,6 +43,22 @@ export function Topbar() {
     walletNetworkMismatch,
   } = useWallet();
   const { toggle } = useMobileNav();
+
+  // The status pill used to be a hardcoded "live" — it kept asserting the
+  // console was healthy right through an outage where every backend call
+  // 404'd. It now reports one real thing: whether this build can reach its
+  // backend. The layout mounts the topbar once, so this is a single request
+  // per console session (refreshed when a stale tab regains focus), and it
+  // shares the deduped GET with any page fetching the same endpoint.
+  const {
+    data: backend,
+    error: backendError,
+    loading: backendLoading,
+    reload: recheckBackend,
+  } = useFetch(getStellarNetwork, [], {
+    revalidateOnFocus: true,
+    staleAfterMs: 30_000,
+  });
 
   return (
     <>
@@ -112,9 +130,34 @@ export function Topbar() {
               </div>
             ))}
           <ConnectWallet />
-          <Badge tone="success" dot>
-            live
-          </Badge>
+          <div role="status" aria-live="polite" className="flex items-center">
+            {backendError ? (
+              // A stale success must not outrank a live failure — report the
+              // most recent attempt, not the best one.
+              <button
+                type="button"
+                onClick={recheckBackend}
+                disabled={backendLoading}
+                title={`backend unreachable — ${backendError}`}
+                aria-label={`backend unreachable — ${backendError}. Retry`}
+                className={`disabled:opacity-50 ${focusRing}`}
+              >
+                <Badge tone="magenta" dot>
+                  {backendLoading ? "checking…" : "offline ↻"}
+                </Badge>
+              </button>
+            ) : backend ? (
+              <span title={`backend reachable · ${backend.network}`}>
+                <Badge tone="success" dot>
+                  live
+                </Badge>
+              </span>
+            ) : (
+              <span title="checking backend…">
+                <Badge tone="muted">checking…</Badge>
+              </span>
+            )}
+          </div>
         </div>
       </header>
       {walletNetworkMismatch && (
