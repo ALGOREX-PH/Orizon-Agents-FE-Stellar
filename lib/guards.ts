@@ -17,6 +17,7 @@ import type {
   Flow,
   Overview,
   ReputationBatch,
+  ReputationParams,
   StellarNetworkInfo,
   Task,
 } from "./types";
@@ -143,6 +144,29 @@ export function isReputationBatch(v: unknown): v is ReputationBatch {
         isNum(r.weight) &&
         isNum(r.dispute_rate_bps),
     )
+  );
+}
+
+/** Reputation reference card + score calculator: every numeric here is
+ * divided or fed into the smoothed/lower-bound chain (`epoch_seconds / 86400`,
+ * `decay_bps_per_epoch / 100`, the whole `prior_weight_usdc`/`wilson_z` math),
+ * so a missing one renders `NaN` or `★ NaN`. Mirrors backend `ReputationParams`
+ * (`app/routers/stellar.py`); `enabled` is not computed with, so it is left
+ * unchecked in keeping with this file's shallow contract. */
+export function isReputationParams(v: unknown): v is ReputationParams {
+  return (
+    isRecord(v) &&
+    isNum(v.prior_bps) &&
+    isNum(v.prior_weight_usdc) &&
+    isNum(v.floor_bps) &&
+    isNum(v.max_rating_weight_usdc) &&
+    isNum(v.read_ttl_seconds) &&
+    isNum(v.wilson_z) &&
+    isNum(v.epoch_seconds) &&
+    isNum(v.decay_bps_per_epoch) &&
+    isNum(v.max_decay_epochs) &&
+    isStr(v.contract_id) &&
+    isStr(v.network)
   );
 }
 

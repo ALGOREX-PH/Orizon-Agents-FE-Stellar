@@ -191,22 +191,26 @@ describe("getReputation", () => {
   });
 });
 
+// Guarded by isReputationParams: every constant the reputation math divides
+// or smooths with has to be present and numeric.
+const paramsFixture = {
+  enabled: true,
+  prior_bps: 7000,
+  prior_weight_usdc: 12,
+  floor_bps: 5500,
+  max_rating_weight_usdc: 100,
+  read_ttl_seconds: 15,
+  wilson_z: 1,
+  epoch_seconds: 604_800,
+  decay_bps_per_epoch: 9250,
+  max_decay_epochs: 96,
+  contract_id: "CDCSOBEVZUPQZV5GV4D6KYHZCLNGW2KXY74RUHSZ3EZUXF34DPW422ZT",
+  network: "testnet",
+};
+
 describe("getReputationParams", () => {
   it("hits the params endpoint and resolves the parsed object", async () => {
-    const params = {
-      enabled: true,
-      prior_bps: 7000,
-      prior_weight_usdc: 12,
-      floor_bps: 5500,
-      max_rating_weight_usdc: 100,
-      read_ttl_seconds: 15,
-      wilson_z: 1,
-      epoch_seconds: 604_800,
-      decay_bps_per_epoch: 9250,
-      max_decay_epochs: 96,
-      contract_id: "CDCSOBEVZUPQZV5GV4D6KYHZCLNGW2KXY74RUHSZ3EZUXF34DPW422ZT",
-      network: "testnet",
-    };
+    const params = paramsFixture;
     fetchMock.mockResolvedValueOnce(jsonResponse(200, params));
 
     await expect(getReputationParams()).resolves.toEqual(params);
@@ -248,6 +252,15 @@ describe("response guards", () => {
 
     await expect(getFlow()).rejects.toThrow(
       "malformed response from /flow/default",
+    );
+  });
+
+  it("rejects reputation params missing a decay constant", async () => {
+    const { epoch_seconds: _drop, ...rest } = paramsFixture;
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, rest));
+
+    await expect(getReputationParams()).rejects.toThrow(
+      "malformed response from /stellar/reputation/params",
     );
   });
 
@@ -321,7 +334,10 @@ describe("get dedupe cache", () => {
   });
 
   it("does not dedupe across different paths", async () => {
-    fetchMock.mockResolvedValue(jsonResponse(200, []));
+    // Both paths are guarded, so each mock body has to satisfy its own guard.
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, []))
+      .mockResolvedValueOnce(jsonResponse(200, paramsFixture));
 
     await Promise.all([listAgents(), getReputationParams()]);
 

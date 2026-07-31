@@ -14,6 +14,7 @@ import {
   isFlow,
   isOverview,
   isReputationBatch,
+  isReputationParams,
   isStellarNetworkInfo,
   isTaskList,
 } from "./guards";
@@ -234,6 +235,55 @@ describe("isReputationBatch", () => {
 
   it("rejects a batch without a numeric floor_bps", () => {
     expect(isReputationBatch({ ...valid, floor_bps: undefined })).toBe(false);
+  });
+});
+
+describe("isReputationParams", () => {
+  const valid = {
+    enabled: true,
+    prior_bps: 7000,
+    prior_weight_usdc: 12,
+    floor_bps: 5500,
+    max_rating_weight_usdc: 100,
+    read_ttl_seconds: 15,
+    wilson_z: 1,
+    epoch_seconds: 604_800,
+    decay_bps_per_epoch: 9250,
+    max_decay_epochs: 96,
+    contract_id: "CDCS",
+    network: "testnet",
+  };
+
+  it("accepts a valid parameter set (extra keys tolerated)", () => {
+    expect(isReputationParams({ ...valid, extra: 1 })).toBe(true);
+  });
+
+  it("rejects a missing epoch_seconds (divided by 86400)", () => {
+    const { epoch_seconds: _drop, ...rest } = valid;
+    expect(isReputationParams(rest)).toBe(false);
+  });
+
+  it("rejects a missing decay_bps_per_epoch (divided by 100)", () => {
+    const { decay_bps_per_epoch: _drop, ...rest } = valid;
+    expect(isReputationParams(rest)).toBe(false);
+  });
+
+  it("rejects non-numeric smoothing inputs that would render ★ NaN", () => {
+    expect(isReputationParams({ ...valid, prior_weight_usdc: "12" })).toBe(
+      false,
+    );
+    expect(isReputationParams({ ...valid, wilson_z: null })).toBe(false);
+    expect(isReputationParams({ ...valid, floor_bps: undefined })).toBe(false);
+  });
+
+  it("rejects a non-string contract_id or network", () => {
+    expect(isReputationParams({ ...valid, contract_id: 7 })).toBe(false);
+    expect(isReputationParams({ ...valid, network: null })).toBe(false);
+  });
+
+  it("rejects non-objects", () => {
+    expect(isReputationParams(null)).toBe(false);
+    expect(isReputationParams([])).toBe(false);
   });
 });
 

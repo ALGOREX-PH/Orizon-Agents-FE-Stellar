@@ -5,6 +5,7 @@ import {
   isFlow,
   isOverview,
   isReputationBatch,
+  isReputationParams,
   isStellarNetworkInfo,
   isTaskList,
 } from "./guards";
@@ -247,7 +248,10 @@ export const listReputation = () =>
     ensure("/stellar/reputation", isReputationBatch),
   );
 export const getReputationParams = () =>
-  get<ReputationParams>("/stellar/reputation/params");
+  get<ReputationParams>(
+    "/stellar/reputation/params",
+    ensure("/stellar/reputation/params", isReputationParams),
+  );
 export const getReputation = (agentId: string) =>
   get<ReputationInfo>(`/stellar/reputation/${agentId}`);
 
