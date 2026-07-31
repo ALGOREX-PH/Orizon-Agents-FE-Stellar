@@ -427,10 +427,14 @@ export const STREAM_CONNECT_TIMEOUT_MS = 12_000;
  * (asleep backend, dead proxy) otherwise streamed nothing, forever, while the
  * UI claimed to be live.
  *
- * The backend replays the full trace history to every new subscriber, so a
- * reconnect re-delivers already-seen lines. onReset fires immediately before
- * each reconnect opens its EventSource — consumers must drop accumulated
- * lines there or the replay double-renders (and double-counts spend).
+ * The backend replays the full trace history to every new subscriber
+ * (app/routers/trace.py), so a reconnect re-delivers already-seen lines.
+ * onReset fires immediately before each reconnect opens its EventSource and
+ * means "the lines you hold are about to be superseded": consumers must
+ * REPLACE their buffer with the first line that arrives afterwards, not
+ * empty it on the spot. Emptying it eagerly loses the whole rendered run
+ * whenever the reconnect then fails — the backend's traces are in-memory
+ * only, so a restart answers 404 and nothing re-fetches them.
  */
 export function openTraceStream(
   taskId: string,

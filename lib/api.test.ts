@@ -823,6 +823,92 @@ describe("openTraceStream reconnect budget", () => {
   });
 });
 
+/**
+ * Mirrors what app/app/trace/page.tsx does with onReset: treat the rendered
+ * lines as superseded, and swap them for the replay only when the
+ * replacement connection actually delivers a line.
+ */
+function deferredConsumer() {
+  const state = { lines: [] as TraceLine[], pending: false };
+  return {
+    state,
+    onEvent: (l: TraceLine) => {
+      if (state.pending) {
+        state.pending = false;
+        state.lines.length = 0;
+      }
+      state.lines.push(l);
+    },
+    onReset: () => {
+      state.pending = true;
+    },
+  };
+}
+
+describe("openTraceStream history handoff", () => {
+  useStubEventSource();
+
+  it("hands the replayed history over without duplicating or losing lines", async () => {
+    const { state, onEvent, onReset } = deferredConsumer();
+    const dispose = openTraceStream(
+      "tsk_replay",
+      onEvent,
+      undefined,
+      undefined,
+      onReset,
+    );
+
+    const first = StubEventSource.last();
+    first.emit("open");
+    first.emit("trace", traceLine("0.1", "0.010 USDC"));
+    first.emit("trace", traceLine("0.2", "0.020 USDC"));
+    first.emit("error");
+
+    // Still on screen while the reconnect is only scheduled.
+    expect(state.lines).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(state.lines).toHaveLength(2);
+
+    const second = StubEventSource.last();
+    second.emit("open");
+    second.emit("trace", traceLine("0.1", "0.010 USDC"));
+    second.emit("trace", traceLine("0.2", "0.020 USDC"));
+    second.emit("trace", traceLine("0.3", "0.030 USDC"));
+
+    expect(state.lines.map((l) => l.t)).toEqual(["0.1", "0.2", "0.3"]);
+    dispose();
+  });
+
+  // The backend keeps traces in memory only: a restart 404s every reconnect,
+  // and nothing re-fetches what was already rendered.
+  it("keeps the rendered history when the reconnects never land", async () => {
+    const { state, onEvent, onReset } = deferredConsumer();
+    const onError = vi.fn();
+    const dispose = openTraceStream(
+      "tsk_restart",
+      onEvent,
+      undefined,
+      onError,
+      onReset,
+    );
+
+    const first = StubEventSource.last();
+    first.emit("open");
+    first.emit("trace", traceLine("0.1", "0.010 USDC"));
+    first.emit("trace", traceLine("0.2", "0.020 USDC"));
+
+    // Every reconnect answers 404 — EventSource reports that as `error`.
+    for (const delay of [1_000, 2_000, 4_000, 1_000]) {
+      StubEventSource.last().emit("error");
+      await vi.advanceTimersByTimeAsync(delay);
+    }
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(state.lines.map((l) => l.msg)).toEqual(["0.010 USDC", "0.020 USDC"]);
+    dispose();
+  });
+});
+
 describe("openTraceStream connect deadline", () => {
   useStubEventSource();
 
