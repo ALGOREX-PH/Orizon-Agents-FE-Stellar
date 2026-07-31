@@ -1,5 +1,12 @@
 "use client";
-import { Suspense, memo, useEffect, useRef, useState } from "react";
+import {
+  Suspense,
+  memo,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -171,7 +178,54 @@ function TracePageInner() {
       return acc + (m ? parseFloat(m[1]) : 0);
     }, 0);
 
+  // A stream that failed — or that never delivered a line — tells us nothing
+  // about what the run cost. The reduce over an empty list formats as
+  // "0.000 USDC", which reads as "this run was free": the exact lie that let
+  // days of 404ing backend calls pass as healthy. Spend is only a fact when
+  // there are lines to total AND the stream did not drop mid-run (a dropped
+  // stream may have missed cost lines that were already charged).
+  const spendUnknownReason = !taskId
+    ? null
+    : streamError
+      ? "stream failed — spend unknown"
+      : visible.length === 0
+        ? done
+          ? "stream closed with no trace lines"
+          : "no trace lines received yet"
+        : null;
+
   const artifact = artifactData?.artifact ?? null;
+
+  const summaryRows: Array<[string, ReactNode]> = [
+    ["Task", taskId ?? "demo"],
+    ["Lines", String(visible.length)],
+    [
+      "Spent",
+      spendUnknownReason ? (
+        <>
+          <span className="text-magenta" aria-hidden="true">
+            —
+          </span>
+          <span className="sr-only">unknown</span>
+          <div className="mt-1 text-[10px] leading-4 text-magenta/80">
+            {spendUnknownReason}
+          </div>
+        </>
+      ) : (
+        `${spent.toFixed(3)} USDC`
+      ),
+    ],
+    [
+      "State",
+      taskId
+        ? streamError
+          ? "interrupted ✕"
+          : done
+            ? "sealed ✓"
+            : "streaming…"
+        : "demo",
+    ],
+  ];
 
   return (
     <div className="space-y-6">
@@ -317,32 +371,16 @@ function TracePageInner() {
               <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan mb-4">
                 Summary
               </div>
-              <dl className="space-y-3 text-sm">
-                {[
-                  ["Task", taskId ?? "demo"],
-                  ["Lines", String(visible.length)],
-                  ["Spent", `${spent.toFixed(3)} USDC`],
-                  [
-                    "State",
-                    taskId
-                      ? streamError
-                        ? "interrupted ✕"
-                        : done
-                          ? "sealed ✓"
-                          : "streaming…"
-                      : "demo",
-                  ],
-                ].map(([k, v]) => (
+              <dl className="space-y-3 text-sm font-mono">
+                {summaryRows.map(([k, v]) => (
                   <div
                     key={k}
-                    className="flex items-center justify-between border-b border-border/40 pb-2"
+                    className="flex items-start justify-between gap-4 border-b border-border/40 pb-2"
                   >
-                    <dt className="text-muted font-mono text-[11px] uppercase tracking-widest">
+                    <dt className="text-muted text-[11px] uppercase tracking-widest">
                       {k}
                     </dt>
-                    <dd className="font-mono truncate max-w-[160px] text-right">
-                      {v}
-                    </dd>
+                    <dd className="text-right break-all">{v}</dd>
                   </div>
                 ))}
               </dl>
