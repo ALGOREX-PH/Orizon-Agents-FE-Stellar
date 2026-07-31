@@ -206,37 +206,46 @@ export default function WalletPage() {
         <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan mb-5">
           Deployed contracts
         </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          {info
-            ? Object.entries(info.contracts).map(([name, id]) => (
-                <a
-                  key={name}
-                  href={stellarExpertUrl("contract", id, info.network)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`clip-cyber-sm border border-border bg-bg/40 p-4 hover:border-violet/60 hover:bg-violet/5 transition ${focusRing}`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold">
-                      {prettyName(name)}
-                    </span>
-                    <Badge tone="cyan">live</Badge>
-                  </div>
-                  <div className="font-mono text-[11px] text-muted break-all">
-                    {id}
-                  </div>
-                  <div className="mt-2 font-mono text-[10px] text-cyan">
-                    view on stellar.expert ▸
-                  </div>
-                </a>
-              ))
-            : Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="clip-cyber-sm border border-border bg-bg/40 p-4 h-20 animate-pulse"
-                />
-              ))}
-        </div>
+        {/* No error branch here used to mean a failed fetch pulsed four empty
+            placeholders forever — the card looked like it was still loading
+            days into an outage. */}
+        {!info && error ? (
+          <ErrorNote onRetry={reload} retrying={loading}>
+            contracts unavailable — {error}
+          </ErrorNote>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {info
+              ? Object.entries(info.contracts).map(([name, id]) => (
+                  <a
+                    key={name}
+                    href={stellarExpertUrl("contract", id, info.network)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`clip-cyber-sm border border-border bg-bg/40 p-4 hover:border-violet/60 hover:bg-violet/5 transition ${focusRing}`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold">
+                        {prettyName(name)}
+                      </span>
+                      <Badge tone="cyan">live</Badge>
+                    </div>
+                    <div className="font-mono text-[11px] text-muted break-all">
+                      {id}
+                    </div>
+                    <div className="mt-2 font-mono text-[10px] text-cyan">
+                      view on stellar.expert ▸
+                    </div>
+                  </a>
+                ))
+              : Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="clip-cyber-sm border border-border bg-bg/40 p-4 h-20 animate-pulse"
+                  />
+                ))}
+          </div>
+        )}
       </Card>
     </div>
   );
