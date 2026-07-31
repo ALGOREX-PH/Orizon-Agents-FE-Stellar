@@ -53,6 +53,10 @@ export default function SendPage() {
     wallet.xlmBalance === null ? NaN : parseFloat(wallet.xlmBalance);
   const balanceNum = Number.isFinite(parsedBalance) ? parsedBalance : null;
   const amountNum = amount ? parseFloat(amount) : NaN;
+  // The fetch finished and failed — distinct from "still loading", which must
+  // not flash a red box on first paint.
+  const balanceUnavailable =
+    balanceNum === null && wallet.balanceError !== null;
 
   const validation = useMemo(() => {
     if (!destination) return "destination required";
@@ -199,6 +203,17 @@ export default function SendPage() {
             </Badge>
           </div>
 
+          {balanceUnavailable && (
+            <ErrorNote
+              className="clip-cyber-sm mb-5"
+              onRetry={() => void wallet.refreshBalance()}
+              retrying={wallet.balanceLoading}
+            >
+              ⚠ balance unavailable — {wallet.balanceError}. Sending is blocked
+              until Horizon confirms what you can afford.
+            </ErrorNote>
+          )}
+
           <form
             noValidate
             onSubmit={(e) => {
@@ -250,9 +265,21 @@ export default function SendPage() {
                   <div className="mt-1.5 flex items-center justify-between font-mono text-[10px] uppercase tracking-widest text-muted">
                     <span>
                       available:{" "}
-                      <span className="text-cyan">
-                        {balanceNum === null ? "—" : balanceNum.toFixed(4)} XLM
-                      </span>
+                      {balanceNum === null ? (
+                        <span
+                          className={
+                            wallet.balanceLoading
+                              ? "text-muted"
+                              : "text-magenta"
+                          }
+                        >
+                          {wallet.balanceLoading ? "checking…" : "unknown"}
+                        </span>
+                      ) : (
+                        <span className="text-cyan">
+                          {balanceNum.toFixed(4)} XLM
+                        </span>
+                      )}
                     </span>
                     {balanceNum !== null && balanceNum > 1 && (
                       <button
