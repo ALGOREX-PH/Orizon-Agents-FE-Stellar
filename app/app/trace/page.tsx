@@ -37,17 +37,25 @@ type Tab = "trace" | "artifact";
 // all already-rendered rows.
 const TraceRow = memo(function TraceRow({ line }: { line: TraceLine }) {
   return (
-    <div className="flex gap-3">
-      <span className="w-16 text-muted">{line.t}</span>
+    <div className="flex gap-2 sm:gap-3">
+      {/* Fixed gutters ate ~120px of the ~276px a 380px viewport leaves inside
+          the log box, squeezing messages into a 2-3 word ribbon — and
+          globals.css sets overflow-x:hidden, so the overflow was clipped
+          rather than scrollable. The timestamp is the droppable one. */}
+      <span className="hidden sm:inline w-16 shrink-0 text-muted">
+        {line.t}
+      </span>
       <span
         className={cn(
-          "w-14 uppercase tracking-widest text-[10px]",
+          "w-14 shrink-0 uppercase tracking-widest text-[10px]",
           levelColor[line.level],
         )}
       >
         {line.level}
       </span>
-      <span className="flex-1 text-text/90 leading-5">{line.msg}</span>
+      <span className="flex-1 min-w-0 break-words text-text/90 leading-5">
+        {line.msg}
+      </span>
     </div>
   );
 });
@@ -373,18 +381,22 @@ function TracePageInner() {
             </div>
             <div
               ref={containerRef}
-              className="font-mono text-xs p-5 h-[540px] overflow-y-auto space-y-1.5 bg-[#060010]"
+              className="font-mono text-xs p-4 sm:p-5 h-[540px] overflow-y-auto space-y-1.5 bg-[#060010]"
             >
               {visible.map((line, i) => (
                 <TraceRow key={i} line={line} />
               ))}
               {taskId && !done && !streamError && (
-                <div className="flex gap-3 animate-pulse">
-                  <span className="w-16 text-muted">…</span>
-                  <span className="w-14 text-violet uppercase tracking-widest text-[10px]">
+                <div className="flex gap-2 sm:gap-3 animate-pulse">
+                  <span className="hidden sm:inline w-16 shrink-0 text-muted">
+                    …
+                  </span>
+                  <span className="w-14 shrink-0 text-violet uppercase tracking-widest text-[10px]">
                     wait
                   </span>
-                  <span className="flex-1 text-muted">awaiting next step…</span>
+                  <span className="flex-1 min-w-0 text-muted">
+                    awaiting next step…
+                  </span>
                 </div>
               )}
               {taskId && streamError && (
