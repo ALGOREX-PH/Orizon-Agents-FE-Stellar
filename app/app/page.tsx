@@ -10,6 +10,15 @@ import type { Overview, Task } from "@/lib/types";
 import { focusRing } from "@/lib/ui";
 import { usePolling } from "@/lib/use-polling";
 
+// Tile labels are static, so they render while the payload is loading and
+// stay put when it fails — only the value slot swaps to a failed state.
+const METRIC_KEYS = [
+  "Agents online",
+  "Tasks / s",
+  "Avg completion",
+  "Avg trust",
+] as const;
+
 const statusTone: Record<
   Task["status"],
   "cyan" | "violet" | "muted" | "magenta"
@@ -141,35 +150,43 @@ export default function OverviewPage() {
       )}
 
       <div className="grid gap-4 md:grid-cols-4">
-        {(overview ? metrics : [0, 1, 2, 3]).map((metric, i) =>
-          typeof metric === "number" ? (
-            <Card key={i}>
-              <Skeleton className="h-3 w-24 mb-4" />
-              <Skeleton className="h-8 w-16" />
+        {!overview &&
+          METRIC_KEYS.map((k) => (
+            <Card key={k}>
+              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
+                {k}
+              </div>
+              {error ? (
+                <div className="font-mono text-sm text-magenta">
+                  unavailable
+                </div>
+              ) : (
+                <Skeleton className="h-8 w-16" />
+              )}
             </Card>
-          ) : (
-            <m.div
-              key={metric.k}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: i * 0.06 }}
-            >
-              <Card>
-                <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-                  {metric.k}
-                </div>
-                <div className="font-mono text-3xl neon-text">
-                  {metric.v}
-                  {metric.unit && (
-                    <span className="ml-1.5 text-base text-muted">
-                      {metric.unit}
-                    </span>
-                  )}
-                </div>
-              </Card>
-            </m.div>
-          ),
-        )}
+          ))}
+        {metrics.map((metric, i) => (
+          <m.div
+            key={metric.k}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.06 }}
+          >
+            <Card>
+              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
+                {metric.k}
+              </div>
+              <div className="font-mono text-3xl neon-text">
+                {metric.v}
+                {metric.unit && (
+                  <span className="ml-1.5 text-base text-muted">
+                    {metric.unit}
+                  </span>
+                )}
+              </div>
+            </Card>
+          </m.div>
+        ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -202,6 +219,10 @@ export default function OverviewPage() {
           </div>
           {overview ? (
             <Sparkline points={overview.throughput} />
+          ) : error ? (
+            <div className="grid h-36 place-items-center border border-dashed border-border font-mono text-[11px] text-muted">
+              throughput unavailable — backend unreachable
+            </div>
           ) : (
             <Skeleton className="h-36 w-full" />
           )}
@@ -235,8 +256,14 @@ export default function OverviewPage() {
               </div>
             ))}
             {!overview &&
-              Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-4 w-full" />
+              (error ? (
+                <p className="font-mono text-[11px] text-muted">
+                  skill mix unavailable — backend unreachable
+                </p>
+              ) : (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-4 w-full" />
+                ))
               ))}
           </div>
         </Card>
@@ -297,12 +324,23 @@ export default function OverviewPage() {
                 </tr>
               )}
               {!tasks &&
-                Array.from({ length: 4 }).map((_, i) => (
-                  <tr key={i} className="border-b border-border/50">
-                    <td colSpan={6} className="py-3">
-                      <Skeleton className="h-5 w-full" />
+                (error ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="py-10 text-center text-muted font-mono text-xs"
+                    >
+                      couldn&apos;t load recent tasks — backend unreachable.
                     </td>
                   </tr>
+                ) : (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <tr key={i} className="border-b border-border/50">
+                      <td colSpan={6} className="py-3">
+                        <Skeleton className="h-5 w-full" />
+                      </td>
+                    </tr>
+                  ))
                 ))}
             </tbody>
           </table>
