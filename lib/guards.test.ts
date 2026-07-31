@@ -385,6 +385,41 @@ describe("isArtifactResponse", () => {
     expect(isArtifactResponse({ artifact: bad })).toBe(false);
   });
 
+  it("rejects a file without a language (code viewer calls .toLowerCase)", () => {
+    const bad = {
+      ...artifact,
+      files: [{ path: "index.html", content: "<html/>" }],
+    };
+    expect(isArtifactResponse({ artifact: bad })).toBe(false);
+    const wrongType = {
+      ...artifact,
+      files: [{ path: "app.tsx", language: 42, content: "x" }],
+    };
+    expect(isArtifactResponse({ artifact: wrongType })).toBe(false);
+  });
+
+  it("rejects when any one file in the set is missing its language", () => {
+    const bad = {
+      ...artifact,
+      files: [artifact.files[0], { path: "app.js", content: "console.log(1)" }],
+    };
+    expect(isArtifactResponse({ artifact: bad })).toBe(false);
+  });
+
+  it("rejects a non-string entry or summary", () => {
+    expect(
+      isArtifactResponse({ artifact: { ...artifact, entry: ["index.html"] } }),
+    ).toBe(false);
+    expect(
+      isArtifactResponse({ artifact: { ...artifact, summary: { t: "x" } } }),
+    ).toBe(false);
+  });
+
+  it("accepts an artifact with no entry or summary (both render behind a fallback)", () => {
+    const { entry: _e, summary: _s, ...rest } = artifact;
+    expect(isArtifactResponse({ artifact: rest })).toBe(true);
+  });
+
   it("rejects non-object payloads", () => {
     expect(isArtifactResponse(null)).toBe(false);
     expect(isArtifactResponse("gateway timeout")).toBe(false);

@@ -30,6 +30,11 @@ const isNum = (v: unknown): v is number =>
 
 const isStr = (v: unknown): v is string => typeof v === "string";
 
+/** A string, or absent. For fields the UI renders behind a fallback: a wrong
+ * *type* is still rejected, a missing one is not. */
+const isOptionalStr = (v: unknown): v is string | undefined =>
+  v === undefined || v === null || isStr(v);
+
 const isNumArray = (v: unknown): v is number[] =>
   Array.isArray(v) && v.every(isNum);
 
@@ -216,14 +221,29 @@ export function isReputationParams(v: unknown): v is ReputationParams {
 }
 
 /** Artifact viewer maps `files`, sums `content.length`, renders `title` and
- * `preview_html`; `artifact` itself may legitimately be null (not sealed). */
+ * `preview_html`; `artifact` itself may legitimately be null (not sealed).
+ *
+ * This is the only validation the artifact ever gets: the backend types it as
+ * a bare `dict` (`Task.artifact`, `ArtifactResponse.artifact`), so pydantic
+ * performs no structural check and a worker's output crosses the HTTP seam
+ * verbatim. `files[].language` is therefore required here — the code viewer
+ * calls `language.toLowerCase()` and a missing one takes out the whole Trace
+ * route through the error boundary. `entry` and `summary` are required on the
+ * producing model (`CodeArtifact`, app/agents/workers/code_gen.py) but both
+ * have working render-time fallbacks, so they are only type-checked when
+ * present rather than made mandatory. */
 function isCodeArtifact(v: unknown): v is CodeArtifact {
   return (
     isRecord(v) &&
     isStr(v.title) &&
     isStr(v.preview_html) &&
+    isOptionalStr(v.entry) &&
+    isOptionalStr(v.summary) &&
     Array.isArray(v.files) &&
-    v.files.every((f) => isRecord(f) && isStr(f.path) && isStr(f.content))
+    v.files.every(
+      (f) =>
+        isRecord(f) && isStr(f.path) && isStr(f.content) && isStr(f.language),
+    )
   );
 }
 
