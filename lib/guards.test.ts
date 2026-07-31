@@ -236,6 +236,44 @@ describe("isReputationBatch", () => {
   it("rejects a batch without a numeric floor_bps", () => {
     expect(isReputationBatch({ ...valid, floor_bps: undefined })).toBe(false);
   });
+
+  it("rejects a non-numeric disputed count (sorted on, NaN scrambles order)", () => {
+    const bad = { ...rep, disputed: "0" };
+    expect(isReputationBatch({ ...valid, reputations: { agt_01: bad } })).toBe(
+      false,
+    );
+    const { disputed: _drop, ...missing } = rep;
+    expect(
+      isReputationBatch({ ...valid, reputations: { agt_01: missing } }),
+    ).toBe(false);
+  });
+
+  it("rejects a missing avg_bps", () => {
+    const { avg_bps: _drop, ...missing } = rep;
+    expect(
+      isReputationBatch({ ...valid, reputations: { agt_01: missing } }),
+    ).toBe(false);
+  });
+
+  it("rejects a source outside the backend literal", () => {
+    expect(
+      isReputationBatch({
+        ...valid,
+        reputations: { agt_01: { ...rep, source: "cached" } },
+      }),
+    ).toBe(false);
+    const { source: _drop, ...missing } = rep;
+    expect(
+      isReputationBatch({ ...valid, reputations: { agt_01: missing } }),
+    ).toBe(false);
+  });
+
+  it("accepts an on-chain sourced entry", () => {
+    const onchain = { ...rep, source: "onchain", disputed: 2, avg_bps: 8100 };
+    expect(
+      isReputationBatch({ ...valid, reputations: { agt_01: onchain } }),
+    ).toBe(true);
+  });
 });
 
 describe("isReputationParams", () => {

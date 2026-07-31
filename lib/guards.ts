@@ -127,8 +127,17 @@ export function isDecomposeResponse(v: unknown): v is DecomposeResponse {
   );
 }
 
+/** Backend `ReputationInfo.source` literal (`app/routers/stellar.py`). The
+ * leaderboard branches on it to decide whether a row shows on-chain evidence
+ * or the seeded prior, so an unlisted value would present prior data as
+ * measured. */
+const REPUTATION_SOURCES = new Set(["onchain", "prior"]);
+
 /** Reputation pages: `reputations` values feed bps→score math, evidence sums
- * (`weight`), counts and dispute rates; `floor_bps` feeds the floor badge. */
+ * (`weight`), counts and dispute rates; `floor_bps` feeds the floor badge.
+ * `disputed` is also a sort comparator (`sortValue.disputes`) — a non-number
+ * makes every comparison NaN and silently scrambles row order — and `avg_bps`
+ * is the unsmoothed on-chain mean. All required on the backend model. */
 export function isReputationBatch(v: unknown): v is ReputationBatch {
   return (
     isRecord(v) &&
@@ -140,9 +149,13 @@ export function isReputationBatch(v: unknown): v is ReputationBatch {
         isRecord(r) &&
         isNum(r.smoothed_bps) &&
         isNum(r.lower_bound_bps) &&
+        isNum(r.avg_bps) &&
         isNum(r.count) &&
         isNum(r.weight) &&
-        isNum(r.dispute_rate_bps),
+        isNum(r.disputed) &&
+        isNum(r.dispute_rate_bps) &&
+        isStr(r.source) &&
+        REPUTATION_SOURCES.has(r.source),
     )
   );
 }
