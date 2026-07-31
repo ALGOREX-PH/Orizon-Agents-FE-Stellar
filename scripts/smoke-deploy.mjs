@@ -111,8 +111,8 @@ async function main() {
   // Absorb a cold start before timing anything, and fail fast if the origin
   // itself is unreachable.
   try {
-    const { res, ms } = await fetchJson("/api/agents", WARMUP_TIMEOUT_MS);
-    console.log(`  warmup /api/agents → ${res.status} in ${ms}ms`);
+    const { res, ms } = await fetchJson("/api/health", WARMUP_TIMEOUT_MS);
+    console.log(`  warmup /api/health → ${res.status} in ${ms}ms`);
   } catch (err) {
     console.error(
       `  warmup failed: ${err instanceof Error ? err.message : err}`,
