@@ -273,7 +273,11 @@ export default function OverviewPage() {
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold">Recent tasks</h2>
           <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-            {tasks ? `${tasks.length} tracked` : "loading…"}
+            {tasks
+              ? `${tasks.length} tracked`
+              : error
+                ? "unavailable"
+                : "loading…"}
           </span>
         </div>
         <div className="overflow-x-auto">
