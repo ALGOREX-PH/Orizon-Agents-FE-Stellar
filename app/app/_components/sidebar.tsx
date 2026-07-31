@@ -275,8 +275,14 @@ export function Sidebar() {
   const pathname = usePathname();
   const { open, setOpen } = useMobileNav();
   const asideRef = useRef<HTMLElement>(null);
+  // The sidebar rides along on every console route, so a one-shot fetch would
+  // freeze these counters at their first-mount values for the whole session.
+  // Revalidating on focus refreshes them when the operator comes back to the
+  // tab without adding a second poller alongside the Overview page's.
   // Errors are ignored: the static fallback copy stays if metrics are unreachable.
-  const { data: overview } = useFetch(getOverview, []);
+  const { data: overview } = useFetch(getOverview, [], {
+    revalidateOnFocus: true,
+  });
 
   // Mobile drawer: Escape closes, body scroll locks, focus moves into the
   // drawer and returns to the opener (hamburger) on close.
