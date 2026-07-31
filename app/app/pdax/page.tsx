@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ErrorNote } from "@/components/ui/error-note";
 import { LoadingStatus, Skeleton } from "@/components/ui/skeleton";
+import { StaleBadge } from "@/components/ui/stale-badge";
 import { getPdaxBalances, getPdaxEnvironment, getPdaxHealth } from "@/lib/pdax";
 import { useFetch } from "@/lib/use-fetch";
 import { RampPanel } from "./_components/ramp-panel";
@@ -24,6 +25,7 @@ export default function PdaxPage() {
     error: healthError,
     loading: healthLoading,
     retrying: healthRetrying,
+    lastSuccessAt: healthLastSuccessAt,
     reload: reloadHealth,
   } = useFetch(getPdaxHealth, []);
   const healthDown = healthError !== null;
@@ -35,6 +37,7 @@ export default function PdaxPage() {
     error: balError,
     loading: loadingBal,
     retrying: balRetrying,
+    lastSuccessAt: balLastSuccessAt,
     reload: reloadBalances,
   } = useFetch(async () => (await getPdaxBalances()).balances, []);
 
@@ -124,6 +127,15 @@ export default function PdaxPage() {
                 {health.status}
               </Badge>
             )}
+            {/* A failed re-check leaves the last verdict on screen — a green
+                "ok" pulsing next to a venue we have since lost contact with
+                is the worst kind of frozen value, because its whole purpose
+                is to say the venue is reachable right now. */}
+            <StaleBadge
+              lastSuccessAt={healthLastSuccessAt}
+              stale={healthError !== null}
+              what="the PDAX health status"
+            />
             {healthDown && !health && (
               <Badge tone="magenta" dot>
                 health unreachable
@@ -157,8 +169,20 @@ export default function PdaxPage() {
 
       <Card>
         <div className="flex items-center justify-between">
-          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted">
-            balances
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted">
+              balances
+            </div>
+            {/* Money that stopped refreshing. `useFetch` keeps the last good
+                rows through a failed reload, so without this the amounts
+                below read as the account's current position. Hidden when
+                nothing ever loaded — that is the "Balances unavailable" copy
+                and the banner above, not staleness. */}
+            <StaleBadge
+              lastSuccessAt={balLastSuccessAt}
+              stale={balError !== null}
+              what="the PDAX balances"
+            />
           </div>
           <Button
             size="sm"
