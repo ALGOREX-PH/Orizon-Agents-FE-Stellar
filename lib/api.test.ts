@@ -26,6 +26,7 @@ import {
   openTraceStream,
 } from "./api";
 import { rememberTaskToken } from "./task-tokens";
+import type { TraceLine } from "./types";
 
 type FetchMockResponse = {
   ok: boolean;
@@ -676,5 +677,147 @@ describe("task read tokens", () => {
 
     expect(FakeEventSource.urls).toEqual(["/api/trace/tsk_plain/stream"]);
     dispose();
+  });
+});
+
+/**
+ * Richer than the URL-only stub above: the suites below drive the whole
+ * connection lifecycle (open / trace / done / error) that openTraceStream
+ * reacts to.
+ */
+class StubEventSource {
+  static instances: StubEventSource[] = [];
+  url: string;
+  closed = false;
+  private listeners = new Map<string, Array<(e: MessageEvent) => void>>();
+
+  constructor(url: string) {
+    this.url = url;
+    StubEventSource.instances.push(this);
+  }
+
+  addEventListener(type: string, cb: (e: MessageEvent) => void): void {
+    const arr = this.listeners.get(type) ?? [];
+    arr.push(cb);
+    this.listeners.set(type, arr);
+  }
+
+  close(): void {
+    this.closed = true;
+  }
+
+  emit(type: string, data?: unknown): void {
+    for (const cb of this.listeners.get(type) ?? []) {
+      cb({ data: JSON.stringify(data) } as MessageEvent);
+    }
+  }
+
+  static last(): StubEventSource {
+    return StubEventSource.instances[StubEventSource.instances.length - 1];
+  }
+}
+
+const traceLine = (t: string, msg: string): TraceLine => ({
+  t,
+  level: "cost",
+  msg,
+});
+
+function useStubEventSource() {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    StubEventSource.instances = [];
+    vi.stubGlobal("EventSource", StubEventSource);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    // Hand the module-level stub back to the token tests above.
+    vi.stubGlobal("EventSource", FakeEventSource);
+  });
+}
+
+describe("openTraceStream reconnect budget", () => {
+  useStubEventSource();
+
+  // A free-form workflow streams for minutes. A budget that never reset
+  // declared such a run dead on its third transport hiccup — while it was
+  // still executing, and still charging.
+  it("refreshes the budget after every connection that carried lines", async () => {
+    const lines: TraceLine[] = [];
+    const onError = vi.fn();
+    const dispose = openTraceStream(
+      "tsk_long",
+      (l) => lines.push(l),
+      undefined,
+      onError,
+      () => {
+        lines.length = 0;
+      },
+    );
+
+    // Six outages — twice the old whole-stream budget of three.
+    for (let i = 0; i < 6; i += 1) {
+      const es = StubEventSource.last();
+      es.emit("open");
+      es.emit("trace", traceLine(`${i}.0`, `step ${i} — 0.010 USDC`));
+      es.emit("error");
+      await vi.advanceTimersByTimeAsync(1_000);
+    }
+
+    expect(StubEventSource.instances).toHaveLength(7);
+    expect(onError).not.toHaveBeenCalled();
+    expect(lines).toHaveLength(0); // consumer cleared on the last reset
+    dispose();
+  });
+
+  // Silence is not failure — steps can take 120s — so simply holding the
+  // connection counts as working.
+  it("refreshes the budget after a connection that merely stayed up", async () => {
+    const dispose = openTraceStream("tsk_quiet", () => {});
+
+    for (let i = 0; i < 5; i += 1) {
+      const es = StubEventSource.last();
+      es.emit("open");
+      await vi.advanceTimersByTimeAsync(20_000); // two keepalive windows
+      es.emit("ping");
+      es.emit("error");
+      await vi.advanceTimersByTimeAsync(1_000);
+    }
+
+    expect(StubEventSource.instances).toHaveLength(6);
+    dispose();
+  });
+
+  it("does not refresh the budget for a connection that dies on open", async () => {
+    const dispose = openTraceStream("tsk_flap", () => {});
+
+    for (const delay of [1_000, 2_000, 4_000, 1_000]) {
+      const es = StubEventSource.last();
+      es.emit("open");
+      es.emit("error");
+      await vi.advanceTimersByTimeAsync(delay);
+    }
+
+    // Three reconnects, then no more sockets: the flap does not loop.
+    expect(StubEventSource.instances).toHaveLength(4);
+    dispose();
+  });
+
+  it("closes the socket and reconnects no further once disposed", async () => {
+    const onReset = vi.fn();
+    const dispose = openTraceStream(
+      "tsk_gone",
+      () => {},
+      undefined,
+      undefined,
+      onReset,
+    );
+
+    StubEventSource.last().emit("error");
+    dispose();
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    expect(onReset).not.toHaveBeenCalled();
+    expect(StubEventSource.instances).toHaveLength(1);
   });
 });

@@ -382,14 +382,34 @@ export const submitSigned = (signedXdr: string) =>
     { signed_xdr: string }
   >("/stellar/submit", { signed_xdr: signedXdr });
 
+/** Consecutive failed reconnects tolerated before SSE is given up on. */
+const MAX_RECONNECTS = 3;
+const BACKOFF_MS = [1_000, 2_000, 4_000];
+/**
+ * Lifetime cap on reconnects. The per-outage budget above refreshes on every
+ * connection that actually ran, which is what keeps a 12-minute workflow
+ * alive — this is the backstop that keeps a server accepting and instantly
+ * dropping the stream from reconnecting forever.
+ */
+const MAX_TOTAL_RECONNECTS = 60;
+/**
+ * A connection that stayed up this long counts as having worked even if it
+ * carried no line: steps can take 120s, so silence is not failure.
+ */
+const STABLE_CONNECTION_MS = 5_000;
+
 /**
  * Subscribe to a live SSE trace stream.
  * Returns a disposer. onEvent is called for each trace line; onDone fires on
  * completion; onError fires if the stream drops mid-flight (falls back to
  * onDone when not provided, preserving the old behavior).
  *
- * Transient drops auto-reconnect up to 3 times (1s/2s/4s backoff) before
- * surfacing the error; once `done` arrives no reconnect is attempted.
+ * Transient drops auto-reconnect with a 1s/2s/4s backoff. The budget is per
+ * outage, not per stream: any connection that opens and carries a line (or
+ * simply holds for a few seconds) refreshes it. A free-form workflow can
+ * legitimately stream for ~12 minutes, and a monotonic counter declared such
+ * a run dead on its third transport hiccup while it was still executing —
+ * and still charging. Once `done` arrives no reconnect is attempted.
  *
  * The backend replays the full trace history to every new subscriber, so a
  * reconnect re-delivers already-seen lines. onReset fires immediately before
@@ -403,11 +423,10 @@ export function openTraceStream(
   onError?: () => void,
   onReset?: () => void,
 ): () => void {
-  const MAX_RECONNECTS = 3;
-  const BACKOFF_MS = [1_000, 2_000, 4_000];
   let es: EventSource | null = null;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
-  let attempts = 0;
+  let attempts = 0; // consecutive failures since the last working connection
+  let reconnects = 0; // lifetime total
   let settled = false; // done received, terminally errored, or disposed
 
   // EventSource cannot set headers, so the task read token (when this
@@ -415,35 +434,63 @@ export function openTraceStream(
   const token = getTaskToken(taskId);
   const query = token ? `?token=${encodeURIComponent(token)}` : "";
 
+  const settle = (ok: boolean) => {
+    if (settled) return;
+    settled = true;
+    es?.close();
+    if (ok) onDone?.();
+    else (onError ?? onDone)?.();
+  };
+
   const connect = () => {
-    es = new EventSource(`${base}/trace/${taskId}/stream${query}`);
-    es.addEventListener("trace", (e) => {
+    const source = new EventSource(`${base}/trace/${taskId}/stream${query}`);
+    es = source;
+    let openedAt: number | null = null;
+    let carried = 0;
+
+    // `open` is the real signal, but any event proves the connection is
+    // live — including the backend's 15s keepalive ping.
+    const established = () => {
+      if (openedAt === null) openedAt = Date.now();
+    };
+
+    source.addEventListener("open", established);
+    source.addEventListener("ping", established);
+    source.addEventListener("trace", (e) => {
+      established();
       try {
         const line = JSON.parse((e as MessageEvent).data) as TraceLine;
+        carried += 1;
         onEvent(line);
       } catch {
         /* ignore */
       }
     });
-    es.addEventListener("done", () => {
-      settled = true;
-      es?.close();
-      onDone?.();
+    source.addEventListener("done", () => {
+      established();
+      settle(true);
     });
-    es.addEventListener("error", () => {
-      es?.close();
+    source.addEventListener("error", () => {
+      source.close();
       if (settled) return;
-      if (attempts < MAX_RECONNECTS) {
-        const delay = BACKOFF_MS[attempts];
+      // A connection that did its job earns a fresh budget; one that opened
+      // and died on the spot does not, or a flapping backend would be
+      // reconnected against in a tight loop.
+      const worked =
+        openedAt !== null &&
+        (carried > 0 || Date.now() - openedAt >= STABLE_CONNECTION_MS);
+      if (worked) attempts = 0;
+      if (attempts < MAX_RECONNECTS && reconnects < MAX_TOTAL_RECONNECTS) {
+        const delay = BACKOFF_MS[Math.min(attempts, BACKOFF_MS.length - 1)];
         attempts += 1;
+        reconnects += 1;
         retryTimer = setTimeout(() => {
           retryTimer = null;
           onReset?.();
           connect();
         }, delay);
       } else {
-        settled = true;
-        (onError ?? onDone)?.();
+        settle(false);
       }
     });
   };
