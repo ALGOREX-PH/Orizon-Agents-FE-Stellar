@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ErrorNote } from "@/components/ui/error-note";
 import { LoadingStatus, Skeleton } from "@/components/ui/skeleton";
+import { StaleBadge } from "@/components/ui/stale-badge";
 import { ReputationBadge } from "@/components/ui/reputation-badge";
 import { listAgents, listReputation } from "@/lib/api";
 import { focusRing } from "@/lib/ui";
@@ -24,6 +25,7 @@ export default function AgentsPage() {
     error,
     loading,
     retrying,
+    lastSuccessAt,
     reload: reloadAgents,
   } = useFetch(listAgents, [], {
     revalidateOnFocus: true,
@@ -144,6 +146,14 @@ export default function AgentsPage() {
               </button>
             ))}
           </div>
+          {/* Rendered only once a registry has actually been fetched — the
+              hook drops `lastSuccessAt` with the data it dates, so a first
+              load that never landed shows the error frame alone. */}
+          <StaleBadge
+            stale={Boolean(error)}
+            lastSuccessAt={lastSuccessAt}
+            what="agent registry"
+          />
         </div>
 
         {/* `retrying` covers the gaps *between* automatic attempts, when the
