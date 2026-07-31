@@ -16,8 +16,14 @@ export default function PdaxPage() {
     data: env,
     error: envError,
     loading: envLoading,
+    reload: reloadEnv,
   } = useFetch(getPdaxEnvironment, []);
-  const { data: health, error: healthError } = useFetch(getPdaxHealth, []);
+  const {
+    data: health,
+    error: healthError,
+    loading: healthLoading,
+    reload: reloadHealth,
+  } = useFetch(getPdaxHealth, []);
   const healthDown = healthError !== null;
 
   // Balances auto-load on mount; `reload` backs the manual refresh button.
@@ -33,13 +39,35 @@ export default function PdaxPage() {
   // precedence-ordered banner used to swallow the others, and the health
   // failure was never shown at all — it only flipped a badge, so a backend
   // returning 404 read as a vague "unreachable" with no reason attached.
-  const failures: { label: string; message: string }[] = [];
+  // Each banner retries only the call that failed — these three fetches are
+  // independent, so a one-off failure should not force a full page reload.
+  const failures: {
+    label: string;
+    message: string;
+    retry: () => void;
+    retrying: boolean;
+  }[] = [];
   if (envError !== null)
-    failures.push({ label: "environment", message: envError });
+    failures.push({
+      label: "environment",
+      message: envError,
+      retry: reloadEnv,
+      retrying: envLoading,
+    });
   if (healthError !== null)
-    failures.push({ label: "health", message: healthError });
+    failures.push({
+      label: "health",
+      message: healthError,
+      retry: reloadHealth,
+      retrying: healthLoading,
+    });
   if (balError !== null)
-    failures.push({ label: "balances", message: balError });
+    failures.push({
+      label: "balances",
+      message: balError,
+      retry: reloadBalances,
+      retrying: loadingBal,
+    });
 
   return (
     <div className="space-y-6">
@@ -51,7 +79,12 @@ export default function PdaxPage() {
       </div>
 
       {failures.map((f) => (
-        <ErrorNote key={f.label} className="bg-magenta/10">
+        <ErrorNote
+          key={f.label}
+          className="bg-magenta/10"
+          onRetry={f.retry}
+          retrying={f.retrying}
+        >
           {f.label} — {f.message}
         </ErrorNote>
       ))}
