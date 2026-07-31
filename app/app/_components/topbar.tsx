@@ -35,6 +35,8 @@ export function Topbar() {
     connected,
     xlmBalance,
     balanceLoading,
+    balanceError,
+    refreshBalance,
     walletNetwork,
     walletNetworkMismatch,
   } = useWallet();
@@ -71,22 +73,44 @@ export function Topbar() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
-          {connected && (
-            <div
-              className="hidden sm:flex clip-cyber-sm border border-cyan/40 bg-cyan/5 h-8 px-3 items-center gap-2 font-mono text-[11px] text-cyan"
-              title={`native XLM balance · ${NETWORK_LABEL}`}
-            >
-              <span className="opacity-60">◈</span>
-              <span className="text-text">
-                {balanceLoading && xlmBalance === null
-                  ? "…"
-                  : fmtXlm(xlmBalance)}
-              </span>
-              <span className="opacity-70 uppercase tracking-[0.22em] text-[9px]">
-                xlm
-              </span>
-            </div>
-          )}
+          {connected &&
+            // A failed balance fetch used to render the same quiet "—" as a
+            // balance that simply hadn't loaded. Say it failed, and make the
+            // chip the retry control.
+            (balanceError ? (
+              <button
+                type="button"
+                onClick={() => void refreshBalance()}
+                disabled={balanceLoading}
+                title={`native XLM balance unavailable — ${balanceError}`}
+                aria-label={`XLM balance unavailable — ${balanceError}. Retry`}
+                className={`hidden sm:flex clip-cyber-sm border border-magenta/40 bg-magenta/5 h-8 px-3 items-center gap-2 font-mono text-[11px] text-magenta hover:bg-magenta/10 disabled:opacity-50 transition ${focusRing}`}
+              >
+                <span aria-hidden>⚠</span>
+                <span>{balanceLoading ? "retrying…" : "balance n/a"}</span>
+                <span
+                  aria-hidden
+                  className="opacity-70 uppercase tracking-[0.22em] text-[9px]"
+                >
+                  ↻
+                </span>
+              </button>
+            ) : (
+              <div
+                className="hidden sm:flex clip-cyber-sm border border-cyan/40 bg-cyan/5 h-8 px-3 items-center gap-2 font-mono text-[11px] text-cyan"
+                title={`native XLM balance · ${NETWORK_LABEL}`}
+              >
+                <span className="opacity-60">◈</span>
+                <span className="text-text">
+                  {balanceLoading && xlmBalance === null
+                    ? "…"
+                    : fmtXlm(xlmBalance)}
+                </span>
+                <span className="opacity-70 uppercase tracking-[0.22em] text-[9px]">
+                  xlm
+                </span>
+              </div>
+            ))}
           <ConnectWallet />
           <Badge tone="success" dot>
             live
