@@ -6,6 +6,7 @@ import {
   defaultExplorerNetwork,
 } from "@/components/ui/stellar-link";
 import type { ReputationParams } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 // deployed ledger ids — fallback until /reputation/params loads
 const FALLBACK_CONTRACT_IDS = {
@@ -78,9 +79,11 @@ export function OnchainDetails({
   error?: string | null;
   onRetry?: () => void;
 }) {
-  const contractId = params?.contract_id
-    ? params.contract_id
-    : FALLBACK_CONTRACT_ID;
+  // A hardcoded id is a guess about the chain, not a reading of it: the
+  // backend may be pointed at a redeployed ledger. Rendered as "unverified"
+  // so a stale constant is never mistaken for on-chain truth.
+  const verified = Boolean(params?.contract_id);
+  const contractId = params?.contract_id ?? FALLBACK_CONTRACT_ID;
   const network = params?.network ?? defaultExplorerNetwork;
   const constants = [
     {
@@ -112,14 +115,36 @@ export function OnchainDetails({
           ReputationLedger v2
         </h2>
         <span
-          title={contractId}
-          aria-label={contractId}
-          className="clip-cyber-sm border border-border bg-bg/60 px-2 py-0.5 font-mono text-[10px] tracking-widest text-muted"
+          title={
+            verified
+              ? contractId
+              : `${contractId} — hardcoded fallback, not confirmed by the backend`
+          }
+          aria-label={
+            verified
+              ? contractId
+              : `${contractId}, unverified fallback contract id`
+          }
+          className={cn(
+            "clip-cyber-sm border px-2 py-0.5 font-mono text-[10px] tracking-widest",
+            verified
+              ? "border-border bg-bg/60 text-muted"
+              : "border-magenta/40 bg-magenta/5 text-magenta",
+          )}
         >
           {contractId.slice(0, 8)}…{contractId.slice(-4)}
         </span>
+        {!verified && <Badge tone="magenta">unverified</Badge>}
         <StellarExpertLink kind="contract" id={contractId} network={network} />
       </div>
+
+      {!verified && (
+        <p className="mt-2 font-mono text-[10px] text-magenta">
+          contract id not confirmed by the backend — showing the build-time
+          fallback for {defaultExplorerNetwork}. Verify on-chain before trusting
+          it.
+        </p>
+      )}
 
       <div className="mt-5 overflow-x-auto">
         <table className="w-full text-sm">
