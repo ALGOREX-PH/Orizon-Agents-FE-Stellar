@@ -3,8 +3,12 @@
  *
  * `get` and `post` are module-private, so they are exercised through the
  * thinnest exported wrappers: `listAgents` (get) and `decompose` (post).
- * `globalThis.fetch` is stubbed — no network, no DOM. The SSE helper
- * `openTraceStream` needs EventSource (DOM) and is deliberately untested here.
+ * `globalThis.fetch` is stubbed — no network, no DOM. `openTraceStream` is
+ * covered too: EventSource is stubbed with a class the tests drive through
+ * the whole connection lifecycle, so the reconnect budget, the connect
+ * deadline, the history handoff and the polling fallback are all exercised
+ * without a browser. (lib/trace-stream.test.ts covers the onReset contract
+ * from a consumer's point of view.)
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,6 +17,7 @@ import {
   GET_DEDUPE_MS,
   GET_TIMEOUT_MS,
   STREAM_CONNECT_TIMEOUT_MS,
+  TRACE_POLL_MS,
   clearGetCache,
   decompose,
   execute,
@@ -879,11 +884,12 @@ describe("openTraceStream history handoff", () => {
     dispose();
   });
 
-  // The backend keeps traces in memory only: a restart 404s every reconnect,
-  // and nothing re-fetches what was already rendered.
-  it("keeps the rendered history when the reconnects never land", async () => {
+  // The backend keeps traces in memory only: a restart 404s every reconnect
+  // and the polling fallback alike, and nothing re-fetches what was rendered.
+  it("keeps the rendered history when nothing can be recovered", async () => {
     const { state, onEvent, onReset } = deferredConsumer();
     const onError = vi.fn();
+    fetchMock.mockRejectedValue(new Error("GET /trace/tsk_restart → 404"));
     const dispose = openTraceStream(
       "tsk_restart",
       onEvent,
@@ -898,7 +904,7 @@ describe("openTraceStream history handoff", () => {
     first.emit("trace", traceLine("0.2", "0.020 USDC"));
 
     // Every reconnect answers 404 — EventSource reports that as `error`.
-    for (const delay of [1_000, 2_000, 4_000, 1_000]) {
+    for (const delay of [1_000, 2_000, 4_000, TRACE_POLL_MS * 3]) {
       StubEventSource.last().emit("error");
       await vi.advanceTimersByTimeAsync(delay);
     }
@@ -906,6 +912,214 @@ describe("openTraceStream history handoff", () => {
     expect(onError).toHaveBeenCalledTimes(1);
     expect(state.lines.map((l) => l.msg)).toEqual(["0.010 USDC", "0.020 USDC"]);
     dispose();
+  });
+});
+
+describe("openTraceStream polling fallback", () => {
+  useStubEventSource();
+
+  /** Serves the history endpoint and the task-status endpoint separately. */
+  function serve(history: () => TraceLine[], status: () => string) {
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url.startsWith("/api/trace/")
+          ? jsonResponse(200, history())
+          : jsonResponse(200, { id: "t", status: status() }),
+      ),
+    );
+  }
+
+  /** Burns the reconnect budget: 3 retries, then the handover. */
+  async function exhaustReconnects() {
+    for (const delay of [1_000, 2_000, 4_000, 0]) {
+      StubEventSource.last().emit("error");
+      await vi.advanceTimersByTimeAsync(delay);
+    }
+  }
+
+  it("polls the history endpoint when the stream cannot be sustained", async () => {
+    const { state, onEvent, onReset } = deferredConsumer();
+    const onFallback = vi.fn();
+    rememberTaskToken("tsk_fb", "tok_fb");
+    serve(
+      () => [
+        traceLine("0.1", "a"),
+        traceLine("0.2", "b"),
+        traceLine("0.3", "c"),
+      ],
+      () => "running",
+    );
+
+    const dispose = openTraceStream(
+      "tsk_fb",
+      onEvent,
+      undefined,
+      undefined,
+      onReset,
+      { onFallback },
+    );
+    const first = StubEventSource.last();
+    first.emit("open");
+    first.emit("trace", traceLine("0.1", "a"));
+    first.emit("trace", traceLine("0.2", "b"));
+
+    await exhaustReconnects();
+
+    expect(onFallback).toHaveBeenCalledTimes(1);
+    expect(state.lines.map((l) => l.msg)).toEqual(["a", "b", "c"]);
+    // Reads carry the task token exactly as getTrace does.
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/trace/tsk_fb",
+      expect.objectContaining({ headers: { "X-Task-Token": "tok_fb" } }),
+    );
+    dispose();
+  });
+
+  it("re-delivers nothing a previous poll already showed", async () => {
+    const { state, onEvent, onReset } = deferredConsumer();
+    const history = [traceLine("0.1", "a"), traceLine("0.2", "b")];
+    serve(
+      () => history,
+      () => "running",
+    );
+
+    const dispose = openTraceStream(
+      "tsk_dupe",
+      onEvent,
+      undefined,
+      undefined,
+      onReset,
+    );
+    await exhaustReconnects();
+    expect(state.lines.map((l) => l.msg)).toEqual(["a", "b"]);
+
+    // Same history again: the poll must add nothing.
+    await vi.advanceTimersByTimeAsync(TRACE_POLL_MS);
+    expect(state.lines.map((l) => l.msg)).toEqual(["a", "b"]);
+
+    // Only the new tail is forwarded when it grows.
+    history.push(traceLine("0.3", "c"));
+    await vi.advanceTimersByTimeAsync(TRACE_POLL_MS);
+    expect(state.lines.map((l) => l.msg)).toEqual(["a", "b", "c"]);
+    dispose();
+  });
+
+  it("seals the run once the task reports a terminal status", async () => {
+    const onDone = vi.fn();
+    const onError = vi.fn();
+    const history = [traceLine("0.1", "a")];
+    let status = "running";
+    serve(
+      () => history,
+      () => status,
+    );
+
+    const dispose = openTraceStream("tsk_seal", () => {}, onDone, onError);
+    await exhaustReconnects();
+    expect(onDone).not.toHaveBeenCalled();
+
+    status = "complete";
+    // One tick notices the terminal status, the next confirms the trace
+    // stopped growing — the backend finalizes before its last line lands.
+    await vi.advanceTimersByTimeAsync(TRACE_POLL_MS * 2 + 10);
+
+    expect(onDone).toHaveBeenCalledTimes(1);
+    expect(onError).not.toHaveBeenCalled();
+
+    const calls = fetchMock.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(TRACE_POLL_MS * 5);
+    expect(fetchMock.mock.calls.length).toBe(calls); // no loop left running
+    dispose();
+  });
+
+  it("still delivers a line that lands after the task went terminal", async () => {
+    const lines: TraceLine[] = [];
+    const onDone = vi.fn();
+    const history = [traceLine("0.1", "a")];
+    let status = "running";
+    serve(
+      () => history,
+      () => status,
+    );
+
+    const dispose = openTraceStream("tsk_late", (l) => lines.push(l), onDone);
+    await exhaustReconnects();
+
+    status = "failed";
+    await vi.advanceTimersByTimeAsync(TRACE_POLL_MS); // notices terminal
+    history.push(traceLine("0.2", "workflow failed: boom"));
+    await vi.advanceTimersByTimeAsync(TRACE_POLL_MS); // picks the last line up
+
+    expect(lines.map((l) => l.msg)).toEqual(["a", "workflow failed: boom"]);
+    dispose();
+  });
+
+  it("gives up after repeated poll failures without erasing the run", async () => {
+    const { state, onEvent, onReset } = deferredConsumer();
+    const onError = vi.fn();
+    fetchMock.mockResolvedValue(jsonResponse(503, { detail: "backend down" }));
+
+    const dispose = openTraceStream(
+      "tsk_pollfail",
+      onEvent,
+      undefined,
+      onError,
+      onReset,
+    );
+    const first = StubEventSource.last();
+    first.emit("open");
+    first.emit("trace", traceLine("0.1", "a"));
+    await exhaustReconnects();
+
+    await vi.advanceTimersByTimeAsync(TRACE_POLL_MS * 3);
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(state.lines.map((l) => l.msg)).toEqual(["a"]);
+    dispose();
+  });
+
+  it("stops at the poll ceiling instead of polling forever", async () => {
+    const onError = vi.fn();
+    const history: TraceLine[] = [];
+    // A history that never stops growing never looks terminal — only the
+    // ceiling ends this.
+    serve(
+      () => {
+        history.push(traceLine(`${history.length}`, "tick"));
+        return history;
+      },
+      () => "running",
+    );
+
+    const dispose = openTraceStream(
+      "tsk_forever",
+      () => {},
+      undefined,
+      onError,
+    );
+    await exhaustReconnects();
+
+    await vi.advanceTimersByTimeAsync(TRACE_POLL_MS * 200);
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(100); // it did keep trying
+    expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(155); // but not forever
+    dispose();
+  });
+
+  it("stops polling when the subscription is disposed", async () => {
+    serve(
+      () => [traceLine("0.1", "a")],
+      () => "running",
+    );
+    const dispose = openTraceStream("tsk_unmount", () => {});
+    await exhaustReconnects();
+
+    dispose();
+    const calls = fetchMock.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(TRACE_POLL_MS * 10);
+
+    expect(fetchMock.mock.calls.length).toBe(calls);
   });
 });
 
@@ -946,11 +1160,13 @@ describe("openTraceStream connect deadline", () => {
 
   it("surfaces a real failure instead of hanging when no connection ever answers", async () => {
     const onError = vi.fn();
+    fetchMock.mockRejectedValue(new Error("GET /trace/tsk_dead → 404"));
     const dispose = openTraceStream("tsk_dead", () => {}, undefined, onError);
 
-    // 3 hung connects + their backoffs, then the 4th hang exhausts the budget.
+    // 3 hung connects + their backoffs, then the 4th hang exhausts the
+    // budget and hands over to polling, which 404s its way out too.
     await vi.advanceTimersByTimeAsync(
-      (STREAM_CONNECT_TIMEOUT_MS + 4_000) * 4 + 10,
+      (STREAM_CONNECT_TIMEOUT_MS + 4_000) * 4 + TRACE_POLL_MS * 3 + 10,
     );
 
     expect(StubEventSource.instances).toHaveLength(4);

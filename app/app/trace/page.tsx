@@ -76,6 +76,9 @@ function TracePageInner() {
   // what is on screen is still the last thing the backend said, but it is no
   // longer live and the badge must not claim otherwise.
   const [reconnecting, setReconnecting] = useState(false);
+  // The live stream could not be sustained and the run is now being followed
+  // by polling the recorded history instead. Degraded, but not dead.
+  const [degraded, setDegraded] = useState(false);
   // Bumping this re-runs the subscribe effect, which tears the dead stream
   // down and opens a fresh one — the manual counterpart to the 3 automatic
   // reconnects openTraceStream spends before giving up.
@@ -111,6 +114,7 @@ function TracePageInner() {
     setArtifactError(null);
     setStreamError(false);
     setReconnecting(false);
+    setDegraded(false);
     const fetchArtifact = () =>
       getArtifact(taskId)
         .then((data) => {
@@ -159,6 +163,15 @@ function TracePageInner() {
         // nothing doubles and nothing is lost if the reconnect never lands.
         pendingReplace = true;
         setReconnecting(true);
+      },
+      {
+        onFallback: () => {
+          // SSE is gone; the run is now followed by polling the recorded
+          // history. Say so — "streaming" would be a lie, and "interrupted"
+          // would be premature.
+          setReconnecting(false);
+          setDegraded(true);
+        },
       },
     );
     return () => {
@@ -276,9 +289,11 @@ function TracePageInner() {
           ? "interrupted ✕"
           : done
             ? "sealed ✓"
-            : reconnecting
-              ? "reconnecting…"
-              : "streaming…"
+            : degraded
+              ? "polling…"
+              : reconnecting
+                ? "reconnecting…"
+                : "streaming…"
         : "demo",
     ],
   ];
@@ -392,9 +407,11 @@ function TracePageInner() {
                       ? "stream interrupted"
                       : done
                         ? "sealed"
-                        : reconnecting
-                          ? "reconnecting"
-                          : "streaming"
+                        : degraded
+                          ? "polling"
+                          : reconnecting
+                            ? "reconnecting"
+                            : "streaming"
                     : "demo replay"}
                 </span>
               </div>
@@ -425,15 +442,17 @@ function TracePageInner() {
                   <span
                     className={cn(
                       "w-14 shrink-0 uppercase tracking-widest text-[10px]",
-                      reconnecting ? "text-magenta" : "text-violet",
+                      reconnecting || degraded ? "text-magenta" : "text-violet",
                     )}
                   >
-                    {reconnecting ? "conn" : "wait"}
+                    {degraded ? "poll" : reconnecting ? "conn" : "wait"}
                   </span>
                   <span className="flex-1 min-w-0 text-muted">
-                    {reconnecting
-                      ? "connection dropped — reconnecting; the lines above are the last received"
-                      : "awaiting next step…"}
+                    {degraded
+                      ? "live stream unavailable — following the recorded trace instead"
+                      : reconnecting
+                        ? "connection dropped — reconnecting; the lines above are the last received"
+                        : "awaiting next step…"}
                   </span>
                 </div>
               )}
@@ -453,14 +472,14 @@ function TracePageInner() {
                       ⚠ stream lost
                     </span>
                     <span className="mt-1.5 block text-magenta/80">
-                      the trace stream dropped and three automatic reconnects
-                      failed
+                      the trace stream dropped, the automatic reconnects failed,
+                      and reading the recorded trace directly did not recover it
+                      either
                       {visible.length === 0
-                        ? " before a single line arrived"
-                        : ` after ${visible.length} line${visible.length === 1 ? "" : "s"}`}
-                      . nothing further will arrive on this connection — the
-                      summary and attestation are incomplete until it is
-                      restored.
+                        ? " — not a single line arrived"
+                        : ` — the ${visible.length} line${visible.length === 1 ? "" : "s"} above ${visible.length === 1 ? "is" : "are"} the last received`}
+                      . nothing further will arrive on its own — the summary and
+                      attestation are incomplete until it is restored.
                     </span>
                   </ErrorNote>
                 </div>

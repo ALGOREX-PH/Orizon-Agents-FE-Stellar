@@ -408,6 +408,20 @@ const STABLE_CONNECTION_MS = 5_000;
  * connection and short enough that a dead one surfaces.
  */
 export const STREAM_CONNECT_TIMEOUT_MS = 12_000;
+/**
+ * Cadence of the history-polling fallback that takes over when SSE cannot be
+ * sustained. GET /api/trace/{id} returns exactly what the stream replays, so
+ * a user still watches their run finish when the transport will not hold.
+ */
+export const TRACE_POLL_MS = 4_000;
+/**
+ * Ceiling on fallback polls (10 minutes at the cadence above), a little past
+ * the longest a plan can legitimately run — 6 steps × 120s. Degraded mode is
+ * a rescue, not a permanent background loop.
+ */
+const MAX_TRACE_POLLS = 150;
+/** Consecutive poll rejections before the fallback gives up. */
+const MAX_POLL_FAILURES = 3;
 
 /**
  * Subscribe to a live SSE trace stream.
@@ -435,6 +449,13 @@ export const STREAM_CONNECT_TIMEOUT_MS = 12_000;
  * empty it on the spot. Emptying it eagerly loses the whole rendered run
  * whenever the reconnect then fails — the backend's traces are in-memory
  * only, so a restart answers 404 and nothing re-fetches them.
+ *
+ * When SSE cannot be sustained at all the stream does not die: it falls back
+ * to polling GET /api/trace/{id}, which serves the same history, forwarding
+ * only the lines the consumer has not been shown. `opts.onFallback` fires
+ * once when that happens so the UI can stop claiming to be live. The
+ * fallback is bounded (MAX_TRACE_POLLS) and ends on `onDone` once the task
+ * reports a terminal status.
  */
 export function openTraceStream(
   taskId: string,
@@ -442,13 +463,23 @@ export function openTraceStream(
   onDone?: () => void,
   onError?: () => void,
   onReset?: () => void,
+  opts?: { onFallback?: () => void },
 ): () => void {
   let es: EventSource | null = null;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
   let connectTimer: ReturnType<typeof setTimeout> | null = null;
+  let pollTimer: ReturnType<typeof setTimeout> | null = null;
   let attempts = 0; // consecutive failures since the last working connection
   let reconnects = 0; // lifetime total
   let settled = false; // done received, terminally errored, or disposed
+  // How much of the task's history the consumer has been shown, in history
+  // positions. Reset in lockstep with onReset, so the polling fallback knows
+  // exactly which tail is still unseen.
+  let delivered = 0;
+  let polling = false;
+  let polls = 0;
+  let pollFailures = 0;
+  let terminalSeen = false;
 
   // EventSource cannot set headers, so the task read token (when this
   // session holds one) rides along as a query param instead.
@@ -464,9 +495,106 @@ export function openTraceStream(
     if (settled) return;
     settled = true;
     clearConnectTimer();
+    if (pollTimer !== null) clearTimeout(pollTimer);
+    pollTimer = null;
     es?.close();
     if (ok) onDone?.();
     else (onError ?? onDone)?.();
+  };
+
+  // The history endpoint is untyped on the wire; a junk row must not reach
+  // the renderer as `undefined.level`.
+  const isTraceLine = (v: unknown): v is TraceLine =>
+    typeof v === "object" &&
+    v !== null &&
+    typeof (v as TraceLine).t === "string" &&
+    typeof (v as TraceLine).level === "string" &&
+    typeof (v as TraceLine).msg === "string";
+
+  /**
+   * Forwards only the part of the history the consumer has not seen.
+   * Returns whether anything new arrived.
+   */
+  const drain = (history: unknown): boolean => {
+    const rows = Array.isArray(history) ? (history as unknown[]) : [];
+    if (rows.length < delivered) {
+      // Shorter than what was already shown: this is a different history
+      // (the backend restarted). Supersede it rather than interleave two.
+      onReset?.();
+      delivered = 0;
+    }
+    let grew = false;
+    for (let i = delivered; i < rows.length; i += 1) {
+      const row = rows[i];
+      delivered = i + 1;
+      if (!isTraceLine(row)) continue;
+      onEvent(row);
+      grew = true;
+    }
+    return grew;
+  };
+
+  /**
+   * The history endpoint cannot say whether the run ended, so the task's own
+   * status answers that — asked only on a tick that delivered nothing, so a
+   * live run still costs one request per tick, not two.
+   */
+  const taskFinished = async (): Promise<boolean> => {
+    try {
+      const task = await get<{ status?: unknown }>(
+        `/tasks/${taskId}`,
+        undefined,
+        taskAuthHeaders(taskId),
+      );
+      return task?.status === "complete" || task?.status === "failed";
+    } catch {
+      return false;
+    }
+  };
+
+  const poll = async (): Promise<void> => {
+    if (settled) return;
+    polls += 1;
+    try {
+      const history = await getTrace(taskId);
+      if (settled) return;
+      pollFailures = 0;
+      if (drain(history)) {
+        terminalSeen = false;
+      } else if (terminalSeen) {
+        // Confirmed twice: the trace stopped growing and the task is
+        // terminal. A single check could seal the run one line early —
+        // the backend finalizes the task before emitting its last line.
+        settle(true);
+        return;
+      } else if (await taskFinished()) {
+        terminalSeen = true;
+      }
+      if (settled) return;
+    } catch {
+      if (settled) return;
+      pollFailures += 1;
+      if (pollFailures >= MAX_POLL_FAILURES) {
+        settle(false);
+        return;
+      }
+    }
+    if (polls >= MAX_TRACE_POLLS) {
+      settle(false);
+      return;
+    }
+    pollTimer = setTimeout(() => {
+      pollTimer = null;
+      void poll();
+    }, TRACE_POLL_MS);
+  };
+
+  /** SSE is unusable — keep the run visible over the history endpoint. */
+  const startPolling = () => {
+    if (settled || polling) return;
+    polling = true;
+    opts?.onFallback?.();
+    void poll();
   };
 
   const connect = () => {
@@ -505,10 +633,11 @@ export function openTraceStream(
         retryTimer = setTimeout(() => {
           retryTimer = null;
           onReset?.();
+          delivered = 0; // the replacement replays from the top
           connect();
         }, delay);
       } else {
-        settle(false);
+        startPolling();
       }
     };
 
@@ -524,10 +653,12 @@ export function openTraceStream(
     source.addEventListener("ping", established);
     source.addEventListener("trace", (e) => {
       established();
+      // Counted whether or not it parses: these are history positions, and
+      // the fallback resumes from the position, not from what rendered.
+      carried += 1;
+      delivered += 1;
       try {
-        const line = JSON.parse((e as MessageEvent).data) as TraceLine;
-        carried += 1;
-        onEvent(line);
+        onEvent(JSON.parse((e as MessageEvent).data) as TraceLine);
       } catch {
         /* ignore */
       }
@@ -545,6 +676,8 @@ export function openTraceStream(
     settled = true;
     if (retryTimer !== null) clearTimeout(retryTimer);
     retryTimer = null;
+    if (pollTimer !== null) clearTimeout(pollTimer);
+    pollTimer = null;
     clearConnectTimer();
     es?.close();
   };
