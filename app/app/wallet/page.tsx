@@ -58,6 +58,10 @@ export default function WalletPage() {
   // this build's configured network when the wallet didn't report one.
   const sessionNetwork = walletNetwork ?? network;
 
+  // Never keep claiming a deploy we could not read — an ellipsis here read as
+  // "still loading" for the whole outage.
+  const deployLabel = info ? info.network : error ? "unreachable" : "…";
+
   // A failed fetch leaves the balance unknown — it must never render as a
   // plain dash next to the number, which reads as "nothing here" instead of
   // "we could not ask Horizon".
@@ -188,10 +192,7 @@ export default function WalletPage() {
         <Card>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-violet-readable">
-              {/* Never keep claiming a deploy we could not read — an ellipsis
-                  here read as "still loading" for the whole outage. */}
-              Orizon deploy ({info ? info.network : error ? "unreachable" : "…"}
-              )
+              Orizon deploy ({deployLabel})
             </div>
             {/* The rows below survive a failed reload, so date them. Nothing
                 renders before the first success — that state is a failure,
