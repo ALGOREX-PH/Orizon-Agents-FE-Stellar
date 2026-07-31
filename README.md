@@ -428,6 +428,12 @@ The repo ships a `vercel.json` that proxies `/api/*` to the Render backend.
    | ---------------------- | ------------------------------------- |
    | `NEXT_PUBLIC_API_BASE` | `https://<your-backend>.onrender.com` |
 
+   It must be a **bare origin** — no trailing slash, no `/api` suffix. The
+   rewrite in `next.config.mjs` appends `/api/:path*` itself, so a value like
+   `https://…/api` would proxy to `/api/api/...` and 404 every call.
+   `lib/api-base.mjs` normalizes both mistakes and rejects values that can
+   never work, so a bad one fails the build instead of shipping a dead console.
+
 5. Click **Deploy**. ~1 minute build → `https://<your-project>.vercel.app`.
 6. Edit `vercel.json`'s `destination` to match your Render URL — commit + push to finalize.
 7. On the backend (Render), set `CORS_ORIGINS` to your Vercel URL. Preview URLs (`*.vercel.app`) are accepted via regex.
