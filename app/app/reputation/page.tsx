@@ -25,6 +25,7 @@ export default function ReputationPage() {
     data: batch,
     error: batchError,
     loading: batchLoading,
+    reload: reloadBatch,
   } = useFetch(listReputation, [], { revalidateOnFocus: true });
   // Static config — the calculator and ledger card fall back to defaults.
   const { data: params } = useFetch(getReputationParams, [], {
@@ -42,7 +43,12 @@ export default function ReputationPage() {
         </p>
       </div>
 
-      <RepStats batch={batch} loading={batchLoading} />
+      <RepStats
+        batch={batch}
+        loading={batchLoading}
+        error={batchError}
+        onRetry={reloadBatch}
+      />
 
       <section aria-labelledby="rep-leaderboard-heading" className="space-y-4">
         <div>
