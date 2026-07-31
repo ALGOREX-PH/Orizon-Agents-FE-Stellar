@@ -213,6 +213,13 @@ describe("isDecomposeResponse", () => {
     const step = { agent_id: "agt_01", est_eta_seconds: 4.5 };
     expect(isDecomposeResponse({ ...valid, steps: [step] })).toBe(false);
   });
+
+  it("rejects a step whose rationale is missing or not a string", () => {
+    const { rationale: _drop, ...missing } = valid.steps[0];
+    expect(isDecomposeResponse({ ...valid, steps: [missing] })).toBe(false);
+    const objectish = { ...valid.steps[0], rationale: { text: "codes" } };
+    expect(isDecomposeResponse({ ...valid, steps: [objectish] })).toBe(false);
+  });
 });
 
 describe("isReputationBatch", () => {

@@ -122,7 +122,11 @@ export function isTaskList(v: unknown): v is Task[] {
 }
 
 /** Plan panel: `total_usdc`/`total_eta` get `.toFixed`, steps are mapped with
- * `.toFixed` on each estimate. */
+ * `.toFixed` on each estimate, and every step renders `rationale` as a React
+ * child — a non-string (a dict from a half-rolled backend) throws "Objects are
+ * not valid as a React child". Required on backend `PlanStep`
+ * (`app/schemas.py`); `agent_name`/`rep_bps`/`rep_source` are optional there
+ * and already have render-time fallbacks, so they stay unchecked. */
 export function isDecomposeResponse(v: unknown): v is DecomposeResponse {
   return (
     isRecord(v) &&
@@ -134,6 +138,7 @@ export function isDecomposeResponse(v: unknown): v is DecomposeResponse {
       (s) =>
         isRecord(s) &&
         isStr(s.agent_id) &&
+        isStr(s.rationale) &&
         isNum(s.est_price_usdc) &&
         isNum(s.est_eta_seconds),
     )
