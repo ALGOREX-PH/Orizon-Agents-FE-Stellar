@@ -27,6 +27,7 @@ export default function ReputationPage() {
     error: agentsError,
     loading: agentsLoading,
     retrying: agentsRetrying,
+    lastSuccessAt: agentsLastSuccessAt,
     reload: reloadAgents,
   } = useFetch(listAgents, [], { revalidateOnFocus: true });
   const {
@@ -34,6 +35,7 @@ export default function ReputationPage() {
     error: batchError,
     loading: batchLoading,
     retrying: batchRetrying,
+    lastSuccessAt: batchLastSuccessAt,
     reload: reloadBatch,
   } = useFetch(listReputation, [], { revalidateOnFocus: true });
   // Static config. The calculator and ledger card fall back to built-in
@@ -91,6 +93,8 @@ export default function ReputationPage() {
           retrying={agentsRetrying || batchRetrying}
           agentsError={agentsError}
           batchError={batchError}
+          agentsLastSuccessAt={agentsLastSuccessAt}
+          batchLastSuccessAt={batchLastSuccessAt}
           onRetryAgents={reloadAgents}
           onRetryBatch={reloadBatch}
         />

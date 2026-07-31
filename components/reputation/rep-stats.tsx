@@ -17,6 +17,12 @@ const STROOPS_PER_USDC = 10_000_000;
  * ("—", or worse a plausible-looking number) would read as an empty but
  * healthy ledger. An unreachable backend must never be indistinguishable from
  * "no evidence settled yet".
+ *
+ * That is also why there is no `StaleBadge` here, unlike the leaderboard: the
+ * error replaces the tiles outright rather than leaving the last-good figures
+ * up, so a settled-evidence total is never on screen for a badge to qualify.
+ * A labelled frozen USDC total would still be a formatted money figure
+ * rendered under a live failure, which this row does not do.
  */
 export function RepStats({
   batch,
