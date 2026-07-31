@@ -373,15 +373,9 @@ function TracePageInner() {
               </div>
               <dl className="space-y-3 text-sm font-mono">
                 {summaryRows.map(([k, v]) => (
-                  <div
-                    key={k}
-                    className="flex items-start justify-between gap-4 border-b border-border/40 pb-2"
-                  >
-                    <dt className="text-muted text-[11px] uppercase tracking-widest">
-                      {k}
-                    </dt>
-                    <dd className="text-right break-all">{v}</dd>
-                  </div>
+                  <KVRow key={k} k={k}>
+                    {v}
+                  </KVRow>
                 ))}
               </dl>
             </Card>
