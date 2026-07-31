@@ -49,7 +49,9 @@ export function PricePanel() {
         price &amp; quote
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-3">
+      {/* One column below sm: three inputs across a ~380px viewport leave
+          each field ~30px of usable text width once padding is counted. */}
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <label className="space-y-1">
           <span className="text-[10px] text-muted">side</span>
           <select
