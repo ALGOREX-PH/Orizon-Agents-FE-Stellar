@@ -9,7 +9,20 @@ import { getFlow } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
 
 export default function FlowPage() {
-  const { data: flow, error, loading, reload } = useFetch(getFlow, []);
+  const {
+    data: flow,
+    error,
+    loading,
+    retrying,
+    reload,
+  } = useFetch(getFlow, []);
+
+  // Every skeleton on this page is gated on `!error` rather than on `loading`,
+  // so an automatic retry — which flips `loading` back to true per attempt —
+  // leaves the error card in place instead of alternating with the shimmer.
+  // `retrying` covers the backoff gaps between attempts, when no request is in
+  // flight but the hook has one scheduled.
+  const reconnecting = retrying || loading;
 
   const nodeById = flow
     ? Object.fromEntries(flow.nodes.map((n) => [n.id, n]))
@@ -76,7 +89,7 @@ export default function FlowPage() {
           )}
           {error && (
             <div className="absolute inset-0 grid place-items-center p-4">
-              <ErrorNote onRetry={reload} retrying={loading}>
+              <ErrorNote onRetry={reload} retrying={reconnecting}>
                 backend offline — {error}
               </ErrorNote>
             </div>
@@ -154,7 +167,7 @@ export default function FlowPage() {
         <div className="bg-[#060010] p-4 md:hidden">
           {!flow && !error && <Skeleton className="h-40 w-full" />}
           {error && (
-            <ErrorNote onRetry={reload} retrying={loading}>
+            <ErrorNote onRetry={reload} retrying={reconnecting}>
               backend offline — {error}
             </ErrorNote>
           )}
