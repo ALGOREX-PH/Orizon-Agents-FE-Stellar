@@ -12,8 +12,14 @@ import { useFetch } from "@/lib/use-fetch";
 /**
  * /app/reputation — the reputation system end to end: live scores for every
  * registered agent, the interactive math, and the on-chain ledger behind it.
- * Every live read degrades gracefully (seeded priors, backend defaults), so
- * the page renders fully even with the chain or backend unreachable.
+ *
+ * Reads degrade where a fallback is honest (seeded priors per agent, built-in
+ * math defaults) but never silently: every failed read is announced next to
+ * the thing it should have filled, and every announcement carries the
+ * matching `reload` so a transient backend outage is one click from recovery.
+ * This page drives who the orchestrator hires and what gets paid — a
+ * placeholder standing in for an unreachable ledger is a data-integrity bug,
+ * not a cosmetic one.
  */
 export default function ReputationPage() {
   const {
