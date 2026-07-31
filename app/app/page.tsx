@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorNote } from "@/components/ui/error-note";
 import { LoadingStatus, Skeleton } from "@/components/ui/skeleton";
+import { StaleBadge } from "@/components/ui/stale-badge";
 import { getOverview, listTasks } from "@/lib/api";
 import type { Overview, Task } from "@/lib/types";
 import { focusRing } from "@/lib/ui";
@@ -72,6 +73,8 @@ export default function OverviewPage() {
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  // When the manual retry below last succeeded; the poller tracks its own.
+  const [manualSuccessAt, setManualSuccessAt] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     const [o, t] = await Promise.all([getOverview(), listTasks()]);
@@ -80,24 +83,37 @@ export default function OverviewPage() {
     setError(null);
   }, []);
 
-  usePolling(async () => {
-    try {
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "fetch failed");
-      // Rethrow so the poller backs off while the backend is down.
-      throw e;
-    }
-  }, 5000);
+  // `trackStatus` dates the numbers still on screen: the poller keeps the last
+  // payload rendered when a tick fails, and without a timestamp those metrics
+  // present themselves as live for the whole outage.
+  const { lastSuccessAt } = usePolling(
+    async () => {
+      try {
+        await load();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "fetch failed");
+        // Rethrow so the poller backs off while the backend is down.
+        throw e;
+      }
+    },
+    5000,
+    { trackStatus: true },
+  );
 
   // Manual retry: the poller has backed off to a 20s cadence by the time the
   // error box is read, so the button fetches immediately instead of waiting.
   const retry = useCallback(() => {
     setRetrying(true);
     load()
+      .then(() => setManualSuccessAt(Date.now()))
       .catch((e) => setError(e instanceof Error ? e.message : "fetch failed"))
       .finally(() => setRetrying(false));
   }, [load]);
+
+  // The data on screen is whatever landed last — a poll tick or a manual
+  // retry. Dating it by the poller alone would age the numbers by up to a
+  // full backoff window after a hand-triggered refresh.
+  const dataAt = Math.max(lastSuccessAt ?? 0, manualSuccessAt ?? 0) || null;
 
   // /api/metrics/overview carries no period-over-period deltas, so the tiles
   // show the measured value and its unit only — never an invented trend.
@@ -133,9 +149,19 @@ export default function OverviewPage() {
             Realtime pulse of the Orizon network.
           </p>
         </div>
-        <Badge tone={error ? "magenta" : "violet"} dot>
-          {error ? "backend offline" : "streaming"}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Hidden unless a payload is actually on screen: a first load that
+              never landed is a failure, not stale data, and the ErrorNote
+              below owns that case. */}
+          <StaleBadge
+            stale={Boolean(error)}
+            lastSuccessAt={dataAt}
+            what="network metrics"
+          />
+          <Badge tone={error ? "magenta" : "violet"} dot>
+            {error ? "backend offline" : "streaming"}
+          </Badge>
+        </div>
       </div>
 
       {error && (
