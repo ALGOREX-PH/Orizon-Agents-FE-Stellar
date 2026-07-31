@@ -14,7 +14,7 @@ import {
 import { getStellarNetwork } from "@/lib/api";
 import { focusRing } from "@/lib/ui";
 import { useFetch } from "@/lib/use-fetch";
-import { prettyName } from "@/lib/utils";
+import { cn, prettyName } from "@/lib/utils";
 
 // Display label for the configured network — "mainnet" | "testnet".
 
@@ -26,6 +26,7 @@ export default function WalletPage() {
     walletNetwork,
     xlmBalance,
     balanceLoading,
+    balanceError,
     refreshBalance,
   } = useWallet();
   const { data: info, error } = useFetch(getStellarNetwork, [], {
@@ -45,8 +46,16 @@ export default function WalletPage() {
   // this build's configured network when the wallet didn't report one.
   const sessionNetwork = walletNetwork ?? network;
 
-  const balanceFmt =
-    xlmBalance === null ? "—" : parseFloat(xlmBalance).toFixed(7);
+  // A failed fetch leaves the balance unknown — it must never render as a
+  // plain dash next to the number, which reads as "nothing here" instead of
+  // "we could not ask Horizon".
+  const parsedBalance = xlmBalance === null ? NaN : parseFloat(xlmBalance);
+  const balanceKnown = Number.isFinite(parsedBalance);
+  const balanceFmt = balanceKnown
+    ? parsedBalance.toFixed(7)
+    : balanceLoading
+      ? "…"
+      : "—";
 
   return (
     <div className="space-y-6">
@@ -78,8 +87,13 @@ export default function WalletPage() {
                 ▸ native XLM balance
               </div>
               <div className="flex items-baseline gap-3">
-                <span className="text-5xl font-semibold tracking-tight tabular-nums">
-                  {balanceLoading && xlmBalance === null ? "…" : balanceFmt}
+                <span
+                  className={cn(
+                    "text-5xl font-semibold tracking-tight tabular-nums",
+                    !balanceKnown && balanceError && "text-magenta",
+                  )}
+                >
+                  {balanceFmt}
                 </span>
                 <span className="font-mono text-sm uppercase tracking-[0.2em] text-cyan">
                   XLM
@@ -89,6 +103,15 @@ export default function WalletPage() {
                 {address ? `${address.slice(0, 6)}…${address.slice(-6)}` : ""} ·{" "}
                 {sessionNetwork?.network ?? NETWORK_NAME}
               </div>
+              {balanceError && (
+                <ErrorNote
+                  className="clip-cyber-sm mt-3 text-[11px]"
+                  onRetry={() => void refreshBalance()}
+                  retrying={balanceLoading}
+                >
+                  balance unavailable — {balanceError}
+                </ErrorNote>
+              )}
             </div>
             <div className="flex items-center gap-3 flex-wrap">
               {defaultExplorerNetwork !== "public" && (
