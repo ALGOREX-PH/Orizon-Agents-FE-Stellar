@@ -8,13 +8,68 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  isAgentList,
   isArtifactResponse,
   isDecomposeResponse,
+  isFlow,
   isOverview,
   isReputationBatch,
+  isReputationParams,
   isStellarNetworkInfo,
   isTaskList,
 } from "./guards";
+
+describe("isAgentList", () => {
+  const agent = {
+    id: "agt_01",
+    name: "copywrite.v3",
+    skills: ["content", "seo"],
+    price: 0.012,
+    rep: 4.6,
+    status: "online",
+    runs: 1284,
+    real: true,
+  };
+
+  it("accepts a valid list and the empty list", () => {
+    expect(isAgentList([agent])).toBe(true);
+    expect(isAgentList([])).toBe(true);
+  });
+
+  it("rejects a non-array payload", () => {
+    expect(isAgentList({ agents: [agent] })).toBe(false);
+    expect(isAgentList(null)).toBe(false);
+  });
+
+  it("rejects a non-numeric price (feeds .toFixed)", () => {
+    expect(isAgentList([{ ...agent, price: "0.012" }])).toBe(false);
+  });
+
+  it("rejects a missing runs count (feeds .toLocaleString)", () => {
+    const { runs: _drop, ...rest } = agent;
+    expect(isAgentList([rest])).toBe(false);
+  });
+
+  it("rejects a non-numeric rep (feeds rep * 2000)", () => {
+    expect(isAgentList([{ ...agent, rep: null }])).toBe(false);
+  });
+
+  it("rejects skills that are not an array of strings (feeds .map)", () => {
+    expect(isAgentList([{ ...agent, skills: "content" }])).toBe(false);
+    expect(isAgentList([{ ...agent, skills: [{ name: "content" }] }])).toBe(
+      false,
+    );
+  });
+
+  it("rejects a status outside the backend literal (keys the tone map)", () => {
+    expect(isAgentList([{ ...agent, status: "degraded" }])).toBe(false);
+    expect(isAgentList([{ ...agent, status: undefined }])).toBe(false);
+  });
+
+  it("rejects when any single entry is malformed", () => {
+    expect(isAgentList([agent, { ...agent, price: undefined }])).toBe(false);
+  });
+});
 
 describe("isOverview", () => {
   const valid = {
@@ -47,6 +102,72 @@ describe("isOverview", () => {
   it("rejects a skills entry without a numeric pct", () => {
     expect(isOverview({ ...valid, skills: [{ name: "code" }] })).toBe(false);
   });
+
+  it("rejects a non-string skill tone", () => {
+    expect(
+      isOverview({ ...valid, skills: [{ name: "code", pct: 62, tone: 7 }] }),
+    ).toBe(false);
+  });
+
+  it("accepts a skill with an absent or unfamiliar tone", () => {
+    // The backend types skills as dict[str, Any] — tone is not contractually
+    // guaranteed, and the renderer color-falls-back on anything it knows.
+    expect(isOverview({ ...valid, skills: [{ name: "code", pct: 62 }] })).toBe(
+      true,
+    );
+    expect(
+      isOverview({
+        ...valid,
+        skills: [{ name: "code", pct: 62, tone: "amber" }],
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("isFlow", () => {
+  const valid = {
+    nodes: [
+      { id: "in", label: "intent", sub: "user input", x: 4, y: 50 },
+      { id: "out", label: "outcome", sub: "verified", x: 96, y: 50 },
+    ],
+    edges: [["in", "out"]],
+  };
+
+  it("accepts a valid graph (empty nodes and edges included)", () => {
+    expect(isFlow(valid)).toBe(true);
+    expect(isFlow({ nodes: [], edges: [] })).toBe(true);
+  });
+
+  it("rejects a payload with no edges array (destructured during render)", () => {
+    const { edges: _drop, ...rest } = valid;
+    expect(isFlow(rest)).toBe(false);
+    expect(isFlow({ ...valid, edges: {} })).toBe(false);
+  });
+
+  it("rejects edges that are not string pairs", () => {
+    expect(isFlow({ ...valid, edges: [["in"]] })).toBe(false);
+    expect(isFlow({ ...valid, edges: [["in", "out", "extra"]] })).toBe(false);
+    expect(isFlow({ ...valid, edges: [[1, 2]] })).toBe(false);
+    expect(isFlow({ ...valid, edges: [{ from: "in", to: "out" }] })).toBe(
+      false,
+    );
+  });
+
+  it("rejects a node without numeric coordinates", () => {
+    const node = {
+      id: "in",
+      label: "intent",
+      sub: "user input",
+      x: "4",
+      y: 50,
+    };
+    expect(isFlow({ ...valid, nodes: [node] })).toBe(false);
+  });
+
+  it("rejects non-objects", () => {
+    expect(isFlow(null)).toBe(false);
+    expect(isFlow([])).toBe(false);
+  });
 });
 
 describe("isTaskList", () => {
@@ -68,6 +189,18 @@ describe("isTaskList", () => {
     expect(isTaskList({ tasks: [task] })).toBe(false);
     expect(isTaskList([{ ...task, spent: "0.054" }])).toBe(false);
     expect(isTaskList([task, { ...task, spent: undefined }])).toBe(false);
+  });
+
+  it("accepts every backend task status", () => {
+    for (const status of ["pending", "running", "complete", "failed"]) {
+      expect(isTaskList([{ ...task, status }])).toBe(true);
+    }
+  });
+
+  it("rejects a status outside the backend literal (keys the tone map)", () => {
+    expect(isTaskList([{ ...task, status: "cancelled" }])).toBe(false);
+    const { status: _drop, ...missing } = task;
+    expect(isTaskList([missing])).toBe(false);
   });
 });
 
@@ -99,6 +232,13 @@ describe("isDecomposeResponse", () => {
   it("rejects a step with a missing price estimate", () => {
     const step = { agent_id: "agt_01", est_eta_seconds: 4.5 };
     expect(isDecomposeResponse({ ...valid, steps: [step] })).toBe(false);
+  });
+
+  it("rejects a step whose rationale is missing or not a string", () => {
+    const { rationale: _drop, ...missing } = valid.steps[0];
+    expect(isDecomposeResponse({ ...valid, steps: [missing] })).toBe(false);
+    const objectish = { ...valid.steps[0], rationale: { text: "codes" } };
+    expect(isDecomposeResponse({ ...valid, steps: [objectish] })).toBe(false);
   });
 });
 
@@ -135,6 +275,93 @@ describe("isReputationBatch", () => {
   it("rejects a batch without a numeric floor_bps", () => {
     expect(isReputationBatch({ ...valid, floor_bps: undefined })).toBe(false);
   });
+
+  it("rejects a non-numeric disputed count (sorted on, NaN scrambles order)", () => {
+    const bad = { ...rep, disputed: "0" };
+    expect(isReputationBatch({ ...valid, reputations: { agt_01: bad } })).toBe(
+      false,
+    );
+    const { disputed: _drop, ...missing } = rep;
+    expect(
+      isReputationBatch({ ...valid, reputations: { agt_01: missing } }),
+    ).toBe(false);
+  });
+
+  it("rejects a missing avg_bps", () => {
+    const { avg_bps: _drop, ...missing } = rep;
+    expect(
+      isReputationBatch({ ...valid, reputations: { agt_01: missing } }),
+    ).toBe(false);
+  });
+
+  it("rejects a source outside the backend literal", () => {
+    expect(
+      isReputationBatch({
+        ...valid,
+        reputations: { agt_01: { ...rep, source: "cached" } },
+      }),
+    ).toBe(false);
+    const { source: _drop, ...missing } = rep;
+    expect(
+      isReputationBatch({ ...valid, reputations: { agt_01: missing } }),
+    ).toBe(false);
+  });
+
+  it("accepts an on-chain sourced entry", () => {
+    const onchain = { ...rep, source: "onchain", disputed: 2, avg_bps: 8100 };
+    expect(
+      isReputationBatch({ ...valid, reputations: { agt_01: onchain } }),
+    ).toBe(true);
+  });
+});
+
+describe("isReputationParams", () => {
+  const valid = {
+    enabled: true,
+    prior_bps: 7000,
+    prior_weight_usdc: 12,
+    floor_bps: 5500,
+    max_rating_weight_usdc: 100,
+    read_ttl_seconds: 15,
+    wilson_z: 1,
+    epoch_seconds: 604_800,
+    decay_bps_per_epoch: 9250,
+    max_decay_epochs: 96,
+    contract_id: "CDCS",
+    network: "testnet",
+  };
+
+  it("accepts a valid parameter set (extra keys tolerated)", () => {
+    expect(isReputationParams({ ...valid, extra: 1 })).toBe(true);
+  });
+
+  it("rejects a missing epoch_seconds (divided by 86400)", () => {
+    const { epoch_seconds: _drop, ...rest } = valid;
+    expect(isReputationParams(rest)).toBe(false);
+  });
+
+  it("rejects a missing decay_bps_per_epoch (divided by 100)", () => {
+    const { decay_bps_per_epoch: _drop, ...rest } = valid;
+    expect(isReputationParams(rest)).toBe(false);
+  });
+
+  it("rejects non-numeric smoothing inputs that would render ★ NaN", () => {
+    expect(isReputationParams({ ...valid, prior_weight_usdc: "12" })).toBe(
+      false,
+    );
+    expect(isReputationParams({ ...valid, wilson_z: null })).toBe(false);
+    expect(isReputationParams({ ...valid, floor_bps: undefined })).toBe(false);
+  });
+
+  it("rejects a non-string contract_id or network", () => {
+    expect(isReputationParams({ ...valid, contract_id: 7 })).toBe(false);
+    expect(isReputationParams({ ...valid, network: null })).toBe(false);
+  });
+
+  it("rejects non-objects", () => {
+    expect(isReputationParams(null)).toBe(false);
+    expect(isReputationParams([])).toBe(false);
+  });
 });
 
 describe("isArtifactResponse", () => {
@@ -156,6 +383,41 @@ describe("isArtifactResponse", () => {
   it("rejects an artifact whose files entries lack string content", () => {
     const bad = { ...artifact, files: [{ path: "index.html", content: 42 }] };
     expect(isArtifactResponse({ artifact: bad })).toBe(false);
+  });
+
+  it("rejects a file without a language (code viewer calls .toLowerCase)", () => {
+    const bad = {
+      ...artifact,
+      files: [{ path: "index.html", content: "<html/>" }],
+    };
+    expect(isArtifactResponse({ artifact: bad })).toBe(false);
+    const wrongType = {
+      ...artifact,
+      files: [{ path: "app.tsx", language: 42, content: "x" }],
+    };
+    expect(isArtifactResponse({ artifact: wrongType })).toBe(false);
+  });
+
+  it("rejects when any one file in the set is missing its language", () => {
+    const bad = {
+      ...artifact,
+      files: [artifact.files[0], { path: "app.js", content: "console.log(1)" }],
+    };
+    expect(isArtifactResponse({ artifact: bad })).toBe(false);
+  });
+
+  it("rejects a non-string entry or summary", () => {
+    expect(
+      isArtifactResponse({ artifact: { ...artifact, entry: ["index.html"] } }),
+    ).toBe(false);
+    expect(
+      isArtifactResponse({ artifact: { ...artifact, summary: { t: "x" } } }),
+    ).toBe(false);
+  });
+
+  it("accepts an artifact with no entry or summary (both render behind a fallback)", () => {
+    const { entry: _e, summary: _s, ...rest } = artifact;
+    expect(isArtifactResponse({ artifact: rest })).toBe(true);
   });
 
   it("rejects non-object payloads", () => {

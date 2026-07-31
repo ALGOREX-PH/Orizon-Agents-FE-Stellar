@@ -1,0 +1,32 @@
+# Probes the *deployed* product the way a browser does: every /api/* call goes
+# through the Next.js rewrite proxy. A green unit suite and a green build cannot
+# catch a bad proxy target — only this can. Scheduled so a config regression
+# surfaces in hours instead of days.
+name: smoke
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      origin:
+        description: "Origin to smoke test"
+        required: false
+        default: "https://orizons.xyz"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      # No install step: the script uses only Node built-ins so a broken
+      # lockfile can never mask a production outage.
+      - name: Smoke test deployed origin
+        env:
+          SMOKE_ORIGIN: ${{ github.event.inputs.origin || 'https://orizons.xyz' }}
+          SMOKE_EXPECT_NETWORK: mainnet
+        run: node scripts/smoke-deploy.mjs

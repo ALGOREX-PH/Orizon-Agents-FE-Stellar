@@ -81,6 +81,64 @@ function json(route: Route, body: unknown) {
  * client-side and /api is a pure rewrite proxy, so this catches everything)
  * and fulfills it with mocked JSON — no backend needed.
  */
+/**
+ * Shapes copied from the live backend. They exist because the runtime guards
+ * in lib/guards.ts now reject the catch-all `{}` below — a spec that visits
+ * /app/flow or /app/reputation would otherwise land in an error state and look
+ * like a product bug rather than a missing fixture.
+ */
+export const mockFlow = {
+  nodes: [
+    { id: "in", label: "intent", sub: "user input", x: 4, y: 50 },
+    { id: "seo", label: "seo.brief", sub: "research", x: 26, y: 22 },
+    { id: "copy", label: "copywrite.v3", sub: "content", x: 50, y: 22 },
+    { id: "out", label: "artifact", sub: "delivered", x: 92, y: 50 },
+  ],
+  edges: [
+    ["in", "seo"],
+    ["seo", "copy"],
+    ["copy", "out"],
+  ],
+};
+
+export const mockReputationParams = {
+  enabled: true,
+  prior_bps: 7000,
+  prior_weight_usdc: 12.0,
+  floor_bps: 5500,
+  max_rating_weight_usdc: 100.0,
+  read_ttl_seconds: 15.0,
+  wilson_z: 1.0,
+  epoch_seconds: 604800,
+  decay_bps_per_epoch: 9250,
+  max_decay_epochs: 96,
+  contract_id: "CDFWQJY72GPH7PEQVFGBDZESZNVRF6LQLVWU42CFMWPGRME5RWN5AXSX",
+  network: "mainnet",
+};
+
+/**
+ * Fails every `/api/*` call the way the production outage did: a 404 carrying
+ * the backend's real error envelope. This is deliberately indistinguishable
+ * from a healthy backend behind a misconfigured proxy — the exact condition
+ * that ran unnoticed in production for days.
+ */
+export async function mockApiOutage(page: Page): Promise<void> {
+  await page.route("**/api/**", (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({
+        detail: "Not Found",
+        error: {
+          code: "not_found",
+          message: "Not Found",
+          request_id: "e2e0000000000000",
+        },
+      }),
+    }),
+  );
+}
+
 export async function mockApi(page: Page): Promise<void> {
   await page.route("**/api/**", (route) => {
     const { pathname } = new URL(route.request().url());

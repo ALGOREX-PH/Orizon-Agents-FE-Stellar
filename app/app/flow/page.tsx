@@ -9,11 +9,37 @@ import { getFlow } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
 
 export default function FlowPage() {
-  const { data: flow, error } = useFetch(getFlow, []);
+  const {
+    data: flow,
+    error,
+    loading,
+    retrying,
+    reload,
+  } = useFetch(getFlow, []);
+
+  // Every skeleton on this page is gated on `!error` rather than on `loading`,
+  // so an automatic retry — which flips `loading` back to true per attempt —
+  // leaves the error card in place instead of alternating with the shimmer.
+  // `retrying` covers the backoff gaps between attempts, when no request is in
+  // flight but the hook has one scheduled.
+  const reconnecting = retrying || loading;
 
   const nodeById = flow
     ? Object.fromEntries(flow.nodes.map((n) => [n.id, n]))
     : {};
+
+  // Widest fan-out in the graph: the largest number of edges leaving a single
+  // node, i.e. how many branches run in parallel at the graph's widest point.
+  // Derived from the payload — the flow API carries no cost or branch counts,
+  // so anything it does not describe is not displayed.
+  const parallelBranches = (() => {
+    if (!flow) return 0;
+    const outDegree = new Map<string, number>();
+    for (const [from] of flow.edges) {
+      outDegree.set(from, (outDegree.get(from) ?? 0) + 1);
+    }
+    return outDegree.size === 0 ? 0 : Math.max(...outDegree.values());
+  })();
 
   return (
     <div className="space-y-6">
@@ -51,7 +77,10 @@ export default function FlowPage() {
           </span>
         </div>
 
-        <div className="relative h-[520px] w-full bg-[#060010] overflow-hidden">
+        {/* Nodes are positioned by percentage inside a clipped canvas and are
+            each ≥140px wide, so a node near x=96% has nowhere to render on a
+            narrow viewport. Below md the same graph is listed instead. */}
+        <div className="relative hidden h-[520px] w-full bg-[#060010] overflow-hidden md:block">
           <div className="absolute inset-0 grid-bg opacity-60" />
           {!flow && !error && (
             <div className="absolute inset-0 grid place-items-center">
@@ -59,8 +88,8 @@ export default function FlowPage() {
             </div>
           )}
           {error && (
-            <div className="absolute inset-0 grid place-items-center">
-              <ErrorNote className="border-0 bg-transparent p-0">
+            <div className="absolute inset-0 grid place-items-center p-4">
+              <ErrorNote onRetry={reload} retrying={reconnecting}>
                 backend offline — {error}
               </ErrorNote>
             </div>
@@ -134,22 +163,67 @@ export default function FlowPage() {
             </>
           )}
         </div>
+
+        <div className="bg-[#060010] p-4 md:hidden">
+          {!flow && !error && <Skeleton className="h-40 w-full" />}
+          {error && (
+            <ErrorNote onRetry={reload} retrying={reconnecting}>
+              backend offline — {error}
+            </ErrorNote>
+          )}
+          {flow && (
+            <>
+              <ol className="space-y-2">
+                {flow.nodes.map((n, i) => (
+                  <li
+                    key={n.id}
+                    className="clip-cyber-sm border border-violet/60 bg-surface/80 px-4 py-2.5"
+                  >
+                    <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-cyan">
+                      {i + 1} ▸ {n.sub}
+                    </div>
+                    <div className="font-mono text-sm">{n.label}</div>
+                  </li>
+                ))}
+              </ol>
+              <div className="mt-4 font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
+                ▸ edges
+              </div>
+              <ul className="mt-2 space-y-1">
+                {flow.edges.map(([from, to]) => (
+                  <li
+                    key={`${from}-${to}`}
+                    className="font-mono text-[11px] text-muted break-words"
+                  >
+                    {nodeById[from]?.label ?? from} →{" "}
+                    {nodeById[to]?.label ?? to}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {[
-          { h: "Nodes", v: flow ? String(flow.nodes.length) : "—" },
-          { h: "Parallel branches", v: "2" },
-          { h: "Est. per-run cost", v: "0.112 USDC" },
-        ].map((s) => (
-          <Card key={s.h}>
-            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted mb-2">
-              {s.h}
-            </div>
-            <div className="font-mono text-2xl neon-text">{s.v}</div>
-          </Card>
-        ))}
-      </div>
+      {/* Every tile below is computed from the loaded flow. The row is hidden
+          until the payload arrives so no tile can show a number the backend
+          never sent. */}
+      {flow && (
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            { h: "Nodes", v: String(flow.nodes.length) },
+            { h: "Edges", v: String(flow.edges.length) },
+            { h: "Parallel branches", v: String(parallelBranches) },
+          ].map((s) => (
+            <Card key={s.h}>
+              <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted mb-2">
+                {s.h}
+              </div>
+              <div className="font-mono text-2xl neon-text">{s.v}</div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

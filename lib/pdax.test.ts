@@ -20,6 +20,8 @@ import {
   pdaxFundingQuote,
   pdaxRampEstimate,
   pdaxReconcileRamp,
+  pdaxStartOffRamp,
+  pdaxStartOnRamp,
 } from "./pdax";
 
 type FetchMockResponse = {
@@ -223,6 +225,89 @@ describe("error detail extraction", () => {
 
     await expect(pdaxRampEstimate("offramp", "5")).rejects.toThrow(
       "POST /ramp/estimate?direction=offramp&amount=5 → 422 — amount too small",
+    );
+  });
+
+  it("prefers the standardized error-envelope message over a string detail", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(502, {
+        detail: "legacy detail",
+        error: { code: "pdax_upstream", message: "pdax rejected the order" },
+      }),
+    );
+
+    await expect(getPdaxHealth()).rejects.toThrow(
+      "GET /health → 502 — pdax rejected the order",
+    );
+  });
+
+  it("renders a 422 array-shaped detail as readable field errors", async () => {
+    // Exactly what FastAPI emits when a truncated Stellar address fails
+    // OnRampRequest's ^G[A-Z2-7]{55}$ pattern — an array of dicts, which
+    // template interpolation used to render as "[object Object]".
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(422, {
+        detail: [
+          {
+            type: "string_pattern_mismatch",
+            loc: ["body", "stellar_address"],
+            msg: "String should match pattern '^G[A-Z2-7]{55}$'",
+            input: "GABC",
+          },
+        ],
+        error: {
+          code: "validation_error",
+          message: "request validation failed",
+        },
+      }),
+    );
+
+    const err = await pdaxStartOnRamp({
+      php_amount: "1000",
+      stellar_address: "GABC",
+      method: "instapay_upay_cashin",
+      identifier: "id_1",
+      sender_first_name: "A",
+      sender_last_name: "B",
+      beneficiary_first_name: "A",
+      beneficiary_last_name: "B",
+    }).then(
+      () => {
+        throw new Error("expected rejection");
+      },
+      (e: unknown) => e as Error,
+    );
+
+    expect(err.message).toBe(
+      "POST /ramp/onramp → 422 — stellar_address: String should match pattern '^G[A-Z2-7]{55}$'",
+    );
+    expect(err.message).not.toContain("[object Object]");
+  });
+
+  it("joins multiple field errors and drops the body/query loc prefix", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(422, {
+        detail: [
+          { loc: ["body", "php_amount"], msg: "must be positive" },
+          { loc: ["query", "direction"], msg: "unexpected value" },
+          { loc: [], msg: "body is not valid JSON" },
+        ],
+      }),
+    );
+
+    await expect(pdaxStartOffRamp({} as never)).rejects.toThrow(
+      "POST /ramp/offramp → 422 — php_amount: must be positive; " +
+        "direction: unexpected value; body is not valid JSON",
+    );
+  });
+
+  it("falls back to the JSON body when the validation list carries no messages", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(422, { detail: [{ type: "missing" }] }),
+    );
+
+    await expect(getPdaxHealth()).rejects.toThrow(
+      'GET /health → 422 — {"detail":[{"type":"missing"}]}',
     );
   });
 

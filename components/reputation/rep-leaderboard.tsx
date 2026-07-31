@@ -2,7 +2,9 @@
 import { useMemo, useState } from "react";
 import { m } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { ErrorNote } from "@/components/ui/error-note";
 import { Skeleton, LoadingStatus } from "@/components/ui/skeleton";
+import { StaleBadge } from "@/components/ui/stale-badge";
 import { ReputationBadge } from "@/components/ui/reputation-badge";
 import { lowerBoundBps, scoreOutOfFive } from "@/lib/reputation-math";
 import type { Agent, ReputationBatch, ReputationInfo } from "@/lib/types";
@@ -101,19 +103,38 @@ function SortableTh({
 /**
  * Sortable reputation leaderboard joining the agent registry with live
  * on-chain scores. Agents without on-chain evidence fall back to their seeded
- * prior (same silent-fallback philosophy as the agents page), so a failed
- * batch fetch degrades the table instead of hiding it.
+ * prior, so a failed *batch* fetch genuinely degrades the table to priors.
+ *
+ * The two failures are reported separately because they mean opposite things:
+ * a batch failure leaves every row rendered against its seeded prior, while an
+ * agents failure leaves nothing to render at all — reporting that as
+ * "degraded to seeded prior" over an empty table would be a lie.
  */
 export function RepLeaderboard({
   agents,
   batch,
   loading,
-  error,
+  retrying = false,
+  agentsError,
+  batchError,
+  agentsLastSuccessAt = null,
+  batchLastSuccessAt = null,
+  onRetryAgents,
+  onRetryBatch,
 }: {
   agents: Agent[] | null;
   batch: ReputationBatch | null;
   loading: boolean;
-  error: string | null;
+  /** An automatic retry is scheduled or in flight (`useFetch.retrying`). */
+  retrying?: boolean;
+  agentsError: string | null;
+  batchError: string | null;
+  /** When the roster on screen was read (`useFetch.lastSuccessAt`). */
+  agentsLastSuccessAt?: number | null;
+  /** When the on-chain scores on screen were read. */
+  batchLastSuccessAt?: number | null;
+  onRetryAgents?: () => void;
+  onRetryBatch?: () => void;
 }) {
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({
     col: "score",
@@ -152,11 +173,62 @@ export function RepLeaderboard({
     return joined.sort((a, b) => dir * (val(a) - val(b)));
   }, [agents, batch, sort]);
 
+  // Skeleton rows stand in for agent rows, so they are only right while the
+  // registry is genuinely still on its way: nothing to render yet and no
+  // failure to report. useFetch retries transient failures on its own and
+  // flips `loading` true for every attempt, so keying the placeholders off
+  // `loading` alone would swap the failure row out for skeletons and back
+  // once per attempt. A batch failure never reaches here — those rows fall
+  // back to seeded priors and render normally under their own error note.
+  const showSkeletons = loading && !agents && agentsError === null;
+
+  // `useFetch` keeps the last good payload when a reload fails, so a failure
+  // here does not empty the table — it freezes it, and a frozen score is what
+  // the orchestrator's hiring floor is read from. A non-null `lastSuccessAt`
+  // is precisely "a real payload is on screen": the hook clears it with the
+  // data, so a first fetch that never succeeded leaves it null and the badge
+  // hidden. That case is a failure, not staleness, and the error notes above
+  // (plus the explicit failure row below) own it.
+  const agentsStale = agentsError !== null && agentsLastSuccessAt !== null;
+  const batchStale = batchError !== null && batchLastSuccessAt !== null;
+
   return (
     <div>
-      {error && (
-        <div className="mb-4 clip-cyber-sm border border-magenta/40 bg-magenta/5 px-4 py-3 font-mono text-xs text-magenta">
-          live reputation degraded to seeded prior — {error}
+      {agentsError && (
+        <ErrorNote
+          className="mb-4 clip-cyber-sm"
+          onRetry={onRetryAgents}
+          retrying={retrying || loading}
+        >
+          agent registry unavailable — the table below is empty because the
+          registry could not be read, not because no agents are registered.{" "}
+          {agentsError}
+        </ErrorNote>
+      )}
+
+      {batchError && (
+        <ErrorNote
+          className="mb-4 clip-cyber-sm"
+          onRetry={onRetryBatch}
+          retrying={retrying || loading}
+        >
+          live reputation degraded to seeded prior — on-chain scores, settled
+          evidence and the routing floor are not live. {batchError}
+        </ErrorNote>
+      )}
+
+      {(agentsStale || batchStale) && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <StaleBadge
+            lastSuccessAt={agentsLastSuccessAt}
+            stale={agentsError !== null}
+            what="the agent roster"
+          />
+          <StaleBadge
+            lastSuccessAt={batchLastSuccessAt}
+            stale={batchError !== null}
+            what="the on-chain reputation scores below"
+          />
         </div>
       )}
 
@@ -203,7 +275,7 @@ export function RepLeaderboard({
             </tr>
           </thead>
           <tbody>
-            {loading && (
+            {showSkeletons && (
               <>
                 <tr>
                   <td colSpan={8} className="p-0">
@@ -220,7 +292,7 @@ export function RepLeaderboard({
               </>
             )}
 
-            {!loading &&
+            {!showSkeletons &&
               rows.map(({ agent, rep }, i) => {
                 const prior = rep.source === "prior";
                 const belowFloor =
@@ -290,7 +362,21 @@ export function RepLeaderboard({
                 );
               })}
 
-            {!loading && agents && rows.length === 0 && (
+            {/* No agent list at all — an explicit failed row, never a blank
+                table body that reads as an empty registry. */}
+            {!showSkeletons && !agents && (
+              <tr>
+                <td
+                  colSpan={8}
+                  className="py-10 text-center font-mono text-xs text-magenta"
+                >
+                  agent registry unavailable — leaderboard could not be loaded.
+                  {agentsError ? ` ${agentsError}` : ""}
+                </td>
+              </tr>
+            )}
+
+            {!showSkeletons && agents && rows.length === 0 && (
               <tr>
                 <td
                   colSpan={8}

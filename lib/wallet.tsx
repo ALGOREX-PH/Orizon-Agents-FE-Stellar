@@ -68,8 +68,24 @@ type WalletState = {
   walletNetworkMismatch: boolean;
   error: FriendlyError | null;
   loading: boolean;
+  /**
+   * Native XLM balance as a decimal string, or null when it is *unknown* —
+   * disconnected, still loading, or the fetch failed. Never trust null to
+   * mean "no funds": pair it with `balanceLoading` / `balanceError` to tell
+   * the four states apart:
+   *   not connected  → !connected
+   *   loading        → balanceLoading && xlmBalance === null
+   *   failed         → balanceError !== null
+   *   zero funds     → xlmBalance === "0"
+   */
   xlmBalance: string | null;
   balanceLoading: boolean;
+  /**
+   * Why the last balance fetch failed, or null when it succeeded / never ran.
+   * Set on both a non-OK Horizon response and a thrown request; consumers must
+   * surface it instead of rendering an innocuous placeholder.
+   */
+  balanceError: string | null;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   signXdr: (
@@ -189,6 +205,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [xlmBalance, setXlmBalance] = useState<string | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  const [balanceError, setBalanceError] = useState<string | null>(null);
   // What the connected wallet itself reported via getNetwork() — null = unknown.
   const [walletNetwork, setWalletNetwork] = useState<NetworkDetails | null>(
     null,
@@ -207,17 +224,29 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     walletNetwork.networkPassphrase !== NETWORK_PASSPHRASE,
   );
 
+  /**
+   * Fetch the native balance from Horizon.
+   *
+   * A failure must never look like "0 XLM" or a quiet dash: the balance is
+   * cleared to null (unknown) *and* `balanceError` is set, so downstream
+   * checks — the Send form's affordability guard above all — can block
+   * rather than silently skip. The previous error is deliberately left in
+   * place until this attempt resolves, so a retry keeps the message on
+   * screen instead of flashing back to a placeholder.
+   */
   const fetchBalance = useCallback(async (g: string) => {
     setBalanceLoading(true);
     try {
       const r = await fetch(`${HORIZON_URL}/accounts/${g}`);
       if (r.status === 404) {
-        // Unfunded account — friendbot needed.
+        // Unfunded account — friendbot needed. A real, known balance of zero.
         setXlmBalance("0");
+        setBalanceError(null);
         return;
       }
       if (!r.ok) {
         setXlmBalance(null);
+        setBalanceError(`Horizon responded ${r.status}`);
         return;
       }
       const j = await r.json();
@@ -226,8 +255,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           b.asset_type === "native",
       );
       setXlmBalance(native?.balance ?? "0");
-    } catch {
+      setBalanceError(null);
+    } catch (e) {
       setXlmBalance(null);
+      setBalanceError(e instanceof Error ? e.message : String(e));
     } finally {
       setBalanceLoading(false);
     }
@@ -238,12 +269,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     await fetchBalance(address);
   }, [address, fetchBalance]);
 
-  // Re-fetch balance whenever the address changes.
+  // Re-fetch balance whenever the address changes. A new address starts from
+  // a clean slate — the previous account's error must not describe this one.
   useEffect(() => {
     if (address) {
+      setBalanceError(null);
       fetchBalance(address);
     } else {
       setXlmBalance(null);
+      setBalanceError(null);
+      setBalanceLoading(false);
     }
   }, [address, fetchBalance]);
 
@@ -358,6 +393,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       loading,
       xlmBalance,
       balanceLoading,
+      balanceError,
       connect,
       disconnect,
       signXdr,
@@ -375,6 +411,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       loading,
       xlmBalance,
       balanceLoading,
+      balanceError,
       connect,
       disconnect,
       signXdr,

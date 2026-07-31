@@ -428,8 +428,14 @@ The repo ships a `vercel.json` that proxies `/api/*` to the Render backend.
    | ---------------------- | ------------------------------------- |
    | `NEXT_PUBLIC_API_BASE` | `https://<your-backend>.onrender.com` |
 
+   It must be a **bare origin** — no trailing slash, no `/api` suffix. The
+   rewrite in `next.config.mjs` appends `/api/:path*` itself, so a value like
+   `https://…/api` would proxy to `/api/api/...` and 404 every call.
+   `lib/api-base.mjs` normalizes both mistakes and rejects values that can
+   never work, so a bad one fails the build instead of shipping a dead console.
+
 5. Click **Deploy**. ~1 minute build → `https://<your-project>.vercel.app`.
-6. Edit `vercel.json`'s `destination` to match your Render URL — commit + push to finalize.
+6. Verify the deploy actually reaches the backend: `npm run smoke -- https://<your-project>.vercel.app`. Unit tests and a green build cannot catch a bad proxy target; this can.
 7. On the backend (Render), set `CORS_ORIGINS` to your Vercel URL. Preview URLs (`*.vercel.app`) are accepted via regex.
 
 > ⚠️ `NEXT_PUBLIC_*` env vars are baked at build time. Changing `NEXT_PUBLIC_API_BASE` requires clicking **Redeploy** — saving alone isn't enough.
@@ -438,14 +444,15 @@ The repo ships a `vercel.json` that proxies `/api/*` to the Render backend.
 
 ## Troubleshooting
 
-| symptom                                                         | fix                                                                                                                             |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `/app` shows "backend offline"                                  | Start the backend (`./run.sh` in the BE repo) or check Render is up.                                                            |
-| **Connect Wallet** silently fails                               | Install Freighter at https://freighter.app and approve this site.                                                               |
-| Authorize popup works but tx fails with `Storage ExceededLimit` | Old contract deploy. Update `STELLAR_*` in Render to match `/api/stellar/network`.                                              |
-| Authorize fails with `Contract, #1` (Unauthorized)              | Your Render `STELLAR_SIGNING_KEY` doesn't match the contracts' admin. Use the secret of the wallet that deployed the contracts. |
-| Artifact preview is empty                                       | `code.gen` returned malformed HTML. Check the **Files** tab; re-run the intent.                                                 |
-| `npm run dev` errors "next not found" on WSL                    | Windows `npm` shadowed WSL `npm`. New terminal: `nvm use default`.                                                              |
+| symptom                                                                                        | fix                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/app` shows "backend offline"                                                                 | Start the backend (`./run.sh` in the BE repo) or check Render is up.                                                                                                                                                                                                                                                                                                 |
+| Deployed site: **every** `/api/*` call 404s, but the backend answers fine when called directly | The proxy target is wrong. `NEXT_PUBLIC_API_BASE` must be a bare origin — a trailing `/` or `/api` makes the rewrite emit `//api/...` or `/api/api/...`, which the backend 404s while still returning backend-shaped error bodies, so it looks like the API is up. Run `npm run smoke -- https://your-deployment` to confirm, then fix the env var and **Redeploy**. |
+| **Connect Wallet** silently fails                                                              | Install Freighter at https://freighter.app and approve this site.                                                                                                                                                                                                                                                                                                    |
+| Authorize popup works but tx fails with `Storage ExceededLimit`                                | Old contract deploy. Update `STELLAR_*` in Render to match `/api/stellar/network`.                                                                                                                                                                                                                                                                                   |
+| Authorize fails with `Contract, #1` (Unauthorized)                                             | Your Render `STELLAR_SIGNING_KEY` doesn't match the contracts' admin. Use the secret of the wallet that deployed the contracts.                                                                                                                                                                                                                                      |
+| Artifact preview is empty                                                                      | `code.gen` returned malformed HTML. Check the **Files** tab; re-run the intent.                                                                                                                                                                                                                                                                                      |
+| `npm run dev` errors "next not found" on WSL                                                   | Windows `npm` shadowed WSL `npm`. New terminal: `nvm use default`.                                                                                                                                                                                                                                                                                                   |
 
 ## Author
 

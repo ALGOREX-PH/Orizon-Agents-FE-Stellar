@@ -7,13 +7,16 @@
  * `openTraceStream` needs EventSource (DOM) and is deliberately untested here.
  */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  ApiError,
   GET_DEDUPE_MS,
+  GET_TIMEOUT_MS,
   clearGetCache,
   decompose,
   execute,
   getArtifact,
+  getFlow,
   getOverview,
   getReputation,
   getReputationParams,
@@ -23,11 +26,13 @@ import {
   openTraceStream,
 } from "./api";
 import { rememberTaskToken } from "./task-tokens";
+import type { TraceLine } from "./types";
 
 type FetchMockResponse = {
   ok: boolean;
   status: number;
   statusText?: string;
+  headers?: { get: (name: string) => string | null };
   json: () => Promise<unknown>;
   text: () => Promise<string>;
 };
@@ -77,9 +82,21 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+// Guarded by isAgentList, so the fixture carries every field the agents
+// table computes with (price/rep/runs/skills/status).
+const agentFixture = {
+  id: "agt_01",
+  name: "copywrite.v3",
+  skills: ["content"],
+  price: 0.012,
+  rep: 4.6,
+  status: "online",
+  runs: 1284,
+};
+
 describe("get (via listAgents)", () => {
   it("hits the /api prefix with no-store and resolves parsed JSON", async () => {
-    const agents = [{ id: "agt_01", name: "copywrite.v3" }];
+    const agents = [agentFixture];
     fetchMock.mockResolvedValueOnce(jsonResponse(200, agents));
 
     await expect(listAgents()).resolves.toEqual(agents);
@@ -104,6 +121,132 @@ describe("get (via listAgents)", () => {
     fetchMock.mockRejectedValueOnce(new Error("network down"));
 
     await expect(listAgents()).rejects.toThrow("network down");
+  });
+
+  it("surfaces the backend error envelope, like post does", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(503, {
+        error: { code: "unavailable", message: "horizon unreachable" },
+        detail: "legacy detail",
+      }),
+    );
+
+    await expect(listAgents()).rejects.toThrow(
+      "GET /agents → 503 — horizon unreachable",
+    );
+  });
+
+  it("falls back to the legacy detail field", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(404, { detail: "no agents" }));
+
+    await expect(listAgents()).rejects.toThrow("GET /agents → 404 — no agents");
+  });
+
+  // "backend offline" is a lie when the backend answered "not this second".
+  it("reports a 429 as rate limited, with the wait the backend asked for", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ...jsonResponse(429, {
+        detail: "rate_limited",
+        error: { code: "rate_limited", message: "too many requests" },
+      }),
+      headers: {
+        get: (name: string) => (name === "retry-after" ? "12" : null),
+      },
+    });
+
+    const err = await listAgents().then(
+      () => {
+        throw new Error("expected rejection");
+      },
+      (e: unknown) => e as ApiError,
+    );
+
+    expect(err.message).toBe("GET /agents → 429 — rate limited, retry in 12s");
+    expect(err.status).toBe(429);
+    expect(err.retryAfterMs).toBe(12_000);
+  });
+
+  it("still names the throttling when the backend sends no Retry-After", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(429, { detail: "rate_limited" }),
+    );
+
+    const err = await listAgents().then(
+      () => {
+        throw new Error("expected rejection");
+      },
+      (e: unknown) => e as ApiError,
+    );
+
+    expect(err.message).toBe("GET /agents → 429 — rate limited, retry shortly");
+    expect(err.retryAfterMs).toBeUndefined();
+  });
+
+  it("reads an HTTP-date Retry-After as a wait in ms", async () => {
+    const at = new Date(Date.now() + 30_000).toUTCString();
+    fetchMock.mockResolvedValueOnce({
+      ...jsonResponse(429, {}),
+      headers: { get: () => at },
+    });
+
+    const err = await listAgents().then(
+      () => {
+        throw new Error("expected rejection");
+      },
+      (e: unknown) => e as ApiError,
+    );
+
+    expect(err.retryAfterMs).toBeGreaterThan(25_000);
+    expect(err.retryAfterMs).toBeLessThanOrEqual(30_000);
+  });
+});
+
+describe("fetch deadline", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("stops the deadline once the body has been read", async () => {
+    let signal: AbortSignal | undefined;
+    fetchMock.mockImplementationOnce((_url, init) => {
+      signal = init?.signal ?? undefined;
+      return Promise.resolve(jsonResponse(200, []));
+    });
+
+    await expect(listAgents()).resolves.toEqual([]);
+
+    await vi.advanceTimersByTimeAsync(GET_TIMEOUT_MS * 2);
+    expect(signal?.aborted).toBe(false);
+  });
+
+  // fetch() resolves when HEADERS arrive: a body that never lands used to sit
+  // outside the guarded scope and hang the loading state forever.
+  it("covers a stalled response body and reports it as a timeout", async () => {
+    let signal: AbortSignal | undefined;
+    fetchMock.mockImplementationOnce((_url, init) => {
+      signal = init?.signal ?? undefined;
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          new Promise<never>((_resolve, reject) => {
+            signal?.addEventListener("abort", () =>
+              reject(new Error("The operation was aborted")),
+            );
+          }),
+        text: () => Promise.resolve(""),
+      });
+    });
+
+    const rejects = expect(listAgents()).rejects.toThrow(
+      "GET /agents → timeout after 60s",
+    );
+    await vi.advanceTimersByTimeAsync(GET_TIMEOUT_MS + 1);
+    await rejects;
+    expect(signal?.aborted).toBe(true);
   });
 });
 
@@ -178,22 +321,26 @@ describe("getReputation", () => {
   });
 });
 
+// Guarded by isReputationParams: every constant the reputation math divides
+// or smooths with has to be present and numeric.
+const paramsFixture = {
+  enabled: true,
+  prior_bps: 7000,
+  prior_weight_usdc: 12,
+  floor_bps: 5500,
+  max_rating_weight_usdc: 100,
+  read_ttl_seconds: 15,
+  wilson_z: 1,
+  epoch_seconds: 604_800,
+  decay_bps_per_epoch: 9250,
+  max_decay_epochs: 96,
+  contract_id: "CDCSOBEVZUPQZV5GV4D6KYHZCLNGW2KXY74RUHSZ3EZUXF34DPW422ZT",
+  network: "testnet",
+};
+
 describe("getReputationParams", () => {
   it("hits the params endpoint and resolves the parsed object", async () => {
-    const params = {
-      enabled: true,
-      prior_bps: 7000,
-      prior_weight_usdc: 12,
-      floor_bps: 5500,
-      max_rating_weight_usdc: 100,
-      read_ttl_seconds: 15,
-      wilson_z: 1,
-      epoch_seconds: 604_800,
-      decay_bps_per_epoch: 9250,
-      max_decay_epochs: 96,
-      contract_id: "CDCSOBEVZUPQZV5GV4D6KYHZCLNGW2KXY74RUHSZ3EZUXF34DPW422ZT",
-      network: "testnet",
-    };
+    const params = paramsFixture;
     fetchMock.mockResolvedValueOnce(jsonResponse(200, params));
 
     await expect(getReputationParams()).resolves.toEqual(params);
@@ -218,6 +365,35 @@ describe("getReputationParams", () => {
 });
 
 describe("response guards", () => {
+  it("rejects a malformed agent list as a normal request error", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, [{ id: "agt_01", name: "copywrite.v3" }]),
+    );
+
+    await expect(listAgents()).rejects.toThrow(
+      "malformed response from /agents",
+    );
+  });
+
+  it("rejects a flow payload with no edges as a normal request error", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { nodes: [{ id: "in", label: "intent" }] }),
+    );
+
+    await expect(getFlow()).rejects.toThrow(
+      "malformed response from /flow/default",
+    );
+  });
+
+  it("rejects reputation params missing a decay constant", async () => {
+    const { epoch_seconds: _drop, ...rest } = paramsFixture;
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, rest));
+
+    await expect(getReputationParams()).rejects.toThrow(
+      "malformed response from /stellar/reputation/params",
+    );
+  });
+
   it("rejects a malformed overview payload as a normal request error", async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse(200, { agents_online: 1, throughput: "not-an-array" }),
@@ -255,7 +431,7 @@ describe("response guards", () => {
 
 describe("get dedupe cache", () => {
   it("shares one fetch across concurrent requests for the same path", async () => {
-    const agents = [{ id: "agt_01", name: "copywrite.v3" }];
+    const agents = [agentFixture];
     fetchMock.mockResolvedValueOnce(jsonResponse(200, agents));
 
     const [a, b] = await Promise.all([listAgents(), listAgents()]);
@@ -288,7 +464,10 @@ describe("get dedupe cache", () => {
   });
 
   it("does not dedupe across different paths", async () => {
-    fetchMock.mockResolvedValue(jsonResponse(200, []));
+    // Both paths are guarded, so each mock body has to satisfy its own guard.
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, []))
+      .mockResolvedValueOnce(jsonResponse(200, paramsFixture));
 
     await Promise.all([listAgents(), getReputationParams()]);
 
@@ -498,5 +677,147 @@ describe("task read tokens", () => {
 
     expect(FakeEventSource.urls).toEqual(["/api/trace/tsk_plain/stream"]);
     dispose();
+  });
+});
+
+/**
+ * Richer than the URL-only stub above: the suites below drive the whole
+ * connection lifecycle (open / trace / done / error) that openTraceStream
+ * reacts to.
+ */
+class StubEventSource {
+  static instances: StubEventSource[] = [];
+  url: string;
+  closed = false;
+  private listeners = new Map<string, Array<(e: MessageEvent) => void>>();
+
+  constructor(url: string) {
+    this.url = url;
+    StubEventSource.instances.push(this);
+  }
+
+  addEventListener(type: string, cb: (e: MessageEvent) => void): void {
+    const arr = this.listeners.get(type) ?? [];
+    arr.push(cb);
+    this.listeners.set(type, arr);
+  }
+
+  close(): void {
+    this.closed = true;
+  }
+
+  emit(type: string, data?: unknown): void {
+    for (const cb of this.listeners.get(type) ?? []) {
+      cb({ data: JSON.stringify(data) } as MessageEvent);
+    }
+  }
+
+  static last(): StubEventSource {
+    return StubEventSource.instances[StubEventSource.instances.length - 1];
+  }
+}
+
+const traceLine = (t: string, msg: string): TraceLine => ({
+  t,
+  level: "cost",
+  msg,
+});
+
+function useStubEventSource() {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    StubEventSource.instances = [];
+    vi.stubGlobal("EventSource", StubEventSource);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    // Hand the module-level stub back to the token tests above.
+    vi.stubGlobal("EventSource", FakeEventSource);
+  });
+}
+
+describe("openTraceStream reconnect budget", () => {
+  useStubEventSource();
+
+  // A free-form workflow streams for minutes. A budget that never reset
+  // declared such a run dead on its third transport hiccup — while it was
+  // still executing, and still charging.
+  it("refreshes the budget after every connection that carried lines", async () => {
+    const lines: TraceLine[] = [];
+    const onError = vi.fn();
+    const dispose = openTraceStream(
+      "tsk_long",
+      (l) => lines.push(l),
+      undefined,
+      onError,
+      () => {
+        lines.length = 0;
+      },
+    );
+
+    // Six outages — twice the old whole-stream budget of three.
+    for (let i = 0; i < 6; i += 1) {
+      const es = StubEventSource.last();
+      es.emit("open");
+      es.emit("trace", traceLine(`${i}.0`, `step ${i} — 0.010 USDC`));
+      es.emit("error");
+      await vi.advanceTimersByTimeAsync(1_000);
+    }
+
+    expect(StubEventSource.instances).toHaveLength(7);
+    expect(onError).not.toHaveBeenCalled();
+    expect(lines).toHaveLength(0); // consumer cleared on the last reset
+    dispose();
+  });
+
+  // Silence is not failure — steps can take 120s — so simply holding the
+  // connection counts as working.
+  it("refreshes the budget after a connection that merely stayed up", async () => {
+    const dispose = openTraceStream("tsk_quiet", () => {});
+
+    for (let i = 0; i < 5; i += 1) {
+      const es = StubEventSource.last();
+      es.emit("open");
+      await vi.advanceTimersByTimeAsync(20_000); // two keepalive windows
+      es.emit("ping");
+      es.emit("error");
+      await vi.advanceTimersByTimeAsync(1_000);
+    }
+
+    expect(StubEventSource.instances).toHaveLength(6);
+    dispose();
+  });
+
+  it("does not refresh the budget for a connection that dies on open", async () => {
+    const dispose = openTraceStream("tsk_flap", () => {});
+
+    for (const delay of [1_000, 2_000, 4_000, 1_000]) {
+      const es = StubEventSource.last();
+      es.emit("open");
+      es.emit("error");
+      await vi.advanceTimersByTimeAsync(delay);
+    }
+
+    // Three reconnects, then no more sockets: the flap does not loop.
+    expect(StubEventSource.instances).toHaveLength(4);
+    dispose();
+  });
+
+  it("closes the socket and reconnects no further once disposed", async () => {
+    const onReset = vi.fn();
+    const dispose = openTraceStream(
+      "tsk_gone",
+      () => {},
+      undefined,
+      undefined,
+      onReset,
+    );
+
+    StubEventSource.last().emit("error");
+    dispose();
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    expect(onReset).not.toHaveBeenCalled();
+    expect(StubEventSource.instances).toHaveLength(1);
   });
 });

@@ -5,30 +5,79 @@
  * - Runs `fn` immediately, then re-schedules after each completion.
  * - Pauses while the tab is hidden and resumes (with an immediate run)
  *   on `visibilitychange` — no wasted requests in background tabs.
- * - Applies exponential backoff (×2 per consecutive rejection, capped at
- *   4× the base interval) so a downed backend isn't hammered; a single
- *   success resets the cadence.
+ * - Applies exponential backoff (×2 per consecutive rejection) so a downed
+ *   backend isn't hammered; a single success resets the cadence. A
+ *   `Retry-After` the backend attached to the rejection wins over the
+ *   computed delay when it is longer.
+ *
+ * `{ trackStatus: true }` returns `{ lastSuccessAt, failures }` so a page can
+ * label data the loop has stopped refreshing — the generalization of the
+ * hand-rolled streak counter in orchestrator/_components/fiat-fund.tsx:
+ *
+ *   const { lastSuccessAt, failures } = usePolling(refresh, 5_000, {
+ *     trackStatus: true,
+ *   });
+ *   {failures >= 3 && lastSuccessAt && (
+ *     <span>stale · updated {Math.round((Date.now() - lastSuccessAt) / 1000)}s ago</span>
+ *   )}
+ *
+ * It is opt-in because the hook otherwise holds no state: callers own the
+ * data `fn` fetches, so tracking here would re-render them on every tick for
+ * a timestamp most of them never read.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { retryAfterHintMs } from "./use-fetch";
 
-// 2^2 = ×4 — the backoff cap expressed as a max failure streak.
-const MAX_BACKOFF_STREAK = 2;
+/**
+ * Floor for the backoff ceiling.
+ *
+ * The backend's rate limiter (app/security.py) answers 429 with a
+ * `Retry-After` of up to its full window — 60s. The old ceiling of 4× the
+ * base interval is 20s on the 5s dashboard, so a throttled page kept firing
+ * inside its own saturated bucket and the bucket never drained. The ceiling
+ * therefore has to clear 60s; 90s does, with headroom. Slow pollers keep the
+ * larger ×4 ceiling they already had.
+ */
+const MIN_BACKOFF_CEILING_MS = 90_000;
+/**
+ * Hard cap for a single sleep, hint included — a bad `Retry-After` must not
+ * park the loop indefinitely.
+ */
+const MAX_DELAY_MS = 300_000;
+// Streak clamp: 2^10 × any realistic interval is far past the ceiling, and it
+// keeps the exponent from overflowing during a long outage.
+const MAX_BACKOFF_STREAK = 10;
+
+export type UsePollingStatus = {
+  /**
+   * Epoch ms of the last run that resolved, or null before the first one
+   * lands (and while `trackStatus` is off). Dates the data on screen.
+   */
+  lastSuccessAt: number | null;
+  /** Consecutive rejections since the last success — 0 while healthy. */
+  failures: number;
+};
+
+const IDLE_STATUS: UsePollingStatus = { lastSuccessAt: null, failures: 0 };
 
 export function usePolling(
   fn: () => Promise<void> | void,
   intervalMs: number,
-  opts?: { enabled?: boolean },
-): void {
+  opts?: { enabled?: boolean; trackStatus?: boolean },
+): UsePollingStatus {
   const enabled = opts?.enabled ?? true;
+  const [status, setStatus] = useState<UsePollingStatus>(IDLE_STATUS);
 
   // Always call the latest `fn` without forcing callers to memoize it.
   // Synced in an effect — not during render — so render stays side-effect
   // free (concurrent renders may be thrown away). Declared before the poll
   // effect below so it runs first after each commit.
   const fnRef = useRef(fn);
+  const trackRef = useRef(opts?.trackStatus ?? false);
   useEffect(() => {
     fnRef.current = fn;
+    trackRef.current = opts?.trackStatus ?? false;
   });
 
   useEffect(() => {
@@ -37,11 +86,17 @@ export function usePolling(
     let stopped = false;
     let inFlight = false;
     let failures = 0;
+    let retryAfter: number | null = null;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    const ceiling = Math.max(intervalMs * 4, MIN_BACKOFF_CEILING_MS);
 
     const schedule = () => {
       if (stopped) return;
-      const delay = Math.min(intervalMs * 2 ** failures, intervalMs * 4);
+      const backoff = Math.min(intervalMs * 2 ** failures, ceiling);
+      const delay = Math.min(
+        retryAfter === null ? backoff : Math.max(backoff, retryAfter),
+        MAX_DELAY_MS,
+      );
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => void tick(), delay);
     };
@@ -54,8 +109,16 @@ export function usePolling(
       try {
         await fnRef.current();
         failures = 0;
-      } catch {
+        retryAfter = null;
+        if (trackRef.current)
+          setStatus({ lastSuccessAt: Date.now(), failures });
+      } catch (e) {
         failures = Math.min(failures + 1, MAX_BACKOFF_STREAK);
+        // Honoured when the rejection carries one; lib/api.ts throws plain
+        // Errors today, so this is normally null and the backoff decides.
+        retryAfter = retryAfterHintMs(e);
+        // Keeps the timestamp: it dates the data still on screen.
+        if (trackRef.current) setStatus((s) => ({ ...s, failures }));
       } finally {
         inFlight = false;
         schedule();
@@ -75,4 +138,6 @@ export function usePolling(
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [enabled, intervalMs]);
+
+  return status;
 }

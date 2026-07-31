@@ -1,11 +1,10 @@
 /** @type {import('next').NextConfig} */
-// On Vercel, fall back to the production backend so a missing env var can
-// never point the /api proxy at localhost.
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE ||
-  (process.env.VERCEL
-    ? "https://orizon-agents-be-stellar.onrender.com"
-    : "http://localhost:8000");
+import { resolveApiBase } from "./lib/api-base.mjs";
+
+// Normalized so a trailing slash or a trailing `/api` in the configured value
+// cannot corrupt the rewrite target below. On Vercel a missing value falls back
+// to the production backend so the proxy can never point at localhost.
+const API_BASE = resolveApiBase(process.env);
 
 const nextConfig = {
   reactStrictMode: true,

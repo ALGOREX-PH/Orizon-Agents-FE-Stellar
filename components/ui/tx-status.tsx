@@ -92,17 +92,24 @@ function StepTrail({ state }: { state: TxState }) {
   const current = ORDER[state];
   return (
     <Card className="mb-4">
-      <div className="flex items-center justify-between gap-2">
+      {/* The five labels are `whitespace-nowrap` and need ~370px side by side —
+          more than a ~380px viewport leaves inside this Card, and `clip-cyber`
+          would clip the overflow rather than scroll it. Below sm the trail
+          stacks vertically so no step is ever hidden. */}
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
         {STEPS.map((s, i) => {
           const idx = ORDER[s.id];
           const done = idx < current;
           const active = idx === current;
           return (
-            <div key={s.id} className="flex items-center flex-1 last:flex-none">
-              <div className="flex flex-col items-center gap-1.5">
+            <div
+              key={s.id}
+              className="flex items-center sm:flex-1 sm:last:flex-none"
+            >
+              <div className="flex items-center gap-3 sm:flex-col sm:gap-1.5">
                 <span
                   className={[
-                    "h-3 w-3 rounded-full transition-all",
+                    "h-3 w-3 shrink-0 rounded-full transition-all",
                     done && "bg-cyan shadow-[0_0_8px_#00FFD1]",
                     active &&
                       "bg-violet shadow-[0_0_12px_#B026FF] animate-pulse",
@@ -127,7 +134,7 @@ function StepTrail({ state }: { state: TxState }) {
               {i < STEPS.length - 1 && (
                 <div
                   className={[
-                    "flex-1 h-px mx-2",
+                    "hidden sm:block flex-1 h-px mx-2",
                     done ? "bg-cyan/60" : "bg-border",
                   ].join(" ")}
                 />

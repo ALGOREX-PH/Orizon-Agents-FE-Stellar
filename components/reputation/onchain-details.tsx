@@ -1,10 +1,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { ErrorNote } from "@/components/ui/error-note";
 import {
   StellarExpertLink,
   defaultExplorerNetwork,
 } from "@/components/ui/stellar-link";
 import type { ReputationParams } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 // deployed ledger ids — fallback until /reputation/params loads
 const FALLBACK_CONTRACT_IDS = {
@@ -61,15 +63,30 @@ const ERRORS = [
  * ReputationLedger v2 reference card — contract id chip + explorer link, the
  * method interface, error codes, and a constants strip driven by the
  * /reputation/params response (em dashes while params is null).
+ *
+ * When that read fails the constants strip is replaced by an announced error:
+ * five em dashes look like a ledger with nothing configured rather than a
+ * backend we could not reach.
  */
 export function OnchainDetails({
   params,
+  loading = false,
+  error = null,
+  retrying = false,
+  onRetry,
 }: {
   params: ReputationParams | null;
+  loading?: boolean;
+  error?: string | null;
+  /** An automatic retry is scheduled or in flight (`useFetch.retrying`). */
+  retrying?: boolean;
+  onRetry?: () => void;
 }) {
-  const contractId = params?.contract_id
-    ? params.contract_id
-    : FALLBACK_CONTRACT_ID;
+  // A hardcoded id is a guess about the chain, not a reading of it: the
+  // backend may be pointed at a redeployed ledger. Rendered as "unverified"
+  // so a stale constant is never mistaken for on-chain truth.
+  const verified = Boolean(params?.contract_id);
+  const contractId = params?.contract_id ?? FALLBACK_CONTRACT_ID;
   const network = params?.network ?? defaultExplorerNetwork;
   const constants = [
     {
@@ -101,14 +118,36 @@ export function OnchainDetails({
           ReputationLedger v2
         </h2>
         <span
-          title={contractId}
-          aria-label={contractId}
-          className="clip-cyber-sm border border-border bg-bg/60 px-2 py-0.5 font-mono text-[10px] tracking-widest text-muted"
+          title={
+            verified
+              ? contractId
+              : `${contractId} — hardcoded fallback, not confirmed by the backend`
+          }
+          aria-label={
+            verified
+              ? contractId
+              : `${contractId}, unverified fallback contract id`
+          }
+          className={cn(
+            "clip-cyber-sm border px-2 py-0.5 font-mono text-[10px] tracking-widest",
+            verified
+              ? "border-border bg-bg/60 text-muted"
+              : "border-magenta/40 bg-magenta/5 text-magenta",
+          )}
         >
           {contractId.slice(0, 8)}…{contractId.slice(-4)}
         </span>
+        {!verified && <Badge tone="magenta">unverified</Badge>}
         <StellarExpertLink kind="contract" id={contractId} network={network} />
       </div>
+
+      {!verified && (
+        <p className="mt-2 font-mono text-[10px] text-magenta">
+          contract id not confirmed by the backend — showing the build-time
+          fallback for {defaultExplorerNetwork}. Verify on-chain before trusting
+          it.
+        </p>
+      )}
 
       <div className="mt-5 overflow-x-auto">
         <table className="w-full text-sm">
@@ -158,18 +197,34 @@ export function OnchainDetails({
         ))}
       </div>
 
-      <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-border/50 pt-4 sm:grid-cols-3 lg:grid-cols-5">
-        {constants.map((c) => (
-          <div key={c.label}>
-            <dt className="text-[10px] uppercase tracking-widest text-muted">
-              {c.label}
-            </dt>
-            <dd className="mt-1 font-mono text-sm text-text">
-              {c.value ?? "—"}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <div className="mt-5 border-t border-border/50 pt-4">
+        {/* Error before the constants strip, and it stays put across an
+            automatic retry — the alternative is five em dashes blinking in
+            and out of a card that claims to describe the live ledger. */}
+        {error ? (
+          <ErrorNote
+            className="clip-cyber-sm"
+            onRetry={onRetry}
+            retrying={retrying || loading}
+          >
+            ledger constants unavailable — epoch length, decay, weight cap and
+            cache TTL could not be read from the backend. {error}
+          </ErrorNote>
+        ) : (
+          <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            {constants.map((c) => (
+              <div key={c.label}>
+                <dt className="text-[10px] uppercase tracking-widest text-muted">
+                  {c.label}
+                </dt>
+                <dd className="mt-1 font-mono text-sm text-text">
+                  {c.value ?? "—"}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
     </Card>
   );
 }

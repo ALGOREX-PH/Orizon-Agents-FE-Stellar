@@ -10,6 +10,7 @@ import { Personas } from "./(marketing)/_components/personas";
 import { CTA } from "./(marketing)/_components/cta";
 import { Footer } from "./(marketing)/_components/footer";
 import { Marquee } from "@/components/ui/marquee";
+import { BackendWarmup } from "@/components/backend-warmup";
 
 // Structured data for search engines. Serialized into a JSON-LD script tag
 // below; the page stays a server component so this ships as static HTML.
@@ -58,6 +59,7 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
+      <BackendWarmup />
       <Nav />
       <Hero />
       <Marquee items={agentTags} />

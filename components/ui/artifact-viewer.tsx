@@ -100,7 +100,9 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
             title={artifact.title}
             srcDoc={artifact.preview_html}
             sandbox="allow-scripts"
-            className="block w-full h-[640px] bg-white rounded-sm border border-border"
+            // 640px exceeds a 380×667 viewport once the container padding and
+            // the header chrome are counted; cap against the viewport instead.
+            className="block w-full h-[60vh] md:h-[640px] bg-white rounded-sm border border-border"
           />
         </div>
       ) : (

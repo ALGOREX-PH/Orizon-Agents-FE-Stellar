@@ -1,13 +1,24 @@
 "use client";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorNote } from "@/components/ui/error-note";
+import { LoadingStatus, Skeleton } from "@/components/ui/skeleton";
+import { StaleBadge } from "@/components/ui/stale-badge";
 import { getOverview, listTasks } from "@/lib/api";
 import type { Overview, Task } from "@/lib/types";
 import { focusRing } from "@/lib/ui";
 import { usePolling } from "@/lib/use-polling";
+
+// Tile labels are static, so they render while the payload is loading and
+// stay put when it fails — only the value slot swaps to a failed state.
+const METRIC_KEYS = [
+  "Agents online",
+  "Tasks / s",
+  "Avg completion",
+  "Avg trust",
+] as const;
 
 const statusTone: Record<
   Task["status"],
@@ -61,89 +72,148 @@ export default function OverviewPage() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  // When the manual retry below last succeeded; the poller tracks its own.
+  const [manualSuccessAt, setManualSuccessAt] = useState<number | null>(null);
 
-  usePolling(async () => {
-    try {
-      const [o, t] = await Promise.all([getOverview(), listTasks()]);
-      setOverview(o);
-      setTasks(t);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "fetch failed");
-      // Rethrow so the poller backs off while the backend is down.
-      throw e;
-    }
-  }, 5000);
+  const load = useCallback(async () => {
+    const [o, t] = await Promise.all([getOverview(), listTasks()]);
+    setOverview(o);
+    setTasks(t);
+    setError(null);
+  }, []);
 
-  const metrics = overview
+  // `trackStatus` dates the numbers still on screen: the poller keeps the last
+  // payload rendered when a tick fails, and without a timestamp those metrics
+  // present themselves as live for the whole outage.
+  const { lastSuccessAt } = usePolling(
+    async () => {
+      try {
+        await load();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "fetch failed");
+        // Rethrow so the poller backs off while the backend is down.
+        throw e;
+      }
+    },
+    5000,
+    { trackStatus: true },
+  );
+
+  // Manual retry: the poller has backed off to a 20s cadence by the time the
+  // error box is read, so the button fetches immediately instead of waiting.
+  const retry = useCallback(() => {
+    setRetrying(true);
+    load()
+      .then(() => setManualSuccessAt(Date.now()))
+      .catch((e) => setError(e instanceof Error ? e.message : "fetch failed"))
+      .finally(() => setRetrying(false));
+  }, [load]);
+
+  // The data on screen is whatever landed last — a poll tick or a manual
+  // retry. Dating it by the poller alone would age the numbers by up to a
+  // full backoff window after a hand-triggered refresh.
+  const dataAt = Math.max(lastSuccessAt ?? 0, manualSuccessAt ?? 0) || null;
+
+  // /api/metrics/overview carries no period-over-period deltas, so the tiles
+  // show the measured value and its unit only — never an invented trend.
+  const metrics: { k: string; v: string; unit?: string }[] = overview
     ? [
         {
           k: "Agents online",
           v: overview.agents_online.toLocaleString(),
-          d: "live",
-          tone: "cyan" as const,
         },
         {
           k: "Tasks / s",
           v: overview.tasks_per_sec.toFixed(3),
-          d: "+12%",
-          tone: "violet" as const,
         },
         {
           k: "Avg completion",
           v: `${(overview.avg_completion * 100).toFixed(1)}%`,
-          d: "+0.4",
-          tone: "cyan" as const,
         },
         {
+          // avg_trust is served on a 0..5 scale; the suffix is the unit, not a delta.
           k: "Avg trust",
           v: overview.avg_trust.toFixed(2),
-          d: "/5",
-          tone: "magenta" as const,
+          unit: "/ 5",
         },
       ]
     : [];
 
   return (
     <div className="space-y-8">
-      <div className="flex items-end justify-between">
+      <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Overview</h1>
           <p className="mt-1 text-sm text-muted">
             Realtime pulse of the Orizon network.
           </p>
         </div>
-        <Badge tone={error ? "magenta" : "violet"} dot>
-          {error ? "backend offline" : "streaming"}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Hidden unless a payload is actually on screen: a first load that
+              never landed is a failure, not stale data, and the ErrorNote
+              below owns that case. */}
+          <StaleBadge
+            stale={Boolean(error)}
+            lastSuccessAt={dataAt}
+            what="network metrics"
+          />
+          <Badge tone={error ? "magenta" : "violet"} dot>
+            {error ? "backend offline" : "streaming"}
+          </Badge>
+        </div>
       </div>
 
+      {error && (
+        <ErrorNote
+          className="clip-cyber-sm"
+          onRetry={retry}
+          retrying={retrying}
+        >
+          couldn&apos;t reach the backend — {error}
+          {overview && " · showing the last values received"}
+        </ErrorNote>
+      )}
+
       <div className="grid gap-4 md:grid-cols-4">
-        {(overview ? metrics : [0, 1, 2, 3]).map((metric, i) =>
-          typeof metric === "number" ? (
-            <Card key={i}>
-              <Skeleton className="h-3 w-24 mb-4" />
-              <Skeleton className="h-8 w-16" />
-            </Card>
-          ) : (
-            <m.div
-              key={metric.k}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: i * 0.06 }}
-            >
-              <Card>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-                    {metric.k}
-                  </span>
-                  <Badge tone={metric.tone}>{metric.d}</Badge>
+        {!overview && !error && <LoadingStatus label="Loading metrics…" />}
+        {!overview &&
+          METRIC_KEYS.map((k) => (
+            <Card key={k}>
+              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
+                {k}
+              </div>
+              {error ? (
+                <div className="font-mono text-sm text-magenta">
+                  unavailable
                 </div>
-                <div className="font-mono text-3xl neon-text">{metric.v}</div>
-              </Card>
-            </m.div>
-          ),
-        )}
+              ) : (
+                <Skeleton className="h-8 w-16" />
+              )}
+            </Card>
+          ))}
+        {metrics.map((metric, i) => (
+          <m.div
+            key={metric.k}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.06 }}
+          >
+            <Card>
+              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
+                {metric.k}
+              </div>
+              <div className="font-mono text-3xl neon-text">
+                {metric.v}
+                {metric.unit && (
+                  <span className="ml-1.5 text-base text-muted">
+                    {metric.unit}
+                  </span>
+                )}
+              </div>
+            </Card>
+          </m.div>
+        ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -176,8 +246,15 @@ export default function OverviewPage() {
           </div>
           {overview ? (
             <Sparkline points={overview.throughput} />
+          ) : error ? (
+            <div className="grid h-36 place-items-center border border-dashed border-border font-mono text-[11px] text-muted">
+              throughput unavailable — backend unreachable
+            </div>
           ) : (
-            <Skeleton className="h-36 w-full" />
+            <>
+              <Skeleton className="h-36 w-full" />
+              <LoadingStatus label="Loading throughput chart…" />
+            </>
           )}
         </Card>
 
@@ -209,8 +286,17 @@ export default function OverviewPage() {
               </div>
             ))}
             {!overview &&
-              Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-4 w-full" />
+              (error ? (
+                <p className="font-mono text-[11px] text-muted">
+                  skill mix unavailable — backend unreachable
+                </p>
+              ) : (
+                <>
+                  <LoadingStatus label="Loading network composition…" />
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-4 w-full" />
+                  ))}
+                </>
               ))}
           </div>
         </Card>
@@ -220,7 +306,11 @@ export default function OverviewPage() {
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold">Recent tasks</h2>
           <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-            {tasks ? `${tasks.length} tracked` : "loading…"}
+            {tasks
+              ? `${tasks.length} tracked`
+              : error
+                ? "unavailable"
+                : "loading…"}
           </span>
         </div>
         <div className="overflow-x-auto">
@@ -271,12 +361,26 @@ export default function OverviewPage() {
                 </tr>
               )}
               {!tasks &&
-                Array.from({ length: 4 }).map((_, i) => (
-                  <tr key={i} className="border-b border-border/50">
-                    <td colSpan={6} className="py-3">
-                      <Skeleton className="h-5 w-full" />
+                (error ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="py-10 text-center text-muted font-mono text-xs"
+                    >
+                      couldn&apos;t load recent tasks — backend unreachable.
                     </td>
                   </tr>
+                ) : (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <tr key={i} className="border-b border-border/50">
+                      <td colSpan={6} className="py-3">
+                        <Skeleton className="h-5 w-full" />
+                        {i === 0 && (
+                          <LoadingStatus label="Loading recent tasks…" />
+                        )}
+                      </td>
+                    </tr>
+                  ))
                 ))}
             </tbody>
           </table>

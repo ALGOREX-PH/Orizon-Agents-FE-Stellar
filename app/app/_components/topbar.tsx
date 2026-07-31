@@ -4,7 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { NETWORK_NAME, useWallet } from "@/lib/wallet";
 import { NETWORK_LABEL } from "@/components/ui/stellar-link";
+import { getStellarNetwork } from "@/lib/api";
 import { focusRing } from "@/lib/ui";
+import { useFetch } from "@/lib/use-fetch";
 import { useMobileNav } from "./mobile-nav-context";
 
 // Display label for the configured network — "mainnet" | "testnet".
@@ -35,10 +37,33 @@ export function Topbar() {
     connected,
     xlmBalance,
     balanceLoading,
+    balanceError,
+    refreshBalance,
     walletNetwork,
     walletNetworkMismatch,
   } = useWallet();
   const { toggle } = useMobileNav();
+
+  // The status pill used to be a hardcoded "live" — it kept asserting the
+  // console was healthy right through an outage where every backend call
+  // 404'd. It now reports one real thing: whether this build can reach its
+  // backend. The layout mounts the topbar once, so this is a single request
+  // per console session (refreshed when a stale tab regains focus), and it
+  // shares the deduped GET with any page fetching the same endpoint.
+  const {
+    data: backend,
+    error: backendError,
+    loading: backendLoading,
+    retrying: backendRetrying,
+    reload: recheckBackend,
+  } = useFetch(getStellarNetwork, [], {
+    revalidateOnFocus: true,
+    staleAfterMs: 30_000,
+  });
+  // The whole automatic-recovery window: an attempt in flight *or* the
+  // backoff gap before the next one. The pill reports one settled state
+  // instead of blinking between "checking…" and "offline" every few seconds.
+  const backendRechecking = backendLoading || backendRetrying;
 
   return (
     <>
@@ -71,26 +96,73 @@ export function Topbar() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
-          {connected && (
-            <div
-              className="hidden sm:flex clip-cyber-sm border border-cyan/40 bg-cyan/5 h-8 px-3 items-center gap-2 font-mono text-[11px] text-cyan"
-              title={`native XLM balance · ${NETWORK_LABEL}`}
-            >
-              <span className="opacity-60">◈</span>
-              <span className="text-text">
-                {balanceLoading && xlmBalance === null
-                  ? "…"
-                  : fmtXlm(xlmBalance)}
-              </span>
-              <span className="opacity-70 uppercase tracking-[0.22em] text-[9px]">
-                xlm
-              </span>
-            </div>
-          )}
+          {connected &&
+            // A failed balance fetch used to render the same quiet "—" as a
+            // balance that simply hadn't loaded. Say it failed, and make the
+            // chip the retry control.
+            (balanceError ? (
+              <button
+                type="button"
+                onClick={() => void refreshBalance()}
+                disabled={balanceLoading}
+                title={`native XLM balance unavailable — ${balanceError}`}
+                aria-label={`XLM balance unavailable — ${balanceError}. Retry`}
+                className={`hidden sm:flex clip-cyber-sm border border-magenta/40 bg-magenta/5 h-8 px-3 items-center gap-2 font-mono text-[11px] text-magenta hover:bg-magenta/10 disabled:opacity-50 transition ${focusRing}`}
+              >
+                <span aria-hidden>⚠</span>
+                <span>{balanceLoading ? "retrying…" : "balance n/a"}</span>
+                <span
+                  aria-hidden
+                  className="opacity-70 uppercase tracking-[0.22em] text-[9px]"
+                >
+                  ↻
+                </span>
+              </button>
+            ) : (
+              <div
+                className="hidden sm:flex clip-cyber-sm border border-cyan/40 bg-cyan/5 h-8 px-3 items-center gap-2 font-mono text-[11px] text-cyan"
+                title={`native XLM balance · ${NETWORK_LABEL}`}
+              >
+                <span className="opacity-60">◈</span>
+                <span className="text-text">
+                  {balanceLoading && xlmBalance === null
+                    ? "…"
+                    : fmtXlm(xlmBalance)}
+                </span>
+                <span className="opacity-70 uppercase tracking-[0.22em] text-[9px]">
+                  xlm
+                </span>
+              </div>
+            ))}
           <ConnectWallet />
-          <Badge tone="success" dot>
-            live
-          </Badge>
+          <div role="status" aria-live="polite" className="flex items-center">
+            {backendError ? (
+              // A stale success must not outrank a live failure — report the
+              // most recent attempt, not the best one.
+              <button
+                type="button"
+                onClick={recheckBackend}
+                disabled={backendRechecking}
+                title={`backend unreachable — ${backendError}`}
+                aria-label={`backend unreachable — ${backendError}. Retry`}
+                className={`disabled:opacity-50 ${focusRing}`}
+              >
+                <Badge tone="magenta" dot>
+                  {backendRechecking ? "checking…" : "offline ↻"}
+                </Badge>
+              </button>
+            ) : backend ? (
+              <span title={`backend reachable · ${backend.network}`}>
+                <Badge tone="success" dot>
+                  live
+                </Badge>
+              </span>
+            ) : (
+              <span title="checking backend…">
+                <Badge tone="muted">checking…</Badge>
+              </span>
+            )}
+          </div>
         </div>
       </header>
       {walletNetworkMismatch && (

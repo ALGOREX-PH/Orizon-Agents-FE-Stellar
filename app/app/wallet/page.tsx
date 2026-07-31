@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { ErrorNote } from "@/components/ui/error-note";
+import { StaleBadge } from "@/components/ui/stale-badge";
 import { NETWORK_NAME, useWallet } from "@/lib/wallet";
 import { KVRow } from "@/components/ui/kv-row";
 import {
@@ -14,7 +15,7 @@ import {
 import { getStellarNetwork } from "@/lib/api";
 import { focusRing } from "@/lib/ui";
 import { useFetch } from "@/lib/use-fetch";
-import { prettyName } from "@/lib/utils";
+import { cn, prettyName } from "@/lib/utils";
 
 // Display label for the configured network — "mainnet" | "testnet".
 
@@ -26,11 +27,23 @@ export default function WalletPage() {
     walletNetwork,
     xlmBalance,
     balanceLoading,
+    balanceError,
     refreshBalance,
   } = useWallet();
-  const { data: info, error } = useFetch(getStellarNetwork, [], {
+  const {
+    data: info,
+    error,
+    loading,
+    retrying,
+    lastSuccessAt,
+    reload,
+  } = useFetch(getStellarNetwork, [], {
     revalidateOnFocus: true,
   });
+  // One flag for the whole recovery window: an attempt in flight *or* the
+  // backoff gap before the next one. Without the gap the error frame drops
+  // back to an idle "retry" between attempts and reads as a dead end.
+  const recovering = loading || retrying;
 
   // Compare the network the wallet itself reported against the backend's
   // deploy. Wallets that can't report a network (walletNetwork null) show
@@ -45,8 +58,22 @@ export default function WalletPage() {
   // this build's configured network when the wallet didn't report one.
   const sessionNetwork = walletNetwork ?? network;
 
-  const balanceFmt =
-    xlmBalance === null ? "—" : parseFloat(xlmBalance).toFixed(7);
+  // A failed fetch leaves the balance unknown — it must never render as a
+  // plain dash next to the number, which reads as "nothing here" instead of
+  // "we could not ask Horizon".
+  //
+  // This is also why the balance carries no StaleBadge: useWallet clears
+  // `xlmBalance` when Horizon fails, so there is never a frozen figure on
+  // screen to date — the number is gone, which is a failure (ErrorNote), not
+  // staleness. Keeping the old amount visible instead would be exactly the
+  // fabricated money value the failure states were fixed to stop showing.
+  const parsedBalance = xlmBalance === null ? NaN : parseFloat(xlmBalance);
+  const balanceKnown = Number.isFinite(parsedBalance);
+  const balanceFmt = balanceKnown
+    ? parsedBalance.toFixed(7)
+    : balanceLoading
+      ? "…"
+      : "—";
 
   return (
     <div className="space-y-6">
@@ -78,8 +105,13 @@ export default function WalletPage() {
                 ▸ native XLM balance
               </div>
               <div className="flex items-baseline gap-3">
-                <span className="text-5xl font-semibold tracking-tight tabular-nums">
-                  {balanceLoading && xlmBalance === null ? "…" : balanceFmt}
+                <span
+                  className={cn(
+                    "text-5xl font-semibold tracking-tight tabular-nums",
+                    !balanceKnown && balanceError && "text-magenta",
+                  )}
+                >
+                  {balanceFmt}
                 </span>
                 <span className="font-mono text-sm uppercase tracking-[0.2em] text-cyan">
                   XLM
@@ -89,6 +121,15 @@ export default function WalletPage() {
                 {address ? `${address.slice(0, 6)}…${address.slice(-6)}` : ""} ·{" "}
                 {sessionNetwork?.network ?? NETWORK_NAME}
               </div>
+              {balanceError && (
+                <ErrorNote
+                  className="clip-cyber-sm mt-3 text-[11px]"
+                  onRetry={() => void refreshBalance()}
+                  retrying={balanceLoading}
+                >
+                  balance unavailable — {balanceError}
+                </ErrorNote>
+              )}
             </div>
             <div className="flex items-center gap-3 flex-wrap">
               {defaultExplorerNetwork !== "public" && (
@@ -145,11 +186,28 @@ export default function WalletPage() {
         </Card>
 
         <Card>
-          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-violet-readable mb-4">
-            Orizon deploy ({info?.network ?? "…"})
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-violet-readable">
+              {/* Never keep claiming a deploy we could not read — an ellipsis
+                  here read as "still loading" for the whole outage. */}
+              Orizon deploy ({info ? info.network : error ? "unreachable" : "…"}
+              )
+            </div>
+            {/* The rows below survive a failed reload, so date them. Nothing
+                renders before the first success — that state is a failure,
+                and the ErrorNote below carries it. */}
+            <StaleBadge
+              stale={Boolean(error)}
+              lastSuccessAt={lastSuccessAt}
+              what="deploy details"
+            />
           </div>
           {error && (
-            <ErrorNote className="border-0 bg-transparent p-0 text-sm mb-3">
+            <ErrorNote
+              className="mb-3 text-sm"
+              onRetry={reload}
+              retrying={recovering}
+            >
               backend offline — {error}
             </ErrorNote>
           )}
@@ -172,37 +230,46 @@ export default function WalletPage() {
         <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan mb-5">
           Deployed contracts
         </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          {info
-            ? Object.entries(info.contracts).map(([name, id]) => (
-                <a
-                  key={name}
-                  href={stellarExpertUrl("contract", id, info.network)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`clip-cyber-sm border border-border bg-bg/40 p-4 hover:border-violet/60 hover:bg-violet/5 transition ${focusRing}`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold">
-                      {prettyName(name)}
-                    </span>
-                    <Badge tone="cyan">live</Badge>
-                  </div>
-                  <div className="font-mono text-[11px] text-muted break-all">
-                    {id}
-                  </div>
-                  <div className="mt-2 font-mono text-[10px] text-cyan">
-                    view on stellar.expert ▸
-                  </div>
-                </a>
-              ))
-            : Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="clip-cyber-sm border border-border bg-bg/40 p-4 h-20 animate-pulse"
-                />
-              ))}
-        </div>
+        {/* No error branch here used to mean a failed fetch pulsed four empty
+            placeholders forever — the card looked like it was still loading
+            days into an outage. */}
+        {!info && error ? (
+          <ErrorNote onRetry={reload} retrying={recovering}>
+            contracts unavailable — {error}
+          </ErrorNote>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {info
+              ? Object.entries(info.contracts).map(([name, id]) => (
+                  <a
+                    key={name}
+                    href={stellarExpertUrl("contract", id, info.network)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`clip-cyber-sm border border-border bg-bg/40 p-4 hover:border-violet/60 hover:bg-violet/5 transition ${focusRing}`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold">
+                        {prettyName(name)}
+                      </span>
+                      <Badge tone="cyan">live</Badge>
+                    </div>
+                    <div className="font-mono text-[11px] text-muted break-all">
+                      {id}
+                    </div>
+                    <div className="mt-2 font-mono text-[10px] text-cyan">
+                      view on stellar.expert ▸
+                    </div>
+                  </a>
+                ))
+              : Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="clip-cyber-sm border border-border bg-bg/40 p-4 h-20 animate-pulse"
+                  />
+                ))}
+          </div>
+        )}
       </Card>
     </div>
   );

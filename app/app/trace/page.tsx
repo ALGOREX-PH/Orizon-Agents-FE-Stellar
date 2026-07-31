@@ -1,11 +1,20 @@
 "use client";
-import { Suspense, memo, useEffect, useRef, useState } from "react";
+import {
+  Suspense,
+  memo,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArtifactViewer } from "@/components/ui/artifact-viewer";
+import { ErrorNote } from "@/components/ui/error-note";
 import { KVRow } from "@/components/ui/kv-row";
+import { LoadingStatus, Skeleton } from "@/components/ui/skeleton";
 import { StellarExpertLink } from "@/components/ui/stellar-link";
 import { getArtifact, openTraceStream } from "@/lib/api";
 import type { ArtifactResponse, TraceLine } from "@/lib/types";
@@ -29,17 +38,25 @@ type Tab = "trace" | "artifact";
 // all already-rendered rows.
 const TraceRow = memo(function TraceRow({ line }: { line: TraceLine }) {
   return (
-    <div className="flex gap-3">
-      <span className="w-16 text-muted">{line.t}</span>
+    <div className="flex gap-2 sm:gap-3">
+      {/* Fixed gutters ate ~120px of the ~276px a 380px viewport leaves inside
+          the log box, squeezing messages into a 2-3 word ribbon — and
+          globals.css sets overflow-x:hidden, so the overflow was clipped
+          rather than scrollable. The timestamp is the droppable one. */}
+      <span className="hidden sm:inline w-16 shrink-0 text-muted">
+        {line.t}
+      </span>
       <span
         className={cn(
-          "w-14 uppercase tracking-widest text-[10px]",
+          "w-14 shrink-0 uppercase tracking-widest text-[10px]",
           levelColor[line.level],
         )}
       >
         {line.level}
       </span>
-      <span className="flex-1 text-text/90 leading-5">{line.msg}</span>
+      <span className="flex-1 min-w-0 break-words text-text/90 leading-5">
+        {line.msg}
+      </span>
     </div>
   );
 });
@@ -55,6 +72,10 @@ function TracePageInner() {
   );
   const [artifactError, setArtifactError] = useState<string | null>(null);
   const [streamError, setStreamError] = useState(false);
+  // Bumping this re-runs the subscribe effect, which tears the dead stream
+  // down and opens a fresh one — the manual counterpart to the 3 automatic
+  // reconnects openTraceStream spends before giving up.
+  const [streamAttempt, setStreamAttempt] = useState(0);
 
   const [demoCursor, setDemoCursor] = useState(0);
   const [demoPlaying, setDemoPlaying] = useState(true);
@@ -126,7 +147,7 @@ function TracePageInner() {
       alive = false;
       close();
     };
-  }, [taskId]);
+  }, [taskId, streamAttempt]);
 
   // Auto-switch tabs when an artifact arrives.
   useEffect(() => {
@@ -171,7 +192,76 @@ function TracePageInner() {
       return acc + (m ? parseFloat(m[1]) : 0);
     }, 0);
 
+  // A stream that failed — or that never delivered a line — tells us nothing
+  // about what the run cost. The reduce over an empty list formats as
+  // "0.000 USDC", which reads as "this run was free": the exact lie that let
+  // days of 404ing backend calls pass as healthy. Spend is only a fact when
+  // there are lines to total AND the stream did not drop mid-run (a dropped
+  // stream may have missed cost lines that were already charged).
+  const spendUnknownReason = !taskId
+    ? null
+    : streamError
+      ? "stream failed — spend unknown"
+      : visible.length === 0
+        ? done
+          ? "stream closed with no trace lines"
+          : "no trace lines received yet"
+        : null;
+
   const artifact = artifactData?.artifact ?? null;
+
+  const proofMsg = visible.find((l) => l.level === "proof")?.msg ?? null;
+  const proofTx = artifactData?.proof_tx ?? null;
+  // "awaiting…" is a promise that something is still coming. Once the stream
+  // is dead — or sealed without a proof — nothing is on its way, and saying
+  // otherwise leaves the panel waiting forever on a run that already ended.
+  const attestationUnavailable =
+    !proofMsg && !proofTx && Boolean(taskId) && (streamError || done);
+  const attestationText = proofMsg
+    ? proofMsg
+    : proofTx
+      ? "ERC-8004 attestation sealed on-chain"
+      : streamError
+        ? "attestation unknown — the stream failed before one was recorded"
+        : done
+          ? "run sealed without an ERC-8004 attestation"
+          : "awaiting ERC-8004 attestation…";
+
+  // The subscribe effect resets lines/done/error and opens a new EventSource,
+  // so a retry restarts from the backend's replayed history rather than
+  // appending onto a stale half-run.
+  const reconnect = () => setStreamAttempt((n) => n + 1);
+
+  const summaryRows: Array<[string, ReactNode]> = [
+    ["Task", taskId ?? "demo"],
+    ["Lines", String(visible.length)],
+    [
+      "Spent",
+      spendUnknownReason ? (
+        <>
+          <span className="text-magenta" aria-hidden="true">
+            —
+          </span>
+          <span className="sr-only">unknown</span>
+          <div className="mt-1 text-[10px] leading-4 text-magenta/80">
+            {spendUnknownReason}
+          </div>
+        </>
+      ) : (
+        `${spent.toFixed(3)} USDC`
+      ),
+    ],
+    [
+      "State",
+      taskId
+        ? streamError
+          ? "interrupted ✕"
+          : done
+            ? "sealed ✓"
+            : "streaming…"
+        : "demo",
+    ],
+  ];
 
   return (
     <div className="space-y-6">
@@ -241,12 +331,9 @@ function TracePageInner() {
       )}
 
       {artifactError && !artifact && (
-        <div
-          role="alert"
-          className="border border-magenta/40 bg-magenta/10 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] text-magenta"
-        >
+        <ErrorNote className="clip-cyber-sm">
           ⚠ artifact fetch failed — {artifactError}
-        </div>
+        </ErrorNote>
       )}
 
       {tab === "artifact" && artifact ? (
@@ -290,23 +377,63 @@ function TracePageInner() {
                 </span>
               </div>
               <span className="font-mono text-[10px] text-muted">
-                {visible.length} / {total} steps
+                {/* Live runs have no known step count — `total` is just
+                    lines.length, so "0 / 0 steps" was a fabricated denominator
+                    that made a dead stream look like a completed empty run.
+                    Only the demo replay knows its length up front. */}
+                {taskId
+                  ? streamError && visible.length === 0
+                    ? "— steps"
+                    : `${visible.length} step${visible.length === 1 ? "" : "s"}`
+                  : `${visible.length} / ${total} steps`}
               </span>
             </div>
             <div
               ref={containerRef}
-              className="font-mono text-xs p-5 h-[540px] overflow-y-auto space-y-1.5 bg-[#060010]"
+              className="font-mono text-xs p-4 sm:p-5 h-[540px] overflow-y-auto space-y-1.5 bg-[#060010]"
             >
               {visible.map((line, i) => (
                 <TraceRow key={i} line={line} />
               ))}
               {taskId && !done && !streamError && (
-                <div className="flex gap-3 animate-pulse">
-                  <span className="w-16 text-muted">…</span>
-                  <span className="w-14 text-violet uppercase tracking-widest text-[10px]">
+                <div className="flex gap-2 sm:gap-3 animate-pulse">
+                  <span className="hidden sm:inline w-16 shrink-0 text-muted">
+                    …
+                  </span>
+                  <span className="w-14 shrink-0 text-violet uppercase tracking-widest text-[10px]">
                     wait
                   </span>
-                  <span className="flex-1 text-muted">awaiting next step…</span>
+                  <span className="flex-1 min-w-0 text-muted">
+                    awaiting next step…
+                  </span>
+                </div>
+              )}
+              {taskId && streamError && (
+                <div
+                  className={cn(
+                    "flex",
+                    visible.length === 0 ? "h-full items-center" : "pt-4",
+                  )}
+                >
+                  <ErrorNote
+                    className="w-full leading-5"
+                    onRetry={reconnect}
+                    retryLabel="↻ reconnect"
+                  >
+                    <span className="block uppercase tracking-[0.2em] text-[10px]">
+                      ⚠ stream lost
+                    </span>
+                    <span className="mt-1.5 block text-magenta/80">
+                      the trace stream dropped and three automatic reconnects
+                      failed
+                      {visible.length === 0
+                        ? " before a single line arrived"
+                        : ` after ${visible.length} line${visible.length === 1 ? "" : "s"}`}
+                      . nothing further will arrive on this connection — the
+                      summary and attestation are incomplete until it is
+                      restored.
+                    </span>
+                  </ErrorNote>
                 </div>
               )}
             </div>
@@ -317,33 +444,11 @@ function TracePageInner() {
               <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan mb-4">
                 Summary
               </div>
-              <dl className="space-y-3 text-sm">
-                {[
-                  ["Task", taskId ?? "demo"],
-                  ["Lines", String(visible.length)],
-                  ["Spent", `${spent.toFixed(3)} USDC`],
-                  [
-                    "State",
-                    taskId
-                      ? streamError
-                        ? "interrupted ✕"
-                        : done
-                          ? "sealed ✓"
-                          : "streaming…"
-                      : "demo",
-                  ],
-                ].map(([k, v]) => (
-                  <div
-                    key={k}
-                    className="flex items-center justify-between border-b border-border/40 pb-2"
-                  >
-                    <dt className="text-muted font-mono text-[11px] uppercase tracking-widest">
-                      {k}
-                    </dt>
-                    <dd className="font-mono truncate max-w-[160px] text-right">
-                      {v}
-                    </dd>
-                  </div>
+              <dl className="space-y-3 text-sm font-mono">
+                {summaryRows.map(([k, v]) => (
+                  <KVRow key={k} k={k}>
+                    {v}
+                  </KVRow>
                 ))}
               </dl>
             </Card>
@@ -351,14 +456,18 @@ function TracePageInner() {
               <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-magenta mb-4">
                 Attestation
               </div>
-              <div className="font-mono text-xs text-muted break-all leading-5">
-                {visible.find((l) => l.level === "proof")?.msg ??
-                  "awaiting ERC-8004 attestation…"}
+              <div
+                className={cn(
+                  "font-mono text-xs break-all leading-5",
+                  attestationUnavailable ? "text-magenta/90" : "text-muted",
+                )}
+              >
+                {attestationText}
               </div>
-              {artifactData?.proof_tx && (
+              {proofTx && (
                 <StellarExpertLink
                   kind="tx"
-                  id={artifactData.proof_tx}
+                  id={proofTx}
                   className="mt-3 inline-block"
                 />
               )}
@@ -379,11 +488,81 @@ function TxRow({ label, hash }: { label: string; hash: string }) {
   );
 }
 
+/**
+ * Shell for the Suspense boundary. `useSearchParams` suspends the whole page,
+ * and a one-line "loading…" reserved none of the 540px log box — the real
+ * layout slammed in underneath it. This mirrors the live structure (header,
+ * log card with its status bar, summary + attestation column) so the swap is
+ * a fill, not a jump.
+ */
+function TraceSkeleton() {
+  return (
+    <div className="space-y-6" aria-busy="true">
+      <LoadingStatus label="Loading trace…" />
+      <div className="flex items-end justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Trace</h1>
+          <Skeleton className="mt-2 h-4 w-64 max-w-full" />
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+        <Card className="!p-0 overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border bg-surface/80 px-4 py-2.5">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+            <Skeleton className="h-3 w-16" />
+          </div>
+          <div className="h-[540px] space-y-3 bg-[#060010] p-4 sm:p-5">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="flex gap-2 sm:gap-3">
+                <Skeleton className="hidden sm:block h-3 w-16 shrink-0" />
+                <Skeleton className="h-3 w-14 shrink-0" />
+                <Skeleton
+                  className={cn("h-3 flex-1", i % 3 === 2 && "max-w-[55%]")}
+                />
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <div className="space-y-4">
+          <Card>
+            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan mb-4">
+              Summary
+            </div>
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between gap-4 border-b border-border/40 pb-2 last:border-0"
+                >
+                  <Skeleton className="h-3 w-14" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              ))}
+            </div>
+          </Card>
+          <Card>
+            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-magenta mb-4">
+              Attestation
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TracePage() {
   return (
-    <Suspense
-      fallback={<div className="font-mono text-sm text-muted">loading…</div>}
-    >
+    <Suspense fallback={<TraceSkeleton />}>
       <TracePageInner />
     </Suspense>
   );

@@ -1,11 +1,12 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ErrorNote } from "@/components/ui/error-note";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingStatus, Skeleton } from "@/components/ui/skeleton";
+import { StaleBadge } from "@/components/ui/stale-badge";
 import { ReputationBadge } from "@/components/ui/reputation-badge";
 import { listAgents, listReputation } from "@/lib/api";
 import { focusRing } from "@/lib/ui";
@@ -19,13 +20,28 @@ const statusTone = {
 };
 
 export default function AgentsPage() {
-  const { data: agents, error } = useFetch(listAgents, [], {
+  const {
+    data: agents,
+    error,
+    loading,
+    retrying,
+    lastSuccessAt,
+    reload: reloadAgents,
+  } = useFetch(listAgents, [], {
     revalidateOnFocus: true,
   });
   // On-chain reputation is best-effort: on error we silently keep seeded values.
-  const { data: repBatch } = useFetch(listReputation, [], {
-    revalidateOnFocus: true,
-  });
+  const { data: repBatch, reload: reloadReputation } = useFetch(
+    listReputation,
+    [],
+    { revalidateOnFocus: true },
+  );
+
+  // One outage takes down both reads, so a retry re-runs them together.
+  const retry = useCallback(() => {
+    reloadAgents();
+    reloadReputation();
+  }, [reloadAgents, reloadReputation]);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "online" | "idle" | "offline">(
     "all",
@@ -130,10 +146,26 @@ export default function AgentsPage() {
               </button>
             ))}
           </div>
+          {/* Rendered only once a registry has actually been fetched — the
+              hook drops `lastSuccessAt` with the data it dates, so a first
+              load that never landed shows the error frame alone. */}
+          <StaleBadge
+            stale={Boolean(error)}
+            lastSuccessAt={lastSuccessAt}
+            what="agent registry"
+          />
         </div>
 
+        {/* `retrying` covers the gaps *between* automatic attempts, when the
+            hook is asleep on its backoff and `loading` is false — without it
+            the frame flips back to an idle "retry" button and reads like a
+            dead end mid-recovery. */}
         {error && (
-          <ErrorNote className="mb-4 clip-cyber-sm">
+          <ErrorNote
+            className="mb-4 clip-cyber-sm"
+            onRetry={retry}
+            retrying={loading || retrying}
+          >
             backend offline — {error}
           </ErrorNote>
         )}
@@ -153,14 +185,30 @@ export default function AgentsPage() {
               </tr>
             </thead>
             <tbody>
+              {/* `!error` first: a retry attempt flips `loading` back to true,
+                  and a skeleton must never win over the error frame — that
+                  alternation is what makes a failing page look alive. */}
               {!agents &&
+                !error &&
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i} className="border-b border-border/50">
                     <td colSpan={8} className="py-3">
                       <Skeleton className="h-5 w-full" />
+                      {i === 0 && <LoadingStatus label="Loading agents…" />}
                     </td>
                   </tr>
                 ))}
+
+              {!agents && error && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="py-10 text-center text-muted font-mono text-xs"
+                  >
+                    couldn&apos;t load agents — the registry is unreachable.
+                  </td>
+                </tr>
+              )}
 
               {rows.map((a, i) => (
                 <m.tr

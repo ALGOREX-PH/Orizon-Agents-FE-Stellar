@@ -10,11 +10,14 @@
  */
 
 import type {
+  Agent,
   ArtifactResponse,
   CodeArtifact,
   DecomposeResponse,
+  Flow,
   Overview,
   ReputationBatch,
+  ReputationParams,
   StellarNetworkInfo,
   Task,
 } from "./types";
@@ -27,11 +30,54 @@ const isNum = (v: unknown): v is number =>
 
 const isStr = (v: unknown): v is string => typeof v === "string";
 
+/** A string, or absent. For fields the UI renders behind a fallback: a wrong
+ * *type* is still rejected, a missing one is not. */
+const isOptionalStr = (v: unknown): v is string | undefined =>
+  v === undefined || v === null || isStr(v);
+
 const isNumArray = (v: unknown): v is number[] =>
   Array.isArray(v) && v.every(isNum);
 
+const isStrArray = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.every(isStr);
+
+/** Backend `AgentStatus` literal (app/schemas.py). Checked as a set, not just
+ * as a string, because the status indexes a tone map — an unlisted value
+ * silently renders an unstyled badge. */
+const AGENT_STATUSES = new Set(["online", "idle", "offline"]);
+
+/** Agents table + reputation leaderboard: `price.toFixed(3)`,
+ * `runs.toLocaleString()`, `skills.map`, `rep * 2000`, and `status` keys a
+ * tone map. Mirrors backend `Agent` (`app/schemas.py`); `real` has a server
+ * default and is only used as a truthiness flag, so it stays unchecked. */
+export function isAgentList(v: unknown): v is Agent[] {
+  return (
+    Array.isArray(v) &&
+    v.every(
+      (a) =>
+        isRecord(a) &&
+        isStr(a.id) &&
+        isStr(a.name) &&
+        isStrArray(a.skills) &&
+        isNum(a.price) &&
+        isNum(a.rep) &&
+        isNum(a.runs) &&
+        isStr(a.status) &&
+        AGENT_STATUSES.has(a.status),
+    )
+  );
+}
+
 /** Dashboard + sidebar: stat tiles do `*100`/`.toFixed`, sparkline maps
- * `throughput`, the skills list maps `name`/`pct`. */
+ * `throughput`, the skills list maps `name`/`pct` and colors each bar from
+ * `tone`.
+ *
+ * `tone` is checked as a string only *when present*: the backend types skills
+ * as `list[dict[str, Any]]` (`OverviewMetrics`, app/schemas.py), so pydantic
+ * guarantees no key at all — requiring it (or pinning it to today's three
+ * tone names) would reject payloads the contract permits. The renderer already
+ * falls back to a default color for an unknown tone; the check only rules out
+ * a non-string sneaking into a comparison. */
 export function isOverview(v: unknown): v is Overview {
   return (
     isRecord(v) &&
@@ -41,20 +87,65 @@ export function isOverview(v: unknown): v is Overview {
     isNum(v.avg_trust) &&
     isNumArray(v.throughput) &&
     Array.isArray(v.skills) &&
-    v.skills.every((s) => isRecord(s) && isStr(s.name) && isNum(s.pct))
+    v.skills.every(
+      (s) =>
+        isRecord(s) &&
+        isStr(s.name) &&
+        isNum(s.pct) &&
+        (s.tone === undefined || s.tone === null || isStr(s.tone)),
+    )
   );
 }
 
-/** Task table: rows keyed by `id`, `spent.toFixed(3)` per row. */
+/** Flow graph: `nodes.map` positions each node with `x`/`y` percentages and
+ * `edges.map(([from, to]) => …)` destructures every edge — a missing or
+ * non-pair `edges` entry is an immediate crash. Mirrors backend `Flow` /
+ * `FlowNode` (`app/schemas.py`), where edges are `list[tuple[str, str]]`. */
+export function isFlow(v: unknown): v is Flow {
+  return (
+    isRecord(v) &&
+    Array.isArray(v.nodes) &&
+    v.nodes.every(
+      (n) =>
+        isRecord(n) &&
+        isStr(n.id) &&
+        isStr(n.label) &&
+        isStr(n.sub) &&
+        isNum(n.x) &&
+        isNum(n.y),
+    ) &&
+    Array.isArray(v.edges) &&
+    v.edges.every((e) => Array.isArray(e) && e.length === 2 && e.every(isStr))
+  );
+}
+
+/** Backend `TaskStatus` literal (`app/schemas.py`). */
+const TASK_STATUSES = new Set(["pending", "running", "complete", "failed"]);
+
+/** Task table: rows keyed by `id`, `spent.toFixed(3)` per row, and `status`
+ * indexes a tone map (`statusTone[t.status]`) — an unlisted value resolves to
+ * `undefined` and renders an unstyled badge, so it is checked against the
+ * backend literal rather than merely as a string. */
 export function isTaskList(v: unknown): v is Task[] {
   return (
     Array.isArray(v) &&
-    v.every((t) => isRecord(t) && isStr(t.id) && isNum(t.spent))
+    v.every(
+      (t) =>
+        isRecord(t) &&
+        isStr(t.id) &&
+        isNum(t.spent) &&
+        isStr(t.status) &&
+        TASK_STATUSES.has(t.status),
+    )
   );
 }
 
 /** Plan panel: `total_usdc`/`total_eta` get `.toFixed`, steps are mapped with
- * `.toFixed` on each estimate. */
+ * `.toFixed` on each estimate, and every step renders `rationale` as a React
+ * child — a non-string (a dict from a half-rolled backend) throws "Objects are
+ * not valid as a React child". Required on backend `PlanStep`
+ * (`app/schemas.py`); `agent_name`/`rep_bps`/`rep_source` are optional there
+ * and already have render-time fallbacks, so they stay unchecked. */
 export function isDecomposeResponse(v: unknown): v is DecomposeResponse {
   return (
     isRecord(v) &&
@@ -66,14 +157,24 @@ export function isDecomposeResponse(v: unknown): v is DecomposeResponse {
       (s) =>
         isRecord(s) &&
         isStr(s.agent_id) &&
+        isStr(s.rationale) &&
         isNum(s.est_price_usdc) &&
         isNum(s.est_eta_seconds),
     )
   );
 }
 
+/** Backend `ReputationInfo.source` literal (`app/routers/stellar.py`). The
+ * leaderboard branches on it to decide whether a row shows on-chain evidence
+ * or the seeded prior, so an unlisted value would present prior data as
+ * measured. */
+const REPUTATION_SOURCES = new Set(["onchain", "prior"]);
+
 /** Reputation pages: `reputations` values feed bps→score math, evidence sums
- * (`weight`), counts and dispute rates; `floor_bps` feeds the floor badge. */
+ * (`weight`), counts and dispute rates; `floor_bps` feeds the floor badge.
+ * `disputed` is also a sort comparator (`sortValue.disputes`) — a non-number
+ * makes every comparison NaN and silently scrambles row order — and `avg_bps`
+ * is the unsmoothed on-chain mean. All required on the backend model. */
 export function isReputationBatch(v: unknown): v is ReputationBatch {
   return (
     isRecord(v) &&
@@ -85,22 +186,64 @@ export function isReputationBatch(v: unknown): v is ReputationBatch {
         isRecord(r) &&
         isNum(r.smoothed_bps) &&
         isNum(r.lower_bound_bps) &&
+        isNum(r.avg_bps) &&
         isNum(r.count) &&
         isNum(r.weight) &&
-        isNum(r.dispute_rate_bps),
+        isNum(r.disputed) &&
+        isNum(r.dispute_rate_bps) &&
+        isStr(r.source) &&
+        REPUTATION_SOURCES.has(r.source),
     )
   );
 }
 
+/** Reputation reference card + score calculator: every numeric here is
+ * divided or fed into the smoothed/lower-bound chain (`epoch_seconds / 86400`,
+ * `decay_bps_per_epoch / 100`, the whole `prior_weight_usdc`/`wilson_z` math),
+ * so a missing one renders `NaN` or `★ NaN`. Mirrors backend `ReputationParams`
+ * (`app/routers/stellar.py`); `enabled` is not computed with, so it is left
+ * unchecked in keeping with this file's shallow contract. */
+export function isReputationParams(v: unknown): v is ReputationParams {
+  return (
+    isRecord(v) &&
+    isNum(v.prior_bps) &&
+    isNum(v.prior_weight_usdc) &&
+    isNum(v.floor_bps) &&
+    isNum(v.max_rating_weight_usdc) &&
+    isNum(v.read_ttl_seconds) &&
+    isNum(v.wilson_z) &&
+    isNum(v.epoch_seconds) &&
+    isNum(v.decay_bps_per_epoch) &&
+    isNum(v.max_decay_epochs) &&
+    isStr(v.contract_id) &&
+    isStr(v.network)
+  );
+}
+
 /** Artifact viewer maps `files`, sums `content.length`, renders `title` and
- * `preview_html`; `artifact` itself may legitimately be null (not sealed). */
+ * `preview_html`; `artifact` itself may legitimately be null (not sealed).
+ *
+ * This is the only validation the artifact ever gets: the backend types it as
+ * a bare `dict` (`Task.artifact`, `ArtifactResponse.artifact`), so pydantic
+ * performs no structural check and a worker's output crosses the HTTP seam
+ * verbatim. `files[].language` is therefore required here — the code viewer
+ * calls `language.toLowerCase()` and a missing one takes out the whole Trace
+ * route through the error boundary. `entry` and `summary` are required on the
+ * producing model (`CodeArtifact`, app/agents/workers/code_gen.py) but both
+ * have working render-time fallbacks, so they are only type-checked when
+ * present rather than made mandatory. */
 function isCodeArtifact(v: unknown): v is CodeArtifact {
   return (
     isRecord(v) &&
     isStr(v.title) &&
     isStr(v.preview_html) &&
+    isOptionalStr(v.entry) &&
+    isOptionalStr(v.summary) &&
     Array.isArray(v.files) &&
-    v.files.every((f) => isRecord(f) && isStr(f.path) && isStr(f.content))
+    v.files.every(
+      (f) =>
+        isRecord(f) && isStr(f.path) && isStr(f.content) && isStr(f.language),
+    )
   );
 }
 

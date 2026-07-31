@@ -17,6 +17,13 @@ import type {
 import { focusRing, inputCls, statusTone } from "@/lib/ui";
 import { useAsyncAction } from "@/lib/use-async-action";
 
+/** Money display, 2 dp — matches ₱/USDC formatting elsewhere (fiat-fund's
+ * `php_base.toFixed(2)`, the leaderboard's evidence column). The estimate is
+ * a raw float from PDAX, so ₱1000 otherwise reads as
+ * "17.421602787456445 USDC". A non-finite value renders an em dash instead of
+ * throwing on `.toFixed`. */
+const money = (v: number) => (Number.isFinite(v) ? v.toFixed(2) : "—");
+
 const DEPOSIT_METHODS = [
   "instapay_upay_cashin",
   "paymaya_pay",
@@ -142,8 +149,11 @@ export function RampPanel() {
 
         {est && (
           <div className="border border-border bg-bg/40 px-3 py-2 font-mono text-xs">
-            ≈ {onRamp ? `${est.usdc_amount} USDC` : `${est.php_amount} PHP`}{" "}
-            <span className="text-muted">@ {est.price} PHP/USDC</span>
+            ≈{" "}
+            {onRamp
+              ? `${money(est.usdc_amount)} USDC`
+              : `₱${money(est.php_amount)}`}{" "}
+            <span className="text-muted">@ ₱{money(est.price)} / USDC</span>
           </div>
         )}
 

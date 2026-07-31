@@ -47,8 +47,21 @@ export default function SendPage() {
   const submitting =
     txState !== "idle" && txState !== "success" && txState !== "failed";
 
-  const balanceNum = wallet.xlmBalance ? parseFloat(wallet.xlmBalance) : null;
+  // null = the balance is *unknown* (loading, failed, or malformed), never
+  // "zero". Horizon returning garbage must not read as a spendable number.
+  const parsedBalance =
+    wallet.xlmBalance === null ? NaN : parseFloat(wallet.xlmBalance);
+  const balanceNum = Number.isFinite(parsedBalance) ? parsedBalance : null;
   const amountNum = amount ? parseFloat(amount) : NaN;
+  // The fetch finished and failed — distinct from "still loading", which must
+  // not flash a red box on first paint. The wallet keeps the previous error
+  // while a retry is in flight, so this frame stays put for the whole
+  // recovery instead of alternating with the neutral "checking…" state.
+  const balanceUnavailable =
+    balanceNum === null && wallet.balanceError !== null;
+  // A recheck *after* a failure is still a failure until it resolves: the
+  // balance is unknown, the send stays blocked, and the surface stays red.
+  const balanceRechecking = balanceUnavailable && wallet.balanceLoading;
 
   const validation = useMemo(() => {
     if (!destination) return "destination required";
@@ -60,11 +73,35 @@ export default function SendPage() {
     if (!amount) return "amount required";
     if (!Number.isFinite(amountNum) || amountNum <= 0)
       return "amount must be > 0";
-    if (balanceNum !== null && amountNum > balanceNum - 0.0001) {
+    // An unverifiable balance BLOCKS the send. This guard used to be skipped
+    // whenever the balance fetch failed, so a downed Horizon turned the
+    // affordability check off and the user only learned the payment was
+    // unaffordable after signing it.
+    if (balanceNum === null) {
+      // Once the balance has failed, a recheck does not soften the block —
+      // saying "checking…" again would read like a fresh, healthy load.
+      if (wallet.balanceError !== null) {
+        return wallet.balanceLoading
+          ? "balance unavailable — rechecking with Horizon…"
+          : "balance unavailable — cannot verify this payment is affordable";
+      }
+      return wallet.balanceLoading
+        ? "checking your balance…"
+        : "balance unavailable — cannot verify this payment is affordable";
+    }
+    if (amountNum > balanceNum - 0.0001) {
       return `amount exceeds balance (${balanceNum.toFixed(4)} XLM available)`;
     }
     return null;
-  }, [destination, amount, amountNum, balanceNum, wallet.address]);
+  }, [
+    destination,
+    amount,
+    amountNum,
+    balanceNum,
+    wallet.address,
+    wallet.balanceLoading,
+    wallet.balanceError,
+  ]);
 
   const send = async () => {
     if (!wallet.connected || !wallet.address) return;
@@ -179,6 +216,17 @@ export default function SendPage() {
             </Badge>
           </div>
 
+          {balanceUnavailable && (
+            <ErrorNote
+              className="clip-cyber-sm mb-5"
+              onRetry={() => void wallet.refreshBalance()}
+              retrying={balanceRechecking}
+            >
+              ⚠ balance unavailable — {wallet.balanceError}. Sending is blocked
+              until Horizon confirms what you can afford.
+            </ErrorNote>
+          )}
+
           <form
             noValidate
             onSubmit={(e) => {
@@ -230,9 +278,25 @@ export default function SendPage() {
                   <div className="mt-1.5 flex items-center justify-between font-mono text-[10px] uppercase tracking-widest text-muted">
                     <span>
                       available:{" "}
-                      <span className="text-cyan">
-                        {balanceNum === null ? "—" : balanceNum.toFixed(4)} XLM
-                      </span>
+                      {balanceNum === null ? (
+                        <span
+                          className={
+                            wallet.balanceLoading && !balanceUnavailable
+                              ? "text-muted"
+                              : "text-magenta"
+                          }
+                        >
+                          {balanceRechecking
+                            ? "rechecking…"
+                            : wallet.balanceLoading
+                              ? "checking…"
+                              : "unknown"}
+                        </span>
+                      ) : (
+                        <span className="text-cyan">
+                          {balanceNum.toFixed(4)} XLM
+                        </span>
+                      )}
                     </span>
                     {balanceNum !== null && balanceNum > 1 && (
                       <button

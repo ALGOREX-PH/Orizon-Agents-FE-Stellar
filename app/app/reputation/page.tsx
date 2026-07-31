@@ -12,22 +12,42 @@ import { useFetch } from "@/lib/use-fetch";
 /**
  * /app/reputation — the reputation system end to end: live scores for every
  * registered agent, the interactive math, and the on-chain ledger behind it.
- * Every live read degrades gracefully (seeded priors, backend defaults), so
- * the page renders fully even with the chain or backend unreachable.
+ *
+ * Reads degrade where a fallback is honest (seeded priors per agent, built-in
+ * math defaults) but never silently: every failed read is announced next to
+ * the thing it should have filled, and every announcement carries the
+ * matching `reload` so a transient backend outage is one click from recovery.
+ * This page drives who the orchestrator hires and what gets paid — a
+ * placeholder standing in for an unreachable ledger is a data-integrity bug,
+ * not a cosmetic one.
  */
 export default function ReputationPage() {
   const {
     data: agents,
     error: agentsError,
     loading: agentsLoading,
+    retrying: agentsRetrying,
+    lastSuccessAt: agentsLastSuccessAt,
+    reload: reloadAgents,
   } = useFetch(listAgents, [], { revalidateOnFocus: true });
   const {
     data: batch,
     error: batchError,
     loading: batchLoading,
+    retrying: batchRetrying,
+    lastSuccessAt: batchLastSuccessAt,
+    reload: reloadBatch,
   } = useFetch(listReputation, [], { revalidateOnFocus: true });
-  // Static config — the calculator and ledger card fall back to defaults.
-  const { data: params } = useFetch(getReputationParams, [], {
+  // Static config. The calculator and ledger card fall back to built-in
+  // defaults, but the failure is surfaced rather than swallowed — a default
+  // floor rendered as if it were live is a routing claim we cannot back up.
+  const {
+    data: params,
+    error: paramsError,
+    loading: paramsLoading,
+    retrying: paramsRetrying,
+    reload: reloadParams,
+  } = useFetch(getReputationParams, [], {
     revalidateOnFocus: true,
   });
 
@@ -42,7 +62,16 @@ export default function ReputationPage() {
         </p>
       </div>
 
-      <RepStats batch={batch} loading={batchLoading} />
+      {/* `retrying` is threaded into every card below so an automatic retry
+          reads as "retrying…" on a stable error surface instead of dropping
+          back to skeletons and placeholders once per attempt. */}
+      <RepStats
+        batch={batch}
+        loading={batchLoading}
+        error={batchError}
+        retrying={batchRetrying}
+        onRetry={reloadBatch}
+      />
 
       <section aria-labelledby="rep-leaderboard-heading" className="space-y-4">
         <div>
@@ -61,7 +90,13 @@ export default function ReputationPage() {
           agents={agents}
           batch={batch}
           loading={agentsLoading || batchLoading}
-          error={agentsError ?? batchError}
+          retrying={agentsRetrying || batchRetrying}
+          agentsError={agentsError}
+          batchError={batchError}
+          agentsLastSuccessAt={agentsLastSuccessAt}
+          batchLastSuccessAt={batchLastSuccessAt}
+          onRetryAgents={reloadAgents}
+          onRetryBatch={reloadBatch}
         />
       </section>
 
@@ -69,10 +104,22 @@ export default function ReputationPage() {
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <RatingRubric />
-        <ScoreCalculator params={params} />
+        <ScoreCalculator
+          params={params}
+          loading={paramsLoading}
+          error={paramsError}
+          retrying={paramsRetrying}
+          onRetry={reloadParams}
+        />
       </div>
 
-      <OnchainDetails params={params} />
+      <OnchainDetails
+        params={params}
+        loading={paramsLoading}
+        error={paramsError}
+        retrying={paramsRetrying}
+        onRetry={reloadParams}
+      />
 
       <section aria-labelledby="rep-principles-heading" className="space-y-4">
         <div>

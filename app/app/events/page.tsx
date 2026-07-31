@@ -16,7 +16,22 @@ const FEED_OPTIONS = { intervalMs: 5000, max: 60 };
 // Display label for the configured network — "mainnet" | "testnet".
 
 export default function EventsPage() {
-  const { data: info, error: loadError } = useFetch(getStellarNetwork, []);
+  // `reload` re-fetches the contract ids, which yields a fresh `contractIds`
+  // array — that restarts the events subscription too, so one retry control
+  // recovers from both a backend failure and an RPC failure.
+  const {
+    data: info,
+    error: loadError,
+    loading: infoLoading,
+    retrying: infoRetrying,
+    reload: retry,
+  } = useFetch(getStellarNetwork, []);
+
+  // What every retry control on this page reports: an attempt is in flight,
+  // or `useFetch` has one scheduled on its own backoff. Without the second
+  // half the button would read "retry" during the 2s/4s/8s gaps between
+  // automatic attempts, as if nothing were happening.
+  const reconnecting = infoRetrying || infoLoading;
 
   const contractIds = useMemo(
     () => (info ? Object.values(info.contracts) : null),
@@ -46,8 +61,20 @@ export default function EventsPage() {
   // The feed isn't ready while the contract list is still being fetched or
   // the stellar-sdk chunk is loading ("starting") — during that window an
   // empty list means "still loading", not "no events".
+  //
+  // Deliberately keyed off `loadError` rather than `infoLoading`: `useFetch`
+  // retries a transient failure on its own and flips `loading` back to true
+  // for every attempt, but the error survives until one succeeds. Reading the
+  // error is what keeps a failing feed on a stable error surface instead of
+  // cycling error → "connecting…" → error once per attempt.
   const feedLoading =
     status === "starting" || (contractIds === null && !loadError);
+
+  // A failed contract-id fetch means the feed never starts, so `status` stays
+  // "idle" and `events` stays empty — indistinguishable from a healthy feed
+  // with nothing to show. Track the failure explicitly so the UI can say so.
+  const failureMessage = loadError ?? error;
+  const feedState = failureMessage !== null ? "error" : status;
 
   return (
     <div className="space-y-6">
@@ -61,12 +88,12 @@ export default function EventsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <Badge tone={status === "live" ? "success" : "magenta"} dot>
-            {status === "live"
+          <Badge tone={feedState === "live" ? "success" : "magenta"} dot>
+            {feedState === "live"
               ? "live"
-              : status === "starting"
+              : feedState === "starting"
                 ? "starting…"
-                : status === "error"
+                : feedState === "error"
                   ? "error"
                   : "idle"}
           </Badge>
@@ -85,7 +112,11 @@ export default function EventsPage() {
 
       {loadError && (
         <Card>
-          <ErrorNote className="border-0 bg-transparent p-0 text-[11px]">
+          <ErrorNote
+            className="border-0 bg-transparent p-0 text-[11px]"
+            onRetry={retry}
+            retrying={reconnecting}
+          >
             backend offline — {loadError}
           </ErrorNote>
         </Card>
@@ -93,11 +124,16 @@ export default function EventsPage() {
 
       {error && (
         <Card>
-          <ErrorNote className="border-0 bg-transparent p-0">
-            <div className="text-[10px] uppercase tracking-[0.25em] mb-2">
+          <ErrorNote
+            className="border-0 bg-transparent p-0"
+            onRetry={retry}
+            retryLabel="restart feed"
+            retrying={reconnecting}
+          >
+            <span className="block text-[10px] uppercase tracking-[0.25em] mb-2">
               ▸ rpc error
-            </div>
-            <div className="text-[11px] break-all">{error}</div>
+            </span>
+            <span className="block text-[11px] break-all">{error}</span>
           </ErrorNote>
         </Card>
       )}
@@ -108,11 +144,31 @@ export default function EventsPage() {
             ▸ contract event feed
           </div>
           <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
-            {events.length} {events.length === 1 ? "event" : "events"}
+            {failureMessage !== null && events.length === 0
+              ? "unavailable"
+              : `${events.length} ${events.length === 1 ? "event" : "events"}`}
           </span>
         </div>
 
-        {feedLoading && events.length === 0 ? (
+        {/* Failure first, ahead of both the loading and the empty branch.
+            Never fall through to the "no events yet" copy on a failure — an
+            empty feed we could not even start is a broken feed, not an idle
+            one — and never fall back to the connecting placeholder either,
+            which would flicker in and out as `useFetch` retries. */}
+        {failureMessage !== null && events.length === 0 ? (
+          <ErrorNote
+            className="border-0 bg-transparent p-0"
+            onRetry={retry}
+            retrying={reconnecting}
+          >
+            <span className="block text-[10px] uppercase tracking-[0.25em] mb-2">
+              ▸ feed unavailable
+            </span>
+            <span className="block text-[11px] break-all">
+              {failureMessage}
+            </span>
+          </ErrorNote>
+        ) : feedLoading && events.length === 0 ? (
           <div className="space-y-2">
             <div role="status" className="text-sm text-muted">
               Connecting to the event feed…
