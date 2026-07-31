@@ -377,7 +377,15 @@ function TracePageInner() {
                 </span>
               </div>
               <span className="font-mono text-[10px] text-muted">
-                {visible.length} / {total} steps
+                {/* Live runs have no known step count — `total` is just
+                    lines.length, so "0 / 0 steps" was a fabricated denominator
+                    that made a dead stream look like a completed empty run.
+                    Only the demo replay knows its length up front. */}
+                {taskId
+                  ? streamError && visible.length === 0
+                    ? "— steps"
+                    : `${visible.length} step${visible.length === 1 ? "" : "s"}`
+                  : `${visible.length} / ${total} steps`}
               </span>
             </div>
             <div
