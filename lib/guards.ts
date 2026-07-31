@@ -14,6 +14,7 @@ import type {
   ArtifactResponse,
   CodeArtifact,
   DecomposeResponse,
+  Flow,
   Overview,
   ReputationBatch,
   StellarNetworkInfo,
@@ -73,6 +74,28 @@ export function isOverview(v: unknown): v is Overview {
     isNumArray(v.throughput) &&
     Array.isArray(v.skills) &&
     v.skills.every((s) => isRecord(s) && isStr(s.name) && isNum(s.pct))
+  );
+}
+
+/** Flow graph: `nodes.map` positions each node with `x`/`y` percentages and
+ * `edges.map(([from, to]) => …)` destructures every edge — a missing or
+ * non-pair `edges` entry is an immediate crash. Mirrors backend `Flow` /
+ * `FlowNode` (`app/schemas.py`), where edges are `list[tuple[str, str]]`. */
+export function isFlow(v: unknown): v is Flow {
+  return (
+    isRecord(v) &&
+    Array.isArray(v.nodes) &&
+    v.nodes.every(
+      (n) =>
+        isRecord(n) &&
+        isStr(n.id) &&
+        isStr(n.label) &&
+        isStr(n.sub) &&
+        isNum(n.x) &&
+        isNum(n.y),
+    ) &&
+    Array.isArray(v.edges) &&
+    v.edges.every((e) => Array.isArray(e) && e.length === 2 && e.every(isStr))
   );
 }
 

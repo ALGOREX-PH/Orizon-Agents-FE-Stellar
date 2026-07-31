@@ -11,6 +11,7 @@ import {
   isAgentList,
   isArtifactResponse,
   isDecomposeResponse,
+  isFlow,
   isOverview,
   isReputationBatch,
   isStellarNetworkInfo,
@@ -99,6 +100,52 @@ describe("isOverview", () => {
 
   it("rejects a skills entry without a numeric pct", () => {
     expect(isOverview({ ...valid, skills: [{ name: "code" }] })).toBe(false);
+  });
+});
+
+describe("isFlow", () => {
+  const valid = {
+    nodes: [
+      { id: "in", label: "intent", sub: "user input", x: 4, y: 50 },
+      { id: "out", label: "outcome", sub: "verified", x: 96, y: 50 },
+    ],
+    edges: [["in", "out"]],
+  };
+
+  it("accepts a valid graph (empty nodes and edges included)", () => {
+    expect(isFlow(valid)).toBe(true);
+    expect(isFlow({ nodes: [], edges: [] })).toBe(true);
+  });
+
+  it("rejects a payload with no edges array (destructured during render)", () => {
+    const { edges: _drop, ...rest } = valid;
+    expect(isFlow(rest)).toBe(false);
+    expect(isFlow({ ...valid, edges: {} })).toBe(false);
+  });
+
+  it("rejects edges that are not string pairs", () => {
+    expect(isFlow({ ...valid, edges: [["in"]] })).toBe(false);
+    expect(isFlow({ ...valid, edges: [["in", "out", "extra"]] })).toBe(false);
+    expect(isFlow({ ...valid, edges: [[1, 2]] })).toBe(false);
+    expect(isFlow({ ...valid, edges: [{ from: "in", to: "out" }] })).toBe(
+      false,
+    );
+  });
+
+  it("rejects a node without numeric coordinates", () => {
+    const node = {
+      id: "in",
+      label: "intent",
+      sub: "user input",
+      x: "4",
+      y: 50,
+    };
+    expect(isFlow({ ...valid, nodes: [node] })).toBe(false);
+  });
+
+  it("rejects non-objects", () => {
+    expect(isFlow(null)).toBe(false);
+    expect(isFlow([])).toBe(false);
   });
 });
 

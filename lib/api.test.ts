@@ -14,6 +14,7 @@ import {
   decompose,
   execute,
   getArtifact,
+  getFlow,
   getOverview,
   getReputation,
   getReputationParams,
@@ -237,6 +238,16 @@ describe("response guards", () => {
 
     await expect(listAgents()).rejects.toThrow(
       "malformed response from /agents",
+    );
+  });
+
+  it("rejects a flow payload with no edges as a normal request error", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { nodes: [{ id: "in", label: "intent" }] }),
+    );
+
+    await expect(getFlow()).rejects.toThrow(
+      "malformed response from /flow/default",
     );
   });
 

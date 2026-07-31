@@ -2,6 +2,7 @@ import {
   isAgentList,
   isArtifactResponse,
   isDecomposeResponse,
+  isFlow,
   isOverview,
   isReputationBatch,
   isStellarNetworkInfo,
@@ -188,7 +189,8 @@ export const listTasks = () =>
   get<Task[]>("/tasks", ensure("/tasks", isTaskList));
 export const getOverview = () =>
   get<Overview>("/metrics/overview", ensure("/metrics/overview", isOverview));
-export const getFlow = () => get<Flow>("/flow/default");
+export const getFlow = () =>
+  get<Flow>("/flow/default", ensure("/flow/default", isFlow));
 export const getTrace = (taskId: string) =>
   get<TraceLine[]>(`/trace/${taskId}`, undefined, taskAuthHeaders(taskId));
 
