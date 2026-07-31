@@ -10,6 +10,7 @@
  */
 
 import type {
+  Agent,
   ArtifactResponse,
   CodeArtifact,
   DecomposeResponse,
@@ -29,6 +30,36 @@ const isStr = (v: unknown): v is string => typeof v === "string";
 
 const isNumArray = (v: unknown): v is number[] =>
   Array.isArray(v) && v.every(isNum);
+
+const isStrArray = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.every(isStr);
+
+/** Backend `AgentStatus` literal (app/schemas.py). Checked as a set, not just
+ * as a string, because the status indexes a tone map — an unlisted value
+ * silently renders an unstyled badge. */
+const AGENT_STATUSES = new Set(["online", "idle", "offline"]);
+
+/** Agents table + reputation leaderboard: `price.toFixed(3)`,
+ * `runs.toLocaleString()`, `skills.map`, `rep * 2000`, and `status` keys a
+ * tone map. Mirrors backend `Agent` (`app/schemas.py`); `real` has a server
+ * default and is only used as a truthiness flag, so it stays unchecked. */
+export function isAgentList(v: unknown): v is Agent[] {
+  return (
+    Array.isArray(v) &&
+    v.every(
+      (a) =>
+        isRecord(a) &&
+        isStr(a.id) &&
+        isStr(a.name) &&
+        isStrArray(a.skills) &&
+        isNum(a.price) &&
+        isNum(a.rep) &&
+        isNum(a.runs) &&
+        isStr(a.status) &&
+        AGENT_STATUSES.has(a.status),
+    )
+  );
+}
 
 /** Dashboard + sidebar: stat tiles do `*100`/`.toFixed`, sparkline maps
  * `throughput`, the skills list maps `name`/`pct`. */

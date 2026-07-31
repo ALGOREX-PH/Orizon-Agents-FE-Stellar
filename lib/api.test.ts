@@ -77,9 +77,21 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+// Guarded by isAgentList, so the fixture carries every field the agents
+// table computes with (price/rep/runs/skills/status).
+const agentFixture = {
+  id: "agt_01",
+  name: "copywrite.v3",
+  skills: ["content"],
+  price: 0.012,
+  rep: 4.6,
+  status: "online",
+  runs: 1284,
+};
+
 describe("get (via listAgents)", () => {
   it("hits the /api prefix with no-store and resolves parsed JSON", async () => {
-    const agents = [{ id: "agt_01", name: "copywrite.v3" }];
+    const agents = [agentFixture];
     fetchMock.mockResolvedValueOnce(jsonResponse(200, agents));
 
     await expect(listAgents()).resolves.toEqual(agents);
@@ -218,6 +230,16 @@ describe("getReputationParams", () => {
 });
 
 describe("response guards", () => {
+  it("rejects a malformed agent list as a normal request error", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, [{ id: "agt_01", name: "copywrite.v3" }]),
+    );
+
+    await expect(listAgents()).rejects.toThrow(
+      "malformed response from /agents",
+    );
+  });
+
   it("rejects a malformed overview payload as a normal request error", async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse(200, { agents_online: 1, throughput: "not-an-array" }),
@@ -255,7 +277,7 @@ describe("response guards", () => {
 
 describe("get dedupe cache", () => {
   it("shares one fetch across concurrent requests for the same path", async () => {
-    const agents = [{ id: "agt_01", name: "copywrite.v3" }];
+    const agents = [agentFixture];
     fetchMock.mockResolvedValueOnce(jsonResponse(200, agents));
 
     const [a, b] = await Promise.all([listAgents(), listAgents()]);

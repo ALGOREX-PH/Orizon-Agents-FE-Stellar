@@ -8,6 +8,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  isAgentList,
   isArtifactResponse,
   isDecomposeResponse,
   isOverview,
@@ -15,6 +16,58 @@ import {
   isStellarNetworkInfo,
   isTaskList,
 } from "./guards";
+
+describe("isAgentList", () => {
+  const agent = {
+    id: "agt_01",
+    name: "copywrite.v3",
+    skills: ["content", "seo"],
+    price: 0.012,
+    rep: 4.6,
+    status: "online",
+    runs: 1284,
+    real: true,
+  };
+
+  it("accepts a valid list and the empty list", () => {
+    expect(isAgentList([agent])).toBe(true);
+    expect(isAgentList([])).toBe(true);
+  });
+
+  it("rejects a non-array payload", () => {
+    expect(isAgentList({ agents: [agent] })).toBe(false);
+    expect(isAgentList(null)).toBe(false);
+  });
+
+  it("rejects a non-numeric price (feeds .toFixed)", () => {
+    expect(isAgentList([{ ...agent, price: "0.012" }])).toBe(false);
+  });
+
+  it("rejects a missing runs count (feeds .toLocaleString)", () => {
+    const { runs: _drop, ...rest } = agent;
+    expect(isAgentList([rest])).toBe(false);
+  });
+
+  it("rejects a non-numeric rep (feeds rep * 2000)", () => {
+    expect(isAgentList([{ ...agent, rep: null }])).toBe(false);
+  });
+
+  it("rejects skills that are not an array of strings (feeds .map)", () => {
+    expect(isAgentList([{ ...agent, skills: "content" }])).toBe(false);
+    expect(isAgentList([{ ...agent, skills: [{ name: "content" }] }])).toBe(
+      false,
+    );
+  });
+
+  it("rejects a status outside the backend literal (keys the tone map)", () => {
+    expect(isAgentList([{ ...agent, status: "degraded" }])).toBe(false);
+    expect(isAgentList([{ ...agent, status: undefined }])).toBe(false);
+  });
+
+  it("rejects when any single entry is malformed", () => {
+    expect(isAgentList([agent, { ...agent, price: undefined }])).toBe(false);
+  });
+});
 
 describe("isOverview", () => {
   const valid = {

@@ -1,4 +1,5 @@
 import {
+  isAgentList,
   isArtifactResponse,
   isDecomposeResponse,
   isOverview,
@@ -181,7 +182,8 @@ function taskAuthHeaders(taskId: string): Record<string, string> | undefined {
   return token ? { "X-Task-Token": token } : undefined;
 }
 
-export const listAgents = () => get<Agent[]>("/agents");
+export const listAgents = () =>
+  get<Agent[]>("/agents", ensure("/agents", isAgentList));
 export const listTasks = () =>
   get<Task[]>("/tasks", ensure("/tasks", isTaskList));
 export const getOverview = () =>
