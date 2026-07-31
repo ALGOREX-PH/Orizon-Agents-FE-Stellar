@@ -29,7 +29,12 @@ export default function WalletPage() {
     balanceError,
     refreshBalance,
   } = useWallet();
-  const { data: info, error } = useFetch(getStellarNetwork, [], {
+  const {
+    data: info,
+    error,
+    loading,
+    reload,
+  } = useFetch(getStellarNetwork, [], {
     revalidateOnFocus: true,
   });
 
@@ -169,10 +174,16 @@ export default function WalletPage() {
 
         <Card>
           <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-violet-readable mb-4">
-            Orizon deploy ({info?.network ?? "…"})
+            {/* Never keep claiming a deploy we could not read — an ellipsis
+                here read as "still loading" for the whole outage. */}
+            Orizon deploy ({info ? info.network : error ? "unreachable" : "…"})
           </div>
           {error && (
-            <ErrorNote className="border-0 bg-transparent p-0 text-sm mb-3">
+            <ErrorNote
+              className="mb-3 text-sm"
+              onRetry={reload}
+              retrying={loading}
+            >
               backend offline — {error}
             </ErrorNote>
           )}
