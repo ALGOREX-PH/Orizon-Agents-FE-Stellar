@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { m } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { ErrorNote } from "@/components/ui/error-note";
 import { Skeleton, LoadingStatus } from "@/components/ui/skeleton";
 import { ReputationBadge } from "@/components/ui/reputation-badge";
 import { lowerBoundBps, scoreOutOfFive } from "@/lib/reputation-math";
@@ -109,11 +110,13 @@ export function RepLeaderboard({
   batch,
   loading,
   error,
+  onRetry,
 }: {
   agents: Agent[] | null;
   batch: ReputationBatch | null;
   loading: boolean;
   error: string | null;
+  onRetry?: () => void;
 }) {
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({
     col: "score",
@@ -155,9 +158,13 @@ export function RepLeaderboard({
   return (
     <div>
       {error && (
-        <div className="mb-4 clip-cyber-sm border border-magenta/40 bg-magenta/5 px-4 py-3 font-mono text-xs text-magenta">
+        <ErrorNote
+          className="mb-4 clip-cyber-sm"
+          onRetry={onRetry}
+          retrying={loading}
+        >
           live reputation degraded to seeded prior — {error}
-        </div>
+        </ErrorNote>
       )}
 
       <div className="overflow-x-auto">

@@ -20,6 +20,7 @@ export default function ReputationPage() {
     data: agents,
     error: agentsError,
     loading: agentsLoading,
+    reload: reloadAgents,
   } = useFetch(listAgents, [], { revalidateOnFocus: true });
   const {
     data: batch,
@@ -68,6 +69,10 @@ export default function ReputationPage() {
           batch={batch}
           loading={agentsLoading || batchLoading}
           error={agentsError ?? batchError}
+          onRetry={() => {
+            reloadAgents();
+            reloadBatch();
+          }}
         />
       </section>
 
