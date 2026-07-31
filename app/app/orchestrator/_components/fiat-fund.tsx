@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StaleBadge } from "@/components/ui/stale-badge";
 import {
   pdaxFundingQuote,
   pdaxReconcileRamp,
@@ -41,7 +42,6 @@ export function FiatFund({
   // Quote-pricing failures are a separate error source from starting the
   // ramp; the fund action's error takes precedence in the shared line.
   const [quoteErr, setQuoteErr] = useState<string | null>(null);
-  const [pollStale, setPollStale] = useState(false);
 
   const {
     run: runFund,
@@ -90,30 +90,31 @@ export function FiatFund({
     record !== null &&
     record.status !== "completed" &&
     record.status !== "failed";
-  const pollFailures = useRef(0);
-  usePolling(
+  // `trackStatus` replaces the streak counter this component used to keep by
+  // hand: the hook already knows when the last reconcile landed and how many
+  // have failed since, and the shared StaleBadge below renders it the same
+  // way every other frozen surface in the console does.
+  const { lastSuccessAt: lastPollAt, failures: pollFailures } = usePolling(
     async () => {
       if (!record) return;
-      try {
-        const r = await pdaxReconcileRamp(record.ramp_id);
-        pollFailures.current = 0;
-        setPollStale(false);
-        setRecord(r);
-      } catch (e) {
-        // One missed poll is transient; only surface a persistent outage.
-        pollFailures.current += 1;
-        if (pollFailures.current >= 3) setPollStale(true);
-        throw e; // let usePolling apply its backoff
-      }
+      const r = await pdaxReconcileRamp(record.ramp_id);
+      setRecord(r);
     },
     6000,
-    { enabled: rampPending },
+    { enabled: rampPending, trackStatus: true },
   );
+
+  // One missed poll is transient — a payment status only counts as frozen
+  // after a run of failures. `lastPollAt` stays null until a reconcile has
+  // actually landed, so a ramp whose polling never worked shows nothing here:
+  // its status is the one the start call returned, not a stale refresh.
+  const statusStale = pollFailures >= 3;
 
   const fund = async () => {
     setQuoteErr(null);
+    // Dropping the record also stops the reconcile loop, which restarts with
+    // a clean failure streak once the new ramp lands.
     setRecord(null);
-    pollFailures.current = 0; // a new ramp starts with a clean streak
     const r = await runFund({
       php_amount: php,
       stellar_address: address,
@@ -247,11 +248,11 @@ export function FiatFund({
               can ignore PDAX&apos;s redirect page.
             </div>
           )}
-          {pollStale && (
-            <div role="status" className="text-[10px] font-mono text-magenta">
-              ⚠ status refresh failing — shown state may be stale; retrying…
-            </div>
-          )}
+          <StaleBadge
+            lastSuccessAt={lastPollAt}
+            stale={statusStale}
+            what="this ramp's status"
+          />
           {record.stages.length > 0 && (
             <div className="space-y-1 pt-1">
               {record.stages.map((s, i) => (
