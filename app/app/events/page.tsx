@@ -23,8 +23,15 @@ export default function EventsPage() {
     data: info,
     error: loadError,
     loading: infoLoading,
+    retrying: infoRetrying,
     reload: retry,
   } = useFetch(getStellarNetwork, []);
+
+  // What every retry control on this page reports: an attempt is in flight,
+  // or `useFetch` has one scheduled on its own backoff. Without the second
+  // half the button would read "retry" during the 2s/4s/8s gaps between
+  // automatic attempts, as if nothing were happening.
+  const reconnecting = infoRetrying || infoLoading;
 
   const contractIds = useMemo(
     () => (info ? Object.values(info.contracts) : null),
@@ -54,6 +61,12 @@ export default function EventsPage() {
   // The feed isn't ready while the contract list is still being fetched or
   // the stellar-sdk chunk is loading ("starting") — during that window an
   // empty list means "still loading", not "no events".
+  //
+  // Deliberately keyed off `loadError` rather than `infoLoading`: `useFetch`
+  // retries a transient failure on its own and flips `loading` back to true
+  // for every attempt, but the error survives until one succeeds. Reading the
+  // error is what keeps a failing feed on a stable error surface instead of
+  // cycling error → "connecting…" → error once per attempt.
   const feedLoading =
     status === "starting" || (contractIds === null && !loadError);
 
@@ -102,7 +115,7 @@ export default function EventsPage() {
           <ErrorNote
             className="border-0 bg-transparent p-0 text-[11px]"
             onRetry={retry}
-            retrying={infoLoading}
+            retrying={reconnecting}
           >
             backend offline — {loadError}
           </ErrorNote>
@@ -115,7 +128,7 @@ export default function EventsPage() {
             className="border-0 bg-transparent p-0"
             onRetry={retry}
             retryLabel="restart feed"
-            retrying={infoLoading}
+            retrying={reconnecting}
           >
             <span className="block text-[10px] uppercase tracking-[0.25em] mb-2">
               ▸ rpc error
@@ -137,7 +150,25 @@ export default function EventsPage() {
           </span>
         </div>
 
-        {feedLoading && events.length === 0 ? (
+        {/* Failure first, ahead of both the loading and the empty branch.
+            Never fall through to the "no events yet" copy on a failure — an
+            empty feed we could not even start is a broken feed, not an idle
+            one — and never fall back to the connecting placeholder either,
+            which would flicker in and out as `useFetch` retries. */}
+        {failureMessage !== null && events.length === 0 ? (
+          <ErrorNote
+            className="border-0 bg-transparent p-0"
+            onRetry={retry}
+            retrying={reconnecting}
+          >
+            <span className="block text-[10px] uppercase tracking-[0.25em] mb-2">
+              ▸ feed unavailable
+            </span>
+            <span className="block text-[11px] break-all">
+              {failureMessage}
+            </span>
+          </ErrorNote>
+        ) : feedLoading && events.length === 0 ? (
           <div className="space-y-2">
             <div role="status" className="text-sm text-muted">
               Connecting to the event feed…
@@ -151,21 +182,6 @@ export default function EventsPage() {
               ))}
             </div>
           </div>
-        ) : failureMessage !== null && events.length === 0 ? (
-          // Never fall through to the "no events yet" copy on a failure: an
-          // empty feed we could not even start is a broken feed, not an idle one.
-          <ErrorNote
-            className="border-0 bg-transparent p-0"
-            onRetry={retry}
-            retrying={infoLoading}
-          >
-            <span className="block text-[10px] uppercase tracking-[0.25em] mb-2">
-              ▸ feed unavailable
-            </span>
-            <span className="block text-[11px] break-all">
-              {failureMessage}
-            </span>
-          </ErrorNote>
         ) : events.length === 0 ? (
           <div className="space-y-2">
             <div className="text-sm text-muted">
