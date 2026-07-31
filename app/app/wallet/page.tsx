@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { ErrorNote } from "@/components/ui/error-note";
+import { StaleBadge } from "@/components/ui/stale-badge";
 import { NETWORK_NAME, useWallet } from "@/lib/wallet";
 import { KVRow } from "@/components/ui/kv-row";
 import {
@@ -34,6 +35,7 @@ export default function WalletPage() {
     error,
     loading,
     retrying,
+    lastSuccessAt,
     reload,
   } = useFetch(getStellarNetwork, [], {
     revalidateOnFocus: true,
@@ -59,6 +61,12 @@ export default function WalletPage() {
   // A failed fetch leaves the balance unknown — it must never render as a
   // plain dash next to the number, which reads as "nothing here" instead of
   // "we could not ask Horizon".
+  //
+  // This is also why the balance carries no StaleBadge: useWallet clears
+  // `xlmBalance` when Horizon fails, so there is never a frozen figure on
+  // screen to date — the number is gone, which is a failure (ErrorNote), not
+  // staleness. Keeping the old amount visible instead would be exactly the
+  // fabricated money value the failure states were fixed to stop showing.
   const parsedBalance = xlmBalance === null ? NaN : parseFloat(xlmBalance);
   const balanceKnown = Number.isFinite(parsedBalance);
   const balanceFmt = balanceKnown
@@ -178,10 +186,21 @@ export default function WalletPage() {
         </Card>
 
         <Card>
-          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-violet-readable mb-4">
-            {/* Never keep claiming a deploy we could not read — an ellipsis
-                here read as "still loading" for the whole outage. */}
-            Orizon deploy ({info ? info.network : error ? "unreachable" : "…"})
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-violet-readable">
+              {/* Never keep claiming a deploy we could not read — an ellipsis
+                  here read as "still loading" for the whole outage. */}
+              Orizon deploy ({info ? info.network : error ? "unreachable" : "…"}
+              )
+            </div>
+            {/* The rows below survive a failed reload, so date them. Nothing
+                renders before the first success — that state is a failure,
+                and the ErrorNote below carries it. */}
+            <StaleBadge
+              stale={Boolean(error)}
+              lastSuccessAt={lastSuccessAt}
+              what="deploy details"
+            />
           </div>
           {error && (
             <ErrorNote
