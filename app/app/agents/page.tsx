@@ -23,6 +23,7 @@ export default function AgentsPage() {
     data: agents,
     error,
     loading,
+    retrying,
     reload: reloadAgents,
   } = useFetch(listAgents, [], {
     revalidateOnFocus: true,
@@ -145,11 +146,15 @@ export default function AgentsPage() {
           </div>
         </div>
 
+        {/* `retrying` covers the gaps *between* automatic attempts, when the
+            hook is asleep on its backoff and `loading` is false — without it
+            the frame flips back to an idle "retry" button and reads like a
+            dead end mid-recovery. */}
         {error && (
           <ErrorNote
             className="mb-4 clip-cyber-sm"
             onRetry={retry}
-            retrying={loading}
+            retrying={loading || retrying}
           >
             backend offline — {error}
           </ErrorNote>
@@ -170,6 +175,9 @@ export default function AgentsPage() {
               </tr>
             </thead>
             <tbody>
+              {/* `!error` first: a retry attempt flips `loading` back to true,
+                  and a skeleton must never win over the error frame — that
+                  alternation is what makes a failing page look alive. */}
               {!agents &&
                 !error &&
                 Array.from({ length: 6 }).map((_, i) => (

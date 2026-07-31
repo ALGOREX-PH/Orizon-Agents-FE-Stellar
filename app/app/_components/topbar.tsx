@@ -54,11 +54,16 @@ export function Topbar() {
     data: backend,
     error: backendError,
     loading: backendLoading,
+    retrying: backendRetrying,
     reload: recheckBackend,
   } = useFetch(getStellarNetwork, [], {
     revalidateOnFocus: true,
     staleAfterMs: 30_000,
   });
+  // The whole automatic-recovery window: an attempt in flight *or* the
+  // backoff gap before the next one. The pill reports one settled state
+  // instead of blinking between "checking…" and "offline" every few seconds.
+  const backendRechecking = backendLoading || backendRetrying;
 
   return (
     <>
@@ -137,13 +142,13 @@ export function Topbar() {
               <button
                 type="button"
                 onClick={recheckBackend}
-                disabled={backendLoading}
+                disabled={backendRechecking}
                 title={`backend unreachable — ${backendError}`}
                 aria-label={`backend unreachable — ${backendError}. Retry`}
                 className={`disabled:opacity-50 ${focusRing}`}
               >
                 <Badge tone="magenta" dot>
-                  {backendLoading ? "checking…" : "offline ↻"}
+                  {backendRechecking ? "checking…" : "offline ↻"}
                 </Badge>
               </button>
             ) : backend ? (

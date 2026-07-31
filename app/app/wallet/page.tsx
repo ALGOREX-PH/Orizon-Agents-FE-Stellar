@@ -33,10 +33,15 @@ export default function WalletPage() {
     data: info,
     error,
     loading,
+    retrying,
     reload,
   } = useFetch(getStellarNetwork, [], {
     revalidateOnFocus: true,
   });
+  // One flag for the whole recovery window: an attempt in flight *or* the
+  // backoff gap before the next one. Without the gap the error frame drops
+  // back to an idle "retry" between attempts and reads as a dead end.
+  const recovering = loading || retrying;
 
   // Compare the network the wallet itself reported against the backend's
   // deploy. Wallets that can't report a network (walletNetwork null) show
@@ -182,7 +187,7 @@ export default function WalletPage() {
             <ErrorNote
               className="mb-3 text-sm"
               onRetry={reload}
-              retrying={loading}
+              retrying={recovering}
             >
               backend offline — {error}
             </ErrorNote>
@@ -210,7 +215,7 @@ export default function WalletPage() {
             placeholders forever — the card looked like it was still loading
             days into an outage. */}
         {!info && error ? (
-          <ErrorNote onRetry={reload} retrying={loading}>
+          <ErrorNote onRetry={reload} retrying={recovering}>
             contracts unavailable — {error}
           </ErrorNote>
         ) : (

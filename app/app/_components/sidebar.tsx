@@ -284,6 +284,7 @@ export function Sidebar() {
     data: overview,
     error,
     loading,
+    retrying,
     reload,
   } = useFetch(getOverview, [], {
     revalidateOnFocus: true,
@@ -401,6 +402,9 @@ export function Sidebar() {
                 {`avg completion ${(overview.avg_completion * 100).toFixed(0)}%`}
               </div>
             )}
+            {/* Placeholder dashes only before anything has ever loaded and
+                only while no failure is on screen — a retry attempt turns
+                `loading` back on, and dashes must not replace the error. */}
             {!overview && !error && (
               <div className="font-mono text-[11px] text-muted leading-5">
                 — agents online
@@ -412,7 +416,7 @@ export function Sidebar() {
               <ErrorNote
                 className="mt-1 border-0 bg-transparent p-0 text-[10px] leading-4 break-words"
                 onRetry={reload}
-                retrying={loading}
+                retrying={loading || retrying}
               >
                 <span className="block">
                   {overview
