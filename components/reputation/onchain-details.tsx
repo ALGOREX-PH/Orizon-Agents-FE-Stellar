@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { ErrorNote } from "@/components/ui/error-note";
 import {
   StellarExpertLink,
   defaultExplorerNetwork,
@@ -61,11 +62,21 @@ const ERRORS = [
  * ReputationLedger v2 reference card — contract id chip + explorer link, the
  * method interface, error codes, and a constants strip driven by the
  * /reputation/params response (em dashes while params is null).
+ *
+ * When that read fails the constants strip is replaced by an announced error:
+ * five em dashes look like a ledger with nothing configured rather than a
+ * backend we could not reach.
  */
 export function OnchainDetails({
   params,
+  loading = false,
+  error = null,
+  onRetry,
 }: {
   params: ReputationParams | null;
+  loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }) {
   const contractId = params?.contract_id
     ? params.contract_id
@@ -158,18 +169,31 @@ export function OnchainDetails({
         ))}
       </div>
 
-      <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-border/50 pt-4 sm:grid-cols-3 lg:grid-cols-5">
-        {constants.map((c) => (
-          <div key={c.label}>
-            <dt className="text-[10px] uppercase tracking-widest text-muted">
-              {c.label}
-            </dt>
-            <dd className="mt-1 font-mono text-sm text-text">
-              {c.value ?? "—"}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <div className="mt-5 border-t border-border/50 pt-4">
+        {error ? (
+          <ErrorNote
+            className="clip-cyber-sm"
+            onRetry={onRetry}
+            retrying={loading}
+          >
+            ledger constants unavailable — epoch length, decay, weight cap and
+            cache TTL could not be read from the backend. {error}
+          </ErrorNote>
+        ) : (
+          <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            {constants.map((c) => (
+              <div key={c.label}>
+                <dt className="text-[10px] uppercase tracking-widest text-muted">
+                  {c.label}
+                </dt>
+                <dd className="mt-1 font-mono text-sm text-text">
+                  {c.value ?? "—"}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
     </Card>
   );
 }

@@ -94,7 +94,12 @@ export default function ReputationPage() {
         />
       </div>
 
-      <OnchainDetails params={params} />
+      <OnchainDetails
+        params={params}
+        loading={paramsLoading}
+        error={paramsError}
+        onRetry={reloadParams}
+      />
 
       <section aria-labelledby="rep-principles-heading" className="space-y-4">
         <div>
