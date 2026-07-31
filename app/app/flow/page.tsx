@@ -15,6 +15,19 @@ export default function FlowPage() {
     ? Object.fromEntries(flow.nodes.map((n) => [n.id, n]))
     : {};
 
+  // Widest fan-out in the graph: the largest number of edges leaving a single
+  // node, i.e. how many branches run in parallel at the graph's widest point.
+  // Derived from the payload — the flow API carries no cost or branch counts,
+  // so anything it does not describe is not displayed.
+  const parallelBranches = (() => {
+    if (!flow) return 0;
+    const outDegree = new Map<string, number>();
+    for (const [from] of flow.edges) {
+      outDegree.set(from, (outDegree.get(from) ?? 0) + 1);
+    }
+    return outDegree.size === 0 ? 0 : Math.max(...outDegree.values());
+  })();
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between flex-wrap gap-4">
@@ -136,20 +149,25 @@ export default function FlowPage() {
         </div>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {[
-          { h: "Nodes", v: flow ? String(flow.nodes.length) : "—" },
-          { h: "Parallel branches", v: "2" },
-          { h: "Est. per-run cost", v: "0.112 USDC" },
-        ].map((s) => (
-          <Card key={s.h}>
-            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted mb-2">
-              {s.h}
-            </div>
-            <div className="font-mono text-2xl neon-text">{s.v}</div>
-          </Card>
-        ))}
-      </div>
+      {/* Every tile below is computed from the loaded flow. The row is hidden
+          until the payload arrives so no tile can show a number the backend
+          never sent. */}
+      {flow && (
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            { h: "Nodes", v: String(flow.nodes.length) },
+            { h: "Edges", v: String(flow.edges.length) },
+            { h: "Parallel branches", v: String(parallelBranches) },
+          ].map((s) => (
+            <Card key={s.h}>
+              <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted mb-2">
+                {s.h}
+              </div>
+              <div className="font-mono text-2xl neon-text">{s.v}</div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
