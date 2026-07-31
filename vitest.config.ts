@@ -26,7 +26,13 @@ export default defineConfig({
       // logic + hooks) and the one tested UI module. Client components are
       // exercised by the Playwright smoke suite, not unit tests — pulling
       // them in would collapse the number into noise.
-      include: ["lib/**/*.ts", "components/ui/stellar-link.tsx"],
+      include: [
+        "lib/**/*.ts",
+        // api-base.mjs is build-critical config logic — a regression there
+        // 404s every request in production, so it stays under the gate.
+        "lib/**/*.mjs",
+        "components/ui/stellar-link.tsx",
+      ],
       exclude: [
         "lib/types.ts",
         "lib/pdax-types.ts",
