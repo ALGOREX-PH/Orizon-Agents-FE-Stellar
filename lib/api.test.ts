@@ -9,6 +9,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  ApiError,
   GET_DEDUPE_MS,
   GET_TIMEOUT_MS,
   clearGetCache,
@@ -30,6 +31,7 @@ type FetchMockResponse = {
   ok: boolean;
   status: number;
   statusText?: string;
+  headers?: { get: (name: string) => string | null };
   json: () => Promise<unknown>;
   text: () => Promise<string>;
 };
@@ -118,6 +120,83 @@ describe("get (via listAgents)", () => {
     fetchMock.mockRejectedValueOnce(new Error("network down"));
 
     await expect(listAgents()).rejects.toThrow("network down");
+  });
+
+  it("surfaces the backend error envelope, like post does", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(503, {
+        error: { code: "unavailable", message: "horizon unreachable" },
+        detail: "legacy detail",
+      }),
+    );
+
+    await expect(listAgents()).rejects.toThrow(
+      "GET /agents → 503 — horizon unreachable",
+    );
+  });
+
+  it("falls back to the legacy detail field", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(404, { detail: "no agents" }));
+
+    await expect(listAgents()).rejects.toThrow("GET /agents → 404 — no agents");
+  });
+
+  // "backend offline" is a lie when the backend answered "not this second".
+  it("reports a 429 as rate limited, with the wait the backend asked for", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ...jsonResponse(429, {
+        detail: "rate_limited",
+        error: { code: "rate_limited", message: "too many requests" },
+      }),
+      headers: {
+        get: (name: string) => (name === "retry-after" ? "12" : null),
+      },
+    });
+
+    const err = await listAgents().then(
+      () => {
+        throw new Error("expected rejection");
+      },
+      (e: unknown) => e as ApiError,
+    );
+
+    expect(err.message).toBe("GET /agents → 429 — rate limited, retry in 12s");
+    expect(err.status).toBe(429);
+    expect(err.retryAfterMs).toBe(12_000);
+  });
+
+  it("still names the throttling when the backend sends no Retry-After", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(429, { detail: "rate_limited" }),
+    );
+
+    const err = await listAgents().then(
+      () => {
+        throw new Error("expected rejection");
+      },
+      (e: unknown) => e as ApiError,
+    );
+
+    expect(err.message).toBe("GET /agents → 429 — rate limited, retry shortly");
+    expect(err.retryAfterMs).toBeUndefined();
+  });
+
+  it("reads an HTTP-date Retry-After as a wait in ms", async () => {
+    const at = new Date(Date.now() + 30_000).toUTCString();
+    fetchMock.mockResolvedValueOnce({
+      ...jsonResponse(429, {}),
+      headers: { get: () => at },
+    });
+
+    const err = await listAgents().then(
+      () => {
+        throw new Error("expected rejection");
+      },
+      (e: unknown) => e as ApiError,
+    );
+
+    expect(err.retryAfterMs).toBeGreaterThan(25_000);
+    expect(err.retryAfterMs).toBeLessThanOrEqual(30_000);
   });
 });
 

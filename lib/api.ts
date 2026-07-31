@@ -123,6 +123,85 @@ export async function fetchWithTimeout(
   return guardBody(res, timer, controller.signal, expired);
 }
 
+/**
+ * A non-OK HTTP answer, carrying the machine-readable bits the message can
+ * only spell out. `retryAfterMs` mirrors the header the backend's rate
+ * limiter sets — lib/use-fetch and lib/use-polling already duck-type that
+ * field off rejections, so a throttled page now waits exactly as long as it
+ * was asked to instead of guessing.
+ */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly retryAfterMs?: number;
+
+  constructor(message: string, status: number, retryAfterMs?: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    if (retryAfterMs !== undefined) this.retryAfterMs = retryAfterMs;
+  }
+}
+
+/**
+ * `Retry-After` in ms — seconds or an HTTP-date, per RFC 9110 — or null when
+ * the response says nothing. Written defensively: `headers` is absent on the
+ * plain-object responses used in tests.
+ */
+function retryAfterMs(res: Response): number | undefined {
+  const raw = (
+    res as { headers?: { get?: (name: string) => string | null } }
+  ).headers?.get?.("retry-after");
+  if (!raw) return undefined;
+  const seconds = Number(raw);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds) * 1_000;
+  const at = Date.parse(raw);
+  return Number.isFinite(at) ? Math.max(0, at - Date.now()) : undefined;
+}
+
+/**
+ * Turns a non-OK response into the error the user reads.
+ *
+ * The backend is standardizing on an { error: { code, message } } envelope —
+ * prefer its message, fall back to the legacy `detail` field, then the raw
+ * body, then statusText. 429 gets its own sentence: "backend offline" is a
+ * lie when the answer was "not this second", and the wait is actionable.
+ */
+async function httpError(
+  method: "GET" | "POST",
+  path: string,
+  res: Response,
+): Promise<ApiError> {
+  let detail = "";
+  try {
+    const j = await res.json();
+    const envelopeMsg =
+      typeof j?.error?.message === "string" ? j.error.message : undefined;
+    const msg = envelopeMsg ?? j?.detail;
+    detail = msg ? ` — ${msg}` : ` — ${JSON.stringify(j).slice(0, 300)}`;
+  } catch {
+    try {
+      detail = ` — ${(await res.text()).slice(0, 300)}`;
+    } catch {
+      /* ignore */
+    }
+  }
+  if (!detail && res.statusText) detail = ` — ${res.statusText}`;
+  const wait = retryAfterMs(res);
+  if (res.status === 429) {
+    // The limiter's own envelope message is "too many requests", which adds
+    // nothing over the status — the wait is the part worth printing.
+    detail =
+      wait === undefined
+        ? " — rate limited, retry shortly"
+        : ` — rate limited, retry in ${Math.max(1, Math.ceil(wait / 1_000))}s`;
+  }
+  return new ApiError(
+    `${method} ${path} → ${res.status}${detail}`,
+    res.status,
+    wait,
+  );
+}
+
 // Several components fetch the same GET simultaneously on mount (/app fires
 // getOverview from both the sidebar and the page). Identical paths share one
 // request while it is in flight and for a short window after it resolves;
@@ -156,7 +235,7 @@ function get<T>(
       { cache: "no-store", ...(headers ? { headers } : {}) },
       GET_TIMEOUT_MS,
     );
-    if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
+    if (!res.ok) throw await httpError("GET", path, res);
     const json: unknown = await res.json();
     return parse ? parse(json) : (json as T);
   })();
@@ -188,27 +267,7 @@ async function post<T, B>(
     },
     POST_TIMEOUT_MS,
   );
-  if (!res.ok) {
-    let detail = "";
-    try {
-      const j = await res.json();
-      // The backend is standardizing on an { error: { code, message } }
-      // envelope — prefer its message, fall back to the legacy `detail`
-      // field, then the raw body; statusText is the last resort below.
-      const envelopeMsg =
-        typeof j?.error?.message === "string" ? j.error.message : undefined;
-      const msg = envelopeMsg ?? j?.detail;
-      detail = msg ? ` — ${msg}` : ` — ${JSON.stringify(j).slice(0, 300)}`;
-    } catch {
-      try {
-        detail = ` — ${(await res.text()).slice(0, 300)}`;
-      } catch {
-        /* ignore */
-      }
-    }
-    if (!detail && res.statusText) detail = ` — ${res.statusText}`;
-    throw new Error(`POST ${path} → ${res.status}${detail}`);
-  }
+  if (!res.ok) throw await httpError("POST", path, res);
   const json: unknown = await res.json();
   return parse ? parse(json) : (json as T);
 }
