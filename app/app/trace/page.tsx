@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArtifactViewer } from "@/components/ui/artifact-viewer";
+import { ErrorNote } from "@/components/ui/error-note";
 import { KVRow } from "@/components/ui/kv-row";
 import { StellarExpertLink } from "@/components/ui/stellar-link";
 import { getArtifact, openTraceStream } from "@/lib/api";
@@ -295,12 +296,9 @@ function TracePageInner() {
       )}
 
       {artifactError && !artifact && (
-        <div
-          role="alert"
-          className="border border-magenta/40 bg-magenta/10 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] text-magenta"
-        >
+        <ErrorNote className="clip-cyber-sm">
           ⚠ artifact fetch failed — {artifactError}
-        </div>
+        </ErrorNote>
       )}
 
       {tab === "artifact" && artifact ? (
