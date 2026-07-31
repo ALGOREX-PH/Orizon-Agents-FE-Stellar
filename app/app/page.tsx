@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ErrorNote } from "@/components/ui/error-note";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getOverview, listTasks } from "@/lib/api";
 import type { Overview, Task } from "@/lib/types";
@@ -61,19 +62,33 @@ export default function OverviewPage() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+
+  const load = useCallback(async () => {
+    const [o, t] = await Promise.all([getOverview(), listTasks()]);
+    setOverview(o);
+    setTasks(t);
+    setError(null);
+  }, []);
 
   usePolling(async () => {
     try {
-      const [o, t] = await Promise.all([getOverview(), listTasks()]);
-      setOverview(o);
-      setTasks(t);
-      setError(null);
+      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "fetch failed");
       // Rethrow so the poller backs off while the backend is down.
       throw e;
     }
   }, 5000);
+
+  // Manual retry: the poller has backed off to a 20s cadence by the time the
+  // error box is read, so the button fetches immediately instead of waiting.
+  const retry = useCallback(() => {
+    setRetrying(true);
+    load()
+      .catch((e) => setError(e instanceof Error ? e.message : "fetch failed"))
+      .finally(() => setRetrying(false));
+  }, [load]);
 
   // /api/metrics/overview carries no period-over-period deltas, so the tiles
   // show the measured value and its unit only — never an invented trend.
@@ -113,6 +128,17 @@ export default function OverviewPage() {
           {error ? "backend offline" : "streaming"}
         </Badge>
       </div>
+
+      {error && (
+        <ErrorNote
+          className="clip-cyber-sm"
+          onRetry={retry}
+          retrying={retrying}
+        >
+          couldn&apos;t reach the backend — {error}
+          {overview && " · showing the last values received"}
+        </ErrorNote>
+      )}
 
       <div className="grid gap-4 md:grid-cols-4">
         {(overview ? metrics : [0, 1, 2, 3]).map((metric, i) =>
