@@ -170,6 +170,18 @@ describe("isTaskList", () => {
     expect(isTaskList([{ ...task, spent: "0.054" }])).toBe(false);
     expect(isTaskList([task, { ...task, spent: undefined }])).toBe(false);
   });
+
+  it("accepts every backend task status", () => {
+    for (const status of ["pending", "running", "complete", "failed"]) {
+      expect(isTaskList([{ ...task, status }])).toBe(true);
+    }
+  });
+
+  it("rejects a status outside the backend literal (keys the tone map)", () => {
+    expect(isTaskList([{ ...task, status: "cancelled" }])).toBe(false);
+    const { status: _drop, ...missing } = task;
+    expect(isTaskList([missing])).toBe(false);
+  });
 });
 
 describe("isDecomposeResponse", () => {

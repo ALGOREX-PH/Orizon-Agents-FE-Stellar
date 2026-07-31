@@ -100,11 +100,24 @@ export function isFlow(v: unknown): v is Flow {
   );
 }
 
-/** Task table: rows keyed by `id`, `spent.toFixed(3)` per row. */
+/** Backend `TaskStatus` literal (`app/schemas.py`). */
+const TASK_STATUSES = new Set(["pending", "running", "complete", "failed"]);
+
+/** Task table: rows keyed by `id`, `spent.toFixed(3)` per row, and `status`
+ * indexes a tone map (`statusTone[t.status]`) — an unlisted value resolves to
+ * `undefined` and renders an unstyled badge, so it is checked against the
+ * backend literal rather than merely as a string. */
 export function isTaskList(v: unknown): v is Task[] {
   return (
     Array.isArray(v) &&
-    v.every((t) => isRecord(t) && isStr(t.id) && isNum(t.spent))
+    v.every(
+      (t) =>
+        isRecord(t) &&
+        isStr(t.id) &&
+        isNum(t.spent) &&
+        isStr(t.status) &&
+        TASK_STATUSES.has(t.status),
+    )
   );
 }
 
