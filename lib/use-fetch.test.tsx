@@ -53,6 +53,14 @@ describe("useFetch", () => {
     expect(result.current.loading).toBe(false);
   });
 
+  it("stringifies a rejection that is not an Error", async () => {
+    const { result } = renderHook(() =>
+      useFetch(() => Promise.reject("kaboom"), []),
+    );
+    await waitFor(() => expect(result.current.error).toBe("kaboom"));
+    expect(result.current.retrying).toBe(false);
+  });
+
   it("clears stale data immediately when deps change (default)", async () => {
     const resolvers = new Map<number, (v: string) => void>();
     const fn = vi.fn(

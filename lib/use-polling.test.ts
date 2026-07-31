@@ -237,6 +237,21 @@ describe("usePolling", () => {
     expect(result.current).toEqual({ lastSuccessAt: null, failures: 0 });
   });
 
+  it("does not reschedule when the loop is torn down mid-flight", async () => {
+    const d = deferred();
+    const fn = vi.fn(() => d.promise);
+    const { unmount } = renderHook(() => usePolling(fn, INTERVAL));
+    expect(fn).toHaveBeenCalledTimes(1);
+
+    // The in-flight run settles after teardown: its finally must not arm a
+    // new timer.
+    unmount();
+    d.resolve();
+    await flushMicrotasks();
+    await vi.advanceTimersByTimeAsync(INTERVAL * 8);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
   it("does nothing when disabled", async () => {
     const fn = vi.fn(async () => {});
     renderHook(() => usePolling(fn, INTERVAL, { enabled: false }));
