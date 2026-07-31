@@ -49,6 +49,12 @@ export default function EventsPage() {
   const feedLoading =
     status === "starting" || (contractIds === null && !loadError);
 
+  // A failed contract-id fetch means the feed never starts, so `status` stays
+  // "idle" and `events` stays empty — indistinguishable from a healthy feed
+  // with nothing to show. Track the failure explicitly so the UI can say so.
+  const failureMessage = loadError ?? error;
+  const feedState = failureMessage !== null ? "error" : status;
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between flex-wrap gap-4">
@@ -61,12 +67,12 @@ export default function EventsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <Badge tone={status === "live" ? "success" : "magenta"} dot>
-            {status === "live"
+          <Badge tone={feedState === "live" ? "success" : "magenta"} dot>
+            {feedState === "live"
               ? "live"
-              : status === "starting"
+              : feedState === "starting"
                 ? "starting…"
-                : status === "error"
+                : feedState === "error"
                   ? "error"
                   : "idle"}
           </Badge>
@@ -108,7 +114,9 @@ export default function EventsPage() {
             ▸ contract event feed
           </div>
           <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
-            {events.length} {events.length === 1 ? "event" : "events"}
+            {failureMessage !== null && events.length === 0
+              ? "unavailable"
+              : `${events.length} ${events.length === 1 ? "event" : "events"}`}
           </span>
         </div>
 
@@ -126,6 +134,17 @@ export default function EventsPage() {
               ))}
             </div>
           </div>
+        ) : failureMessage !== null && events.length === 0 ? (
+          // Never fall through to the "no events yet" copy on a failure: an
+          // empty feed we could not even start is a broken feed, not an idle one.
+          <ErrorNote className="border-0 bg-transparent p-0">
+            <span className="block text-[10px] uppercase tracking-[0.25em] mb-2">
+              ▸ feed unavailable
+            </span>
+            <span className="block text-[11px] break-all">
+              {failureMessage}
+            </span>
+          </ErrorNote>
         ) : events.length === 0 ? (
           <div className="space-y-2">
             <div className="text-sm text-muted">
