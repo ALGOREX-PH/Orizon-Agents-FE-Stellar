@@ -397,6 +397,17 @@ const MAX_TOTAL_RECONNECTS = 60;
  * carried no line: steps can take 120s, so silence is not failure.
  */
 const STABLE_CONNECTION_MS = 5_000;
+/**
+ * How long a new EventSource has to answer before it is treated as failed.
+ *
+ * Every GET/POST has an AbortController deadline; EventSource has none and
+ * fires no `error` while a request simply hangs. Opening a shared trace link
+ * against a sleeping backend (Render free tier, 30-60s cold start) therefore
+ * pinned the page on a pulsing "awaiting next step…" forever. A warm backend
+ * answers in milliseconds, so 12s is loose enough to never fire on a healthy
+ * connection and short enough that a dead one surfaces.
+ */
+export const STREAM_CONNECT_TIMEOUT_MS = 12_000;
 
 /**
  * Subscribe to a live SSE trace stream.
@@ -410,6 +421,11 @@ const STABLE_CONNECTION_MS = 5_000;
  * legitimately stream for ~12 minutes, and a monotonic counter declared such
  * a run dead on its third transport hiccup while it was still executing —
  * and still charging. Once `done` arrives no reconnect is attempted.
+ *
+ * A connection that never answers within STREAM_CONNECT_TIMEOUT_MS is failed
+ * deliberately: EventSource has no deadline of its own, so a hung request
+ * (asleep backend, dead proxy) otherwise streamed nothing, forever, while the
+ * UI claimed to be live.
  *
  * The backend replays the full trace history to every new subscriber, so a
  * reconnect re-delivers already-seen lines. onReset fires immediately before
@@ -425,6 +441,7 @@ export function openTraceStream(
 ): () => void {
   let es: EventSource | null = null;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  let connectTimer: ReturnType<typeof setTimeout> | null = null;
   let attempts = 0; // consecutive failures since the last working connection
   let reconnects = 0; // lifetime total
   let settled = false; // done received, terminally errored, or disposed
@@ -434,9 +451,15 @@ export function openTraceStream(
   const token = getTaskToken(taskId);
   const query = token ? `?token=${encodeURIComponent(token)}` : "";
 
+  const clearConnectTimer = () => {
+    if (connectTimer !== null) clearTimeout(connectTimer);
+    connectTimer = null;
+  };
+
   const settle = (ok: boolean) => {
     if (settled) return;
     settled = true;
+    clearConnectTimer();
     es?.close();
     if (ok) onDone?.();
     else (onError ?? onDone)?.();
@@ -447,30 +470,21 @@ export function openTraceStream(
     es = source;
     let openedAt: number | null = null;
     let carried = 0;
+    let dead = false;
 
     // `open` is the real signal, but any event proves the connection is
     // live — including the backend's 15s keepalive ping.
     const established = () => {
-      if (openedAt === null) openedAt = Date.now();
+      if (openedAt !== null) return;
+      openedAt = Date.now();
+      clearConnectTimer();
     };
 
-    source.addEventListener("open", established);
-    source.addEventListener("ping", established);
-    source.addEventListener("trace", (e) => {
-      established();
-      try {
-        const line = JSON.parse((e as MessageEvent).data) as TraceLine;
-        carried += 1;
-        onEvent(line);
-      } catch {
-        /* ignore */
-      }
-    });
-    source.addEventListener("done", () => {
-      established();
-      settle(true);
-    });
-    source.addEventListener("error", () => {
+    /** This connection is over — reconnect if the budget allows. */
+    const failed = () => {
+      if (dead) return;
+      dead = true;
+      clearConnectTimer();
       source.close();
       if (settled) return;
       // A connection that did its job earns a fresh budget; one that opened
@@ -492,7 +506,33 @@ export function openTraceStream(
       } else {
         settle(false);
       }
+    };
+
+    // The deadline EventSource does not have: a request that hangs (asleep
+    // backend, dead proxy) never fires `error` on its own.
+    connectTimer = setTimeout(() => {
+      connectTimer = null;
+      if (settled || openedAt !== null) return;
+      failed();
+    }, STREAM_CONNECT_TIMEOUT_MS);
+
+    source.addEventListener("open", established);
+    source.addEventListener("ping", established);
+    source.addEventListener("trace", (e) => {
+      established();
+      try {
+        const line = JSON.parse((e as MessageEvent).data) as TraceLine;
+        carried += 1;
+        onEvent(line);
+      } catch {
+        /* ignore */
+      }
     });
+    source.addEventListener("done", () => {
+      established();
+      settle(true);
+    });
+    source.addEventListener("error", failed);
   };
 
   connect();
@@ -501,6 +541,7 @@ export function openTraceStream(
     settled = true;
     if (retryTimer !== null) clearTimeout(retryTimer);
     retryTimer = null;
+    clearConnectTimer();
     es?.close();
   };
 }

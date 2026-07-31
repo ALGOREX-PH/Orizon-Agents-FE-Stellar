@@ -12,6 +12,7 @@ import {
   ApiError,
   GET_DEDUPE_MS,
   GET_TIMEOUT_MS,
+  STREAM_CONNECT_TIMEOUT_MS,
   clearGetCache,
   decompose,
   execute,
@@ -819,5 +820,66 @@ describe("openTraceStream reconnect budget", () => {
 
     expect(onReset).not.toHaveBeenCalled();
     expect(StubEventSource.instances).toHaveLength(1);
+  });
+});
+
+describe("openTraceStream connect deadline", () => {
+  useStubEventSource();
+
+  // Every GET/POST has an AbortController deadline; EventSource has none and
+  // fires no error while the request simply hangs — a shared trace link
+  // opened against a sleeping backend pulsed "awaiting next step…" forever.
+  it("fails a connection that never answers, and retries", async () => {
+    const dispose = openTraceStream("tsk_cold", () => {});
+    const first = StubEventSource.last();
+
+    await vi.advanceTimersByTimeAsync(STREAM_CONNECT_TIMEOUT_MS - 1);
+    expect(first.closed).toBe(false);
+    expect(StubEventSource.instances).toHaveLength(1);
+
+    await vi.advanceTimersByTimeAsync(2);
+    expect(first.closed).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(StubEventSource.instances).toHaveLength(2);
+    dispose();
+  });
+
+  it("stops arming the deadline once the connection is open", async () => {
+    const dispose = openTraceStream("tsk_warm", () => {});
+    const first = StubEventSource.last();
+    first.emit("open");
+
+    // A quiet-but-live stream (steps take up to 120s) must survive.
+    await vi.advanceTimersByTimeAsync(STREAM_CONNECT_TIMEOUT_MS * 10);
+
+    expect(first.closed).toBe(false);
+    expect(StubEventSource.instances).toHaveLength(1);
+    dispose();
+  });
+
+  it("surfaces a real failure instead of hanging when no connection ever answers", async () => {
+    const onError = vi.fn();
+    const dispose = openTraceStream("tsk_dead", () => {}, undefined, onError);
+
+    // 3 hung connects + their backoffs, then the 4th hang exhausts the budget.
+    await vi.advanceTimersByTimeAsync(
+      (STREAM_CONNECT_TIMEOUT_MS + 4_000) * 4 + 10,
+    );
+
+    expect(StubEventSource.instances).toHaveLength(4);
+    expect(onError).toHaveBeenCalledTimes(1);
+    dispose();
+  });
+
+  it("clears the deadline on dispose", async () => {
+    const dispose = openTraceStream("tsk_unmounted", () => {});
+    const first = StubEventSource.last();
+
+    dispose();
+    await vi.advanceTimersByTimeAsync(STREAM_CONNECT_TIMEOUT_MS * 3);
+
+    expect(StubEventSource.instances).toHaveLength(1);
+    expect(first.closed).toBe(true);
   });
 });
