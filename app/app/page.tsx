@@ -75,31 +75,27 @@ export default function OverviewPage() {
     }
   }, 5000);
 
-  const metrics = overview
+  // /api/metrics/overview carries no period-over-period deltas, so the tiles
+  // show the measured value and its unit only — never an invented trend.
+  const metrics: { k: string; v: string; unit?: string }[] = overview
     ? [
         {
           k: "Agents online",
           v: overview.agents_online.toLocaleString(),
-          d: "live",
-          tone: "cyan" as const,
         },
         {
           k: "Tasks / s",
           v: overview.tasks_per_sec.toFixed(3),
-          d: "+12%",
-          tone: "violet" as const,
         },
         {
           k: "Avg completion",
           v: `${(overview.avg_completion * 100).toFixed(1)}%`,
-          d: "+0.4",
-          tone: "cyan" as const,
         },
         {
+          // avg_trust is served on a 0..5 scale; the suffix is the unit, not a delta.
           k: "Avg trust",
           v: overview.avg_trust.toFixed(2),
-          d: "/5",
-          tone: "magenta" as const,
+          unit: "/ 5",
         },
       ]
     : [];
@@ -133,13 +129,17 @@ export default function OverviewPage() {
               transition={{ duration: 0.4, delay: i * 0.06 }}
             >
               <Card>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-                    {metric.k}
-                  </span>
-                  <Badge tone={metric.tone}>{metric.d}</Badge>
+                <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
+                  {metric.k}
                 </div>
-                <div className="font-mono text-3xl neon-text">{metric.v}</div>
+                <div className="font-mono text-3xl neon-text">
+                  {metric.v}
+                  {metric.unit && (
+                    <span className="ml-1.5 text-base text-muted">
+                      {metric.unit}
+                    </span>
+                  )}
+                </div>
               </Card>
             </m.div>
           ),
