@@ -80,8 +80,8 @@ function TracePageInner() {
   // by polling the recorded history instead. Degraded, but not dead.
   const [degraded, setDegraded] = useState(false);
   // Bumping this re-runs the subscribe effect, which tears the dead stream
-  // down and opens a fresh one — the manual counterpart to the 3 automatic
-  // reconnects openTraceStream spends before giving up.
+  // down and opens a fresh one — the manual counterpart to the automatic
+  // reconnects and the polling fallback openTraceStream spends first.
   const [streamAttempt, setStreamAttempt] = useState(0);
 
   const [demoCursor, setDemoCursor] = useState(0);
