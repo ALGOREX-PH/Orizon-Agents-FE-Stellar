@@ -29,9 +29,17 @@ export default function PdaxPage() {
     reload: reloadBalances,
   } = useFetch(async () => (await getPdaxBalances()).balances, []);
 
-  // Shared banner: the balances failure takes precedence; an environment
-  // fetch failure also surfaces here.
-  const err = balError ?? envError;
+  // Every failed fetch on this page reports its own message. A single
+  // precedence-ordered banner used to swallow the others, and the health
+  // failure was never shown at all — it only flipped a badge, so a backend
+  // returning 404 read as a vague "unreachable" with no reason attached.
+  const failures: { label: string; message: string }[] = [];
+  if (envError !== null)
+    failures.push({ label: "environment", message: envError });
+  if (healthError !== null)
+    failures.push({ label: "health", message: healthError });
+  if (balError !== null)
+    failures.push({ label: "balances", message: balError });
 
   return (
     <div className="space-y-6">
@@ -42,7 +50,11 @@ export default function PdaxPage() {
         </p>
       </div>
 
-      {err && <ErrorNote className="bg-magenta/10">{err}</ErrorNote>}
+      {failures.map((f) => (
+        <ErrorNote key={f.label} className="bg-magenta/10">
+          {f.label} — {f.message}
+        </ErrorNote>
+      ))}
 
       <Card>
         <div className="flex items-center justify-between">
