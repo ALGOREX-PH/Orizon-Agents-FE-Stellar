@@ -28,8 +28,15 @@ export default function ReputationPage() {
     loading: batchLoading,
     reload: reloadBatch,
   } = useFetch(listReputation, [], { revalidateOnFocus: true });
-  // Static config — the calculator and ledger card fall back to defaults.
-  const { data: params } = useFetch(getReputationParams, [], {
+  // Static config. The calculator and ledger card fall back to built-in
+  // defaults, but the failure is surfaced rather than swallowed — a default
+  // floor rendered as if it were live is a routing claim we cannot back up.
+  const {
+    data: params,
+    error: paramsError,
+    loading: paramsLoading,
+    reload: reloadParams,
+  } = useFetch(getReputationParams, [], {
     revalidateOnFocus: true,
   });
 
@@ -79,7 +86,12 @@ export default function ReputationPage() {
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <RatingRubric />
-        <ScoreCalculator params={params} />
+        <ScoreCalculator
+          params={params}
+          loading={paramsLoading}
+          error={paramsError}
+          onRetry={reloadParams}
+        />
       </div>
 
       <OnchainDetails params={params} />

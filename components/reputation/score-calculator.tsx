@@ -2,6 +2,7 @@
 import { useId, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
+import { ErrorNote } from "@/components/ui/error-note";
 import { KVRow } from "@/components/ui/kv-row";
 import {
   DEFAULT_REP_PARAMS,
@@ -17,11 +18,21 @@ import type { ReputationParams } from "@/lib/types";
  * smoothing + Wilson lower bound client-side so visitors can see how prior
  * mass and settled evidence shape a routable score. Runs on
  * DEFAULT_REP_PARAMS until the live params arrive.
+ *
+ * The fallback is stated honestly: "loading…" only while a fetch is actually
+ * in flight, and an announced error once it has failed — the numbers below are
+ * then the client's own constants, not the floor the orchestrator routes on.
  */
 export function ScoreCalculator({
   params,
+  loading = false,
+  error = null,
+  onRetry,
 }: {
   params: ReputationParams | null;
+  loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }) {
   const p: RepMathParams = params ?? DEFAULT_REP_PARAMS;
   const uid = useId();
@@ -42,10 +53,23 @@ export function ScoreCalculator({
         <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
           probe the math — smoothing · wilson bound · floor
         </p>
-        {!params && (
-          <p className="mt-1 font-mono text-[10px] text-muted">
-            defaults — live params loading…
-          </p>
+        {error ? (
+          <ErrorNote
+            className="mt-3 clip-cyber-sm"
+            onRetry={onRetry}
+            retrying={loading}
+          >
+            params unavailable — the math below runs on built-in defaults, not
+            the live routing parameters. {error}
+          </ErrorNote>
+        ) : (
+          !params && (
+            <p className="mt-1 font-mono text-[10px] text-muted">
+              {loading
+                ? "defaults — live params loading…"
+                : "defaults — live params unavailable"}
+            </p>
+          )
         )}
       </div>
 
