@@ -201,6 +201,23 @@ function TracePageInner() {
 
   const artifact = artifactData?.artifact ?? null;
 
+  const proofMsg = visible.find((l) => l.level === "proof")?.msg ?? null;
+  const proofTx = artifactData?.proof_tx ?? null;
+  // "awaiting…" is a promise that something is still coming. Once the stream
+  // is dead — or sealed without a proof — nothing is on its way, and saying
+  // otherwise leaves the panel waiting forever on a run that already ended.
+  const attestationUnavailable =
+    !proofMsg && !proofTx && Boolean(taskId) && (streamError || done);
+  const attestationText = proofMsg
+    ? proofMsg
+    : proofTx
+      ? "ERC-8004 attestation sealed on-chain"
+      : streamError
+        ? "attestation unknown — the stream failed before one was recorded"
+        : done
+          ? "run sealed without an ERC-8004 attestation"
+          : "awaiting ERC-8004 attestation…";
+
   // The subscribe effect resets lines/done/error and opens a new EventSource,
   // so a retry restarts from the backend's replayed history rather than
   // appending onto a stale half-run.
@@ -418,14 +435,18 @@ function TracePageInner() {
               <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-magenta mb-4">
                 Attestation
               </div>
-              <div className="font-mono text-xs text-muted break-all leading-5">
-                {visible.find((l) => l.level === "proof")?.msg ??
-                  "awaiting ERC-8004 attestation…"}
+              <div
+                className={cn(
+                  "font-mono text-xs break-all leading-5",
+                  attestationUnavailable ? "text-magenta/90" : "text-muted",
+                )}
+              >
+                {attestationText}
               </div>
-              {artifactData?.proof_tx && (
+              {proofTx && (
                 <StellarExpertLink
                   kind="tx"
-                  id={artifactData.proof_tx}
+                  id={proofTx}
                   className="mt-3 inline-block"
                 />
               )}
