@@ -42,7 +42,7 @@ export function RepStats({
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <LoadingStatus label="Loading reputation stats…" />
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i}>
@@ -55,10 +55,15 @@ export function RepStats({
   }
 
   const entries = batch ? Object.values(batch.reputations) : null;
+  // `unit` is split off the value so the longest tile ("1234.56 USDC") can
+  // wrap between amount and unit instead of running past the card — the Card's
+  // clip-cyber clip-path cuts overflow off silently, and globals.css sets
+  // overflow-x: hidden, so a too-wide money value is lost, not scrollable.
   const tiles = [
     {
       k: "agents tracked",
       v: entries ? entries.length.toLocaleString() : "—",
+      unit: null,
       sub: null,
     },
     {
@@ -66,20 +71,23 @@ export function RepStats({
       v: entries
         ? entries.filter((r) => r.source === "onchain").length.toLocaleString()
         : "—",
+      unit: null,
       sub: null,
     },
     {
       k: "evidence settled",
       v: entries
-        ? `${(
+        ? (
             entries.reduce((sum, r) => sum + r.weight, 0) / STROOPS_PER_USDC
-          ).toFixed(2)} USDC`
+          ).toFixed(2)
         : "—",
+      unit: entries ? "USDC" : null,
       sub: null,
     },
     {
       k: "routing floor",
       v: batch ? `★ ${scoreOutOfFive(batch.floor_bps)}` : "—",
+      unit: null,
       sub: "wilson lower bound",
     },
   ];
@@ -91,7 +99,16 @@ export function RepStats({
           <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
             {t.k}
           </div>
-          <div className="font-mono text-3xl neon-text">{t.v}</div>
+          {/* Steps down again at lg, where four columns are narrower than the
+              two-column tablet layout they replace. */}
+          <div className="font-mono text-2xl neon-text break-words sm:text-3xl lg:text-2xl xl:text-3xl">
+            {t.v}
+            {t.unit && (
+              <span className="ml-1.5 text-sm text-muted sm:text-base">
+                {t.unit}
+              </span>
+            )}
+          </div>
           {t.sub && (
             <div className="mt-1 font-mono text-[10px] uppercase tracking-widest text-muted">
               {t.sub}
