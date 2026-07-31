@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ArtifactViewer } from "@/components/ui/artifact-viewer";
 import { ErrorNote } from "@/components/ui/error-note";
 import { KVRow } from "@/components/ui/kv-row";
+import { LoadingStatus, Skeleton } from "@/components/ui/skeleton";
 import { StellarExpertLink } from "@/components/ui/stellar-link";
 import { getArtifact, openTraceStream } from "@/lib/api";
 import type { ArtifactResponse, TraceLine } from "@/lib/types";
@@ -479,11 +480,81 @@ function TxRow({ label, hash }: { label: string; hash: string }) {
   );
 }
 
+/**
+ * Shell for the Suspense boundary. `useSearchParams` suspends the whole page,
+ * and a one-line "loading…" reserved none of the 540px log box — the real
+ * layout slammed in underneath it. This mirrors the live structure (header,
+ * log card with its status bar, summary + attestation column) so the swap is
+ * a fill, not a jump.
+ */
+function TraceSkeleton() {
+  return (
+    <div className="space-y-6" aria-busy="true">
+      <LoadingStatus label="Loading trace…" />
+      <div className="flex items-end justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Trace</h1>
+          <Skeleton className="mt-2 h-4 w-64 max-w-full" />
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+        <Card className="!p-0 overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border bg-surface/80 px-4 py-2.5">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+            <Skeleton className="h-3 w-16" />
+          </div>
+          <div className="h-[540px] space-y-3 bg-[#060010] p-4 sm:p-5">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="flex gap-2 sm:gap-3">
+                <Skeleton className="hidden sm:block h-3 w-16 shrink-0" />
+                <Skeleton className="h-3 w-14 shrink-0" />
+                <Skeleton
+                  className={cn("h-3 flex-1", i % 3 === 2 && "max-w-[55%]")}
+                />
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <div className="space-y-4">
+          <Card>
+            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan mb-4">
+              Summary
+            </div>
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between gap-4 border-b border-border/40 pb-2 last:border-0"
+                >
+                  <Skeleton className="h-3 w-14" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              ))}
+            </div>
+          </Card>
+          <Card>
+            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-magenta mb-4">
+              Attestation
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TracePage() {
   return (
-    <Suspense
-      fallback={<div className="font-mono text-sm text-muted">loading…</div>}
-    >
+    <Suspense fallback={<TraceSkeleton />}>
       <TracePageInner />
     </Suspense>
   );
