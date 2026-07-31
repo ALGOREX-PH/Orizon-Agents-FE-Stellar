@@ -47,7 +47,11 @@ export default function SendPage() {
   const submitting =
     txState !== "idle" && txState !== "success" && txState !== "failed";
 
-  const balanceNum = wallet.xlmBalance ? parseFloat(wallet.xlmBalance) : null;
+  // null = the balance is *unknown* (loading, failed, or malformed), never
+  // "zero". Horizon returning garbage must not read as a spendable number.
+  const parsedBalance =
+    wallet.xlmBalance === null ? NaN : parseFloat(wallet.xlmBalance);
+  const balanceNum = Number.isFinite(parsedBalance) ? parsedBalance : null;
   const amountNum = amount ? parseFloat(amount) : NaN;
 
   const validation = useMemo(() => {
@@ -60,11 +64,27 @@ export default function SendPage() {
     if (!amount) return "amount required";
     if (!Number.isFinite(amountNum) || amountNum <= 0)
       return "amount must be > 0";
-    if (balanceNum !== null && amountNum > balanceNum - 0.0001) {
+    // An unverifiable balance BLOCKS the send. This guard used to be skipped
+    // whenever the balance fetch failed, so a downed Horizon turned the
+    // affordability check off and the user only learned the payment was
+    // unaffordable after signing it.
+    if (balanceNum === null) {
+      return wallet.balanceLoading
+        ? "checking your balance…"
+        : "balance unavailable — cannot verify this payment is affordable";
+    }
+    if (amountNum > balanceNum - 0.0001) {
       return `amount exceeds balance (${balanceNum.toFixed(4)} XLM available)`;
     }
     return null;
-  }, [destination, amount, amountNum, balanceNum, wallet.address]);
+  }, [
+    destination,
+    amount,
+    amountNum,
+    balanceNum,
+    wallet.address,
+    wallet.balanceLoading,
+  ]);
 
   const send = async () => {
     if (!wallet.connected || !wallet.address) return;
