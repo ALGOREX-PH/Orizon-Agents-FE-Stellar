@@ -24,9 +24,15 @@ import type {
 
 const base = "/api";
 
-export const GET_TIMEOUT_MS = 30_000;
-// execute/decompose can be slow, so POSTs get a much longer leash.
-export const POST_TIMEOUT_MS = 90_000;
+// The backend sleeps on Render's free tier and takes 30-60s to wake, so a 30s
+// deadline turned every first visit into a hard failure.
+export const GET_TIMEOUT_MS = 60_000;
+// execute/decompose can be slow, so POSTs get a much longer leash. This MUST
+// stay above the backend's own decompose budget (DECOMPOSE_TIMEOUT_SECONDS,
+// 90s) plus the reputation fetch that precedes it — otherwise the client
+// always aborts first and the backend's typed 504 `decompose_timeout` is
+// unreachable, leaving the user a generic "timeout after 90s" instead.
+export const POST_TIMEOUT_MS = 105_000;
 
 /**
  * fetch with an AbortController deadline so a hung backend cannot stall
