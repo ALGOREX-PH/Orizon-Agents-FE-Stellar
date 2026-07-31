@@ -9,7 +9,7 @@ import { getFlow } from "@/lib/api";
 import { useFetch } from "@/lib/use-fetch";
 
 export default function FlowPage() {
-  const { data: flow, error } = useFetch(getFlow, []);
+  const { data: flow, error, loading, reload } = useFetch(getFlow, []);
 
   const nodeById = flow
     ? Object.fromEntries(flow.nodes.map((n) => [n.id, n]))
@@ -72,8 +72,8 @@ export default function FlowPage() {
             </div>
           )}
           {error && (
-            <div className="absolute inset-0 grid place-items-center">
-              <ErrorNote className="border-0 bg-transparent p-0">
+            <div className="absolute inset-0 grid place-items-center p-4">
+              <ErrorNote onRetry={reload} retrying={loading}>
                 backend offline — {error}
               </ErrorNote>
             </div>
