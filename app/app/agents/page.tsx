@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ErrorNote } from "@/components/ui/error-note";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingStatus, Skeleton } from "@/components/ui/skeleton";
 import { ReputationBadge } from "@/components/ui/reputation-badge";
 import { listAgents, listReputation } from "@/lib/api";
 import { focusRing } from "@/lib/ui";
@@ -176,6 +176,7 @@ export default function AgentsPage() {
                   <tr key={i} className="border-b border-border/50">
                     <td colSpan={8} className="py-3">
                       <Skeleton className="h-5 w-full" />
+                      {i === 0 && <LoadingStatus label="Loading agents…" />}
                     </td>
                   </tr>
                 ))}
