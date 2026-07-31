@@ -81,6 +81,29 @@ function json(route: Route, body: unknown) {
  * client-side and /api is a pure rewrite proxy, so this catches everything)
  * and fulfills it with mocked JSON — no backend needed.
  */
+/**
+ * Fails every `/api/*` call the way the production outage did: a 404 carrying
+ * the backend's real error envelope. This is deliberately indistinguishable
+ * from a healthy backend behind a misconfigured proxy — the exact condition
+ * that ran unnoticed in production for days.
+ */
+export async function mockApiOutage(page: Page): Promise<void> {
+  await page.route("**/api/**", (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({
+        detail: "Not Found",
+        error: {
+          code: "not_found",
+          message: "Not Found",
+          request_id: "e2e0000000000000",
+        },
+      }),
+    }),
+  );
+}
+
 export async function mockApi(page: Page): Promise<void> {
   await page.route("**/api/**", (route) => {
     const { pathname } = new URL(route.request().url());
