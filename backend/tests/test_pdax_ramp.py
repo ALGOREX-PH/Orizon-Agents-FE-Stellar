@@ -1,11 +1,14 @@
 """Ramp orchestration against a fake PdaxClient: full on/off-ramp lifecycle,
-duplicate-webhook idempotency, and off-ramp payout PII dropped once the
-advance step finishes (success or failure)."""
+duplicate-webhook idempotency, unmatched settlement events being warned about
+rather than dropped, failed ramps exposing a code instead of upstream text,
+and off-ramp payout PII dropped once the advance step finishes (success or
+failure) or the payment window expires."""
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import time
 
 import pytest
 
@@ -350,7 +353,10 @@ def test_malformed_quote_envelope_fails_ramp_cleanly():
         advanced = await ramp.handle_event(client, event)
         assert advanced is not None
         assert advanced.status == "failed"
-        assert "malformed PDAX response" in (advanced.error or "")
+        # A code, never the upstream text — the record is returned verbatim by
+        # GET /api/pdax/ramp/{ramp_id}.
+        assert advanced.error == "bad_upstream_shape"
+        assert [s.detail for s in advanced.stages if s.status == "failed"] == ["bad_upstream_shape"]
 
     asyncio.run(run())
 
@@ -374,9 +380,59 @@ def test_malformed_quote_fields_fail_ramp_cleanly():
         assert advanced is not None
         assert advanced.status == "failed"
         assert record.status == "failed"
-        assert "malformed PDAX response" in (advanced.error or "")
+        assert advanced.error == "bad_upstream_shape"
 
     asyncio.run(run())
+
+
+UPSTREAM_TEXT = "Insufficient balance in institutional account 9912."
+
+
+def _failing_onramp_client() -> FakePdaxClient:
+    client = _onramp_client()
+    client.responses["v2/trade/quote"] = PdaxError(UPSTREAM_TEXT, code="OT010006", http_status=400)
+    return client
+
+
+async def _run_failing_onramp(client) -> object:
+    await ramp.start_onramp(client, OnRampRequest(**ONRAMP_REQ))
+    return await ramp.handle_event(
+        client,
+        FiatEvent(
+            identifier="on-1",
+            user_id="u1",
+            amount=500.0,
+            transaction_type="DEPOSIT",
+            status="COMPLETED",
+        ),
+    )
+
+
+def test_failed_ramp_record_carries_a_code_not_upstream_text(caplog):
+    """GET /api/pdax/ramp/{ramp_id} returns the record verbatim, so the record
+    owes the client the same thing `_fail` does: a stable snake_case code, and
+    never the upstream message."""
+    client = _failing_onramp_client()
+    with caplog.at_level(logging.ERROR, logger="app.pdax.ramp"):
+        advanced = asyncio.run(_run_failing_onramp(client))
+    assert advanced.status == "failed"
+    assert advanced.error == "insufficient_balance"
+    failed_details = [s.detail for s in advanced.stages if s.status == "failed"]
+    assert failed_details == ["insufficient_balance"]
+    assert all(UPSTREAM_TEXT not in (s.detail or "") for s in advanced.stages)
+    # The raw text is not lost — it lives in the server-side log line only.
+    assert any(UPSTREAM_TEXT in r.getMessage() for r in caplog.records)
+
+
+def test_ramp_status_route_never_returns_upstream_text(client):
+    """End-to-end: the same doctrine holds through the HTTP surface."""
+    fake = _failing_onramp_client()
+    record = asyncio.run(_run_failing_onramp(fake))
+    r = client.get(f"/api/pdax/ramp/{record.ramp_id}")
+    assert r.status_code == 200
+    assert "9912" not in r.text
+    assert "Insufficient balance" not in r.text
+    assert r.json()["error"] == "insufficient_balance"
 
 
 def test_unmatched_event_is_warned_not_silently_dropped(caplog):
@@ -449,6 +505,72 @@ def test_events_we_never_act_on_stay_quiet(caplog):
     assert [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING] == []
 
 
+def test_abandoned_offramp_payout_details_expire(caplog):
+    """An off-ramp whose agent never sends the USDC must not hold the
+    beneficiary's account number for the life of the process — it is only
+    popped on terminal advance or after 500 newer ramps evict it."""
+    client = _offramp_client()
+
+    async def run():
+        return await ramp.start_offramp(client, OffRampRequest(**OFFRAMP_REQ))
+
+    record = asyncio.run(run())
+    assert record.ramp_id in ramp._PAYOUTS
+    # Inside the payment window the ramp may still settle: PII stays.
+    ramp.expire_payouts(now=time.monotonic() + ramp.PAYOUT_STASH_TTL_SECONDS - 1)
+    assert record.ramp_id in ramp._PAYOUTS
+    with caplog.at_level(logging.INFO, logger="app.pdax.ramp"):
+        ramp.expire_payouts(now=time.monotonic() + ramp.PAYOUT_STASH_TTL_SECONDS + 1)
+    assert ramp._PAYOUTS == {}
+    assert any("dropped abandoned off-ramp payout details" in r.getMessage() for r in caplog.records)
+
+
+def test_starting_an_offramp_sweeps_stale_payouts(monkeypatch):
+    """The sweep is event-driven (no background task), so a later off-ramp
+    clears an abandoned one."""
+    client = _offramp_client()
+    monkeypatch.setattr(ramp, "PAYOUT_STASH_TTL_SECONDS", -1.0)
+
+    async def run():
+        first = await ramp.start_offramp(client, OffRampRequest(**OFFRAMP_REQ))
+        second = await ramp.start_offramp(client, OffRampRequest(**{**OFFRAMP_REQ, "identifier": "off-2"}))
+        return first, second
+
+    first, second = asyncio.run(run())
+    assert first.ramp_id not in ramp._PAYOUTS
+    assert list(ramp._PAYOUTS) == [second.ramp_id]
+
+
+def test_expired_payout_fails_the_advance_rather_than_paying_a_stale_beneficiary(monkeypatch):
+    client = _offramp_client()
+
+    async def run():
+        record = await ramp.start_offramp(client, OffRampRequest(**OFFRAMP_REQ))
+        monkeypatch.setattr(ramp, "PAYOUT_STASH_TTL_SECONDS", -1.0)
+        return await ramp.advance_offramp(client, record)
+
+    advanced = asyncio.run(run())
+    assert advanced.status == "failed"
+    assert advanced.error == "missing_payout_details"
+    assert "v1/fiat/withdraw" not in client.calls
+
+
+def test_oversized_payout_field_fails_the_ramp_not_the_process():
+    """OffRampRequest leaves some fields unbounded while FiatWithdrawRequest
+    bounds them, so the withdrawal body can fail local validation. That must
+    land as a failed stage, not a ValidationError 500 on a funded ramp."""
+    client = _offramp_client()
+
+    async def run():
+        record = await ramp.start_offramp(client, OffRampRequest(**{**OFFRAMP_REQ, "sender_first_name": "A" * 300}))
+        return await ramp.advance_offramp(client, record)
+
+    advanced = asyncio.run(run())
+    assert advanced.status == "failed"
+    assert advanced.error == "invalid_withdraw_request"
+    assert "v1/fiat/withdraw" not in client.calls  # never left the process
+
+
 def test_advance_offramp_without_payout_fails_cleanly():
     client = _offramp_client()
 
@@ -457,6 +579,6 @@ def test_advance_offramp_without_payout_fails_cleanly():
         ramp._PAYOUTS.clear()  # simulate a restart losing the payout stash
         advanced = await ramp.advance_offramp(client, record)
         assert advanced.status == "failed"
-        assert advanced.error == "missing payout details"
+        assert advanced.error == "missing_payout_details"
 
     asyncio.run(run())

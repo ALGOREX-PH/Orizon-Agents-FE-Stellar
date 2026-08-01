@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorNote } from "@/components/ui/error-note";
+import { StaleBadge } from "@/components/ui/stale-badge";
 import { NETWORK_LABEL, StellarExpertLink } from "@/components/ui/stellar-link";
 import { getStellarNetwork } from "@/lib/api";
 import { focusRing } from "@/lib/ui";
@@ -107,6 +108,16 @@ export default function EventsPage() {
               last poll: {ageSec}s ago
             </span>
           )}
+          {/* The feed keeps whatever it last received when a poll fails, so
+              the rows, the ledger number and the event count all freeze in
+              place while still reading as live. `lastTickAt` is null until a
+              poll has actually landed, so a feed that never started shows
+              nothing here — that is a failure, and the cards below say so. */}
+          <StaleBadge
+            lastSuccessAt={lastTickAt}
+            stale={failureMessage !== null}
+            what="the event feed"
+          />
         </div>
       </div>
 

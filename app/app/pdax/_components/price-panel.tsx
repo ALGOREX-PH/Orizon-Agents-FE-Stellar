@@ -9,7 +9,16 @@ import type { PdaxSide } from "@/lib/pdax-types";
 import { inputCls } from "@/lib/ui";
 import { useAsyncAction } from "@/lib/use-async-action";
 
-/** Indicative price + firm-quote console for a PHP pair (default USDC). */
+/**
+ * Indicative price + firm-quote console for a PHP pair (default USDC).
+ *
+ * No `StaleBadge` here, deliberately, even though the panel prints money:
+ * staleness means a real value is on screen and a later refresh failed, and
+ * nothing on this panel refreshes. `useAsyncAction` runs only on a click, and
+ * `run()` calls `reset()` first, so a failed quote leaves an error and no
+ * price rather than a frozen one. A price is only ever shown when the request
+ * that produced it succeeded.
+ */
 export function PricePanel() {
   const [side, setSide] = useState<PdaxSide>("buy");
   const [quoteCurrency, setQuoteCurrency] = useState("USDC");

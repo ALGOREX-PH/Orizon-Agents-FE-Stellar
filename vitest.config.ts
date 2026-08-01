@@ -39,11 +39,14 @@ export default defineConfig({
         "lib/mock-data.ts",
         "**/*.test.*",
       ],
+      // Ratcheted after the outage round took the lib layer to 89/82/92/93.
+      // Kept a few points of headroom so an unrelated refactor doesn't fail
+      // CI, but close enough that deleting tests does.
       thresholds: {
-        statements: 80,
-        branches: 72,
-        functions: 70,
-        lines: 80,
+        statements: 86,
+        branches: 78,
+        functions: 88,
+        lines: 89,
       },
     },
   },

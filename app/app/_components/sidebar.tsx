@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { ErrorNote } from "@/components/ui/error-note";
 import { Logo } from "@/components/ui/logo";
+import { StaleBadge } from "@/components/ui/stale-badge";
 import { getOverview } from "@/lib/api";
 import { focusRing } from "@/lib/ui";
 import { useFetch } from "@/lib/use-fetch";
@@ -285,6 +286,7 @@ export function Sidebar() {
     error,
     loading,
     retrying,
+    lastSuccessAt,
     reload,
   } = useFetch(getOverview, [], {
     revalidateOnFocus: true,
@@ -402,6 +404,16 @@ export function Sidebar() {
                 {`avg completion ${(overview.avg_completion * 100).toFixed(0)}%`}
               </div>
             )}
+            {/* These counters ride every console route, so a failed refresh
+                leaves them frozen in the corner of a page the operator is
+                reading. Dating them is the whole point; nothing renders
+                until a payload has actually landed. */}
+            <StaleBadge
+              stale={Boolean(error)}
+              lastSuccessAt={lastSuccessAt}
+              what="network counters"
+              className="mt-2"
+            />
             {/* Placeholder dashes only before anything has ever loaded and
                 only while no failure is on screen — a retry attempt turns
                 `loading` back on, and dashes must not replace the error. */}
@@ -419,9 +431,9 @@ export function Sidebar() {
                 retrying={loading || retrying}
               >
                 <span className="block">
-                  {overview
-                    ? "counters are stale — refresh failed"
-                    : "network metrics unavailable"}
+                  {/* The badge above already says "stale" and dates it —
+                      this line carries why. */}
+                  {overview ? "refresh failed" : "network metrics unavailable"}
                 </span>
                 <span className="mt-0.5 block break-all opacity-80">
                   {error}
