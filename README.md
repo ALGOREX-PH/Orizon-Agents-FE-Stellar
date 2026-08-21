@@ -390,8 +390,6 @@ lib/
   wallet.tsx                 # StellarWalletsKit provider (multi-wallet)
   wallet-errors.ts           # classifyError() — wallet_not_found / user_rejected / insufficient_balance
   stellar-events.ts          # useStellarEvents() — polls RPC getEvents
-contract/                    # snapshot of the Soroban contracts (per White-Belt revision)
-backend/                     # snapshot of the FastAPI + Agno backend
 components/ui/
   connect-wallet.tsx         # Freighter button
   artifact-viewer.tsx        # Preview + Files + Download
