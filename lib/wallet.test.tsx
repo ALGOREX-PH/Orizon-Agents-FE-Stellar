@@ -214,3 +214,96 @@ describe("WalletProvider balance state", () => {
     expect(result.current.balanceError).toBeNull();
   });
 });
+
+describe("signXdr", () => {
+  /** Mounts connected and waits out the restore-time network probe, so the
+   * next getNetwork() call is deterministically the sign-time re-probe. */
+  async function mountProbed() {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => horizonOk("1.0000000")),
+    );
+    const hook = await mountConnected();
+    await waitFor(() =>
+      expect(hook.result.current.walletNetwork).not.toBeNull(),
+    );
+    return hook;
+  }
+
+  beforeEach(() => {
+    kitMock.signTransaction.mockClear();
+  });
+
+  it("re-probes the wallet network before signing and fails fast on a mismatch", async () => {
+    const { result } = await mountProbed();
+    expect(result.current.walletNetworkMismatch).toBe(false);
+
+    // The user flips the extension to mainnet after connecting — the
+    // connect-time snapshot still says testnet.
+    kitMock.getNetwork.mockResolvedValueOnce({
+      network: "PUBLIC",
+      networkPassphrase: "Public Global Stellar Network ; September 2015",
+    });
+
+    let err: unknown;
+    await act(async () => {
+      err = await result.current.signXdr("XDR").catch((e: unknown) => e);
+    });
+    expect(err).toMatchObject({ kind: "wrong_network" });
+    expect(kitMock.signTransaction).not.toHaveBeenCalled();
+    // The fresh probe also refreshed the exposed snapshot.
+    await waitFor(() => expect(result.current.walletNetworkMismatch).toBe(true));
+  });
+
+  it("rejects with a friendly timeout when the signing popup never settles", async () => {
+    const { result } = await mountProbed();
+    kitMock.signTransaction.mockImplementationOnce(
+      () => new Promise(() => {}),
+    );
+
+    vi.useFakeTimers();
+    try {
+      let err: unknown;
+      await act(async () => {
+        const settled = result.current.signXdr("XDR").catch((e: unknown) => {
+          err = e;
+        });
+        // Flush the pre-sign microtask chain (kit load, network re-probe) so
+        // the deadline timer is armed before the clock advances past it.
+        for (let i = 0; i < 20; i++) await Promise.resolve();
+        await vi.advanceTimersByTimeAsync(120_000);
+        await settled;
+      });
+      expect(err).toMatchObject({ kind: "unknown", title: "Wallet timed out" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("signs when the re-probe can't determine the network (unknown, not a mismatch)", async () => {
+    const { result } = await mountProbed();
+    // Albedo/Lobstr-style wallet: getNetwork rejects → unknown, no blocking.
+    kitMock.getNetwork.mockRejectedValueOnce(new Error("code -3"));
+    kitMock.signTransaction.mockResolvedValueOnce({ signedTxXdr: "SIGNED" });
+
+    let signed = "";
+    await act(async () => {
+      signed = await result.current.signXdr("XDR");
+    });
+    expect(signed).toBe("SIGNED");
+  });
+
+  it("propagates the wallet's own rejection untouched", async () => {
+    const { result } = await mountProbed();
+    kitMock.signTransaction.mockRejectedValueOnce(
+      new Error("User declined access"),
+    );
+
+    let err: unknown;
+    await act(async () => {
+      err = await result.current.signXdr("XDR").catch((e: unknown) => e);
+    });
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toBe("User declined access");
+  });
+});

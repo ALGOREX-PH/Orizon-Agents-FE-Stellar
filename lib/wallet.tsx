@@ -24,6 +24,7 @@ import {
 import type { Networks as KitNetworks } from "@creit.tech/stellar-wallets-kit";
 import {
   classifyError,
+  isFriendlyError,
   wrongNetworkError,
   type FriendlyError,
 } from "@/lib/wallet-errors";
@@ -196,6 +197,48 @@ async function probeWalletNetwork(kit: Kit): Promise<NetworkDetails | null> {
   return null;
 }
 
+/**
+ * Deadline on the signing popup. Legitimate signing is interactive and can
+ * take a while, so this is deliberately generous — it exists for the popup
+ * that will never settle (blocked, orphaned, or dismissed without the kit
+ * hearing about it), which otherwise pins the caller's loading state forever.
+ */
+const SIGN_TIMEOUT_MS = 120_000;
+
+function signTimeoutError(): FriendlyError {
+  return {
+    kind: "unknown",
+    title: "Wallet timed out",
+    detail:
+      "The wallet didn't respond within 2 minutes. The signing popup may have been blocked or closed — check your wallet extension and try again.",
+    raw: `wallet did not settle within ${SIGN_TIMEOUT_MS / 1000}s`,
+  };
+}
+
+/** The promise's own outcome, or `onTimeout()` as a rejection if it doesn't settle in time. */
+function withDeadline<T>(
+  promise: Promise<T>,
+  ms: number,
+  onTimeout: () => FriendlyError,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(onTimeout()), ms);
+    // A settled sign must not hold the event loop open (node only —
+    // browsers return a number).
+    (timer as unknown as { unref?: () => void }).unref?.();
+    promise.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+}
+
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const installed = true; // kit modal handles the "no wallet" state inline
   const [address, setAddress] = useState<string | null>(null);
@@ -366,12 +409,28 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       }
       try {
         const kit = await loadKit();
-        const res = await kit.signTransaction(xdr, {
-          networkPassphrase: opts?.networkPassphrase ?? NETWORK_PASSPHRASE,
-          address,
-        });
+        // The connect-time snapshot goes stale the moment the user switches
+        // networks in the extension, so ask again right before signing —
+        // otherwise the tx dies on-chain with tx_bad_auth anyway.
+        const net = await probeWalletNetwork(kit);
+        setWalletNetwork(net);
+        if (net && net.networkPassphrase !== NETWORK_PASSPHRASE) {
+          throw wrongNetworkError(
+            `wallet reports ${net.network || net.networkPassphrase}; app expects ${NETWORK_NAME} (${NETWORK_PASSPHRASE})`,
+          );
+        }
+        const res = await withDeadline(
+          kit.signTransaction(xdr, {
+            networkPassphrase: opts?.networkPassphrase ?? NETWORK_PASSPHRASE,
+            address,
+          }),
+          SIGN_TIMEOUT_MS,
+          signTimeoutError,
+        );
         return res.signedTxXdr;
       } catch (e) {
+        // Already classified (wrong network, sign timeout) — pass through.
+        if (isFriendlyError(e)) throw e;
         // Surface a classified error to call-sites that show toasts.
         throw e instanceof Error ? e : new Error(String(e));
       }
