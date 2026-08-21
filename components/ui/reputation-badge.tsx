@@ -11,9 +11,14 @@ const score = (bps: number) => (bps / 2000).toFixed(2);
  * `≈` prefix when it is only the Bayesian prior, magenta when it sits below
  * the network floor. Meaning is never carried by color alone — the ≈ / ★ / ⚑
  * glyphs and the title/aria-label text carry it too.
+ *
+ * The floor decision follows the backend's `passes_floor`: the Wilson lower
+ * bound against the floor, never the displayed (smoothed) score. Callers
+ * that gate on the floor should pass `lowerBoundBps` alongside `floorBps`.
  */
 export function ReputationBadge({
   bps,
+  lowerBoundBps,
   source,
   count,
   disputeRateBps,
@@ -21,6 +26,7 @@ export function ReputationBadge({
   className,
 }: {
   bps: number;
+  lowerBoundBps?: number;
   source: ReputationSource;
   count?: number;
   disputeRateBps?: number;
@@ -28,7 +34,7 @@ export function ReputationBadge({
   className?: string;
 }) {
   const prior = source === "prior";
-  const belowFloor = floorBps != null && bps < floorBps;
+  const belowFloor = floorBps != null && (lowerBoundBps ?? bps) < floorBps;
   const showCount = !prior && count != null && count > 0;
   const disputePct =
     disputeRateBps != null && disputeRateBps > 0
