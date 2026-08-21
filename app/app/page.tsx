@@ -45,6 +45,8 @@ function Sparkline({ points }: { points: number[] }) {
 
   return (
     <svg
+      role="img"
+      aria-label="Sparkline of tasks executed over the last 24 hours"
       viewBox={`0 0 ${w} ${h}`}
       className="h-36 w-full"
       preserveAspectRatio="none"
