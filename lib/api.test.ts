@@ -460,6 +460,27 @@ describe("get dedupe cache", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("evicts a resolved entry from the cache once the dedupe window elapses", async () => {
+    vi.useFakeTimers({ now: 1_000_000 });
+    try {
+      fetchMock.mockResolvedValue(jsonResponse(200, []));
+
+      await listAgents();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // Let the eviction timer fire, then rewind the clock so the lazy
+      // dedupe-window check would still call the entry fresh: a refetch
+      // proves the map entry itself is gone, not merely aged past reuse.
+      await vi.advanceTimersByTimeAsync(GET_DEDUPE_MS + 1);
+      vi.setSystemTime(1_000_000);
+
+      await listAgents();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("evicts rejected requests so the next call retries the network", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(500, { detail: "boom" }));
     await expect(listAgents()).rejects.toThrow("GET /agents → 500");

@@ -244,6 +244,14 @@ function get<T>(
   promise.then(
     () => {
       entry.settledAt = Date.now();
+      // A resolved payload must not outlive its dedupe window: per-task
+      // paths (/trace/{id}, artifact bodies) are fetched once and would
+      // otherwise be retained forever. `unref` (node only) so the sweep
+      // never holds the event loop open.
+      const evict = setTimeout(() => {
+        if (getCache.get(path) === entry) getCache.delete(path);
+      }, GET_DEDUPE_MS);
+      (evict as unknown as { unref?: () => void }).unref?.();
     },
     () => {
       if (getCache.get(path) === entry) getCache.delete(path);
