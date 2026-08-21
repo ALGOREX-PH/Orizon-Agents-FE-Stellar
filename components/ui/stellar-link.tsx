@@ -12,13 +12,22 @@ export const defaultExplorerNetwork = IS_MAINNET ? "public" : "testnet";
 /** Short badge label for the active network — "mainnet" or "testnet". */
 export const NETWORK_LABEL = IS_MAINNET ? "mainnet" : "testnet";
 
+/**
+ * stellar.expert only publishes two explorer segments. Callers pass through
+ * whatever the backend's GET /stellar/network reports — legitimately
+ * "mainnet" — so normalize instead of interpolating raw and 404ing.
+ */
+function explorerSegment(network: string): "public" | "testnet" {
+  return network === "mainnet" || network === "public" ? "public" : "testnet";
+}
+
 /** Canonical stellar.expert explorer URL for a tx / account / contract. */
 export function stellarExpertUrl(
   kind: StellarExpertKind,
   id: string,
   network: string = defaultExplorerNetwork,
 ): string {
-  return `https://stellar.expert/explorer/${network}/${kind}/${id}`;
+  return `https://stellar.expert/explorer/${explorerSegment(network)}/${kind}/${id}`;
 }
 
 /**
