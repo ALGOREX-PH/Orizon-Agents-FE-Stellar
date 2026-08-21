@@ -117,12 +117,16 @@ export function ExecutionPlan({ plan }: { plan: DecomposeResponse }) {
       setFriendlyError(friendly);
       setTxState("failed");
       setStep("");
-      throw new Error(friendly.detail);
+      // Swallowed, not re-thrown: the failure renders once, in the TxStatus
+      // FailedCard below — re-throwing would surface the same detail a
+      // second time via useAsyncAction's captured error.
     }
   });
 
   const executing = simulate.pending || authorize.pending;
-  const error = simulate.error ?? authorize.error;
+  // Authorize failures render in the TxStatus FailedCard (via friendlyError);
+  // only the simulate path reports through the alert below.
+  const error = simulate.error;
 
   const onSimulate = () => {
     authorize.reset();
