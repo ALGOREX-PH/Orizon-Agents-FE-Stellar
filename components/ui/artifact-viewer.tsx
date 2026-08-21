@@ -23,6 +23,17 @@ const CodeViewer = dynamic(
 
 type Tab = "preview" | "files";
 
+// Blob MIME per artifact file language; anything unrecognized downloads as
+// plain text rather than mislabelled HTML.
+const MIME_BY_LANGUAGE: Record<string, string> = {
+  html: "text/html",
+  css: "text/css",
+  javascript: "text/javascript",
+  js: "text/javascript",
+  json: "application/json",
+  svg: "image/svg+xml",
+};
+
 export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
   const [tab, setTab] = useState<Tab>("preview");
   const [activeFile, setActiveFile] = useState(
@@ -32,9 +43,11 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
     artifact.files.find((f) => f.path === activeFile) ?? artifact.files[0];
 
   const download = () => {
-    const file = artifact.files[0];
+    const file = current;
     if (!file) return;
-    const blob = new Blob([file.content], { type: "text/html" });
+    const blob = new Blob([file.content], {
+      type: MIME_BY_LANGUAGE[file.language?.toLowerCase()] ?? "text/plain",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -94,7 +107,7 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
       {tab === "preview" ? (
         <div className="p-4 bg-[#060010]">
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted mb-3">
-            ◉ sandboxed iframe · no network, no cookies, no parent DOM access
+            ◉ sandboxed iframe · no cookies, no parent DOM access
           </p>
           <iframe
             title={artifact.title}
