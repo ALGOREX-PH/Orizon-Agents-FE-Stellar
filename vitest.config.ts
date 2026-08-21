@@ -16,8 +16,6 @@ export default defineConfig({
     exclude: [
       "node_modules/**",
       ".next/**",
-      "contract/**",
-      "backend/**",
       "e2e/**",
     ],
     reporters: "verbose",
