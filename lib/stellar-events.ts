@@ -56,7 +56,6 @@ export function useStellarEvents(
 
   const cursorRef = useRef<string | null>(null);
   const startLedgerRef = useRef<number | null>(null);
-  const stoppedRef = useRef(false);
 
   const tick = useCallback(
     async (server: RpcNs.Server, scValToNative: ScValToNativeFn) => {
@@ -117,7 +116,11 @@ export function useStellarEvents(
 
   useEffect(() => {
     if (!contractIds || contractIds.length === 0) return;
-    stoppedRef.current = false;
+    // Each effect run owns its stop flag. A shared ref got reset by the NEXT
+    // run before a previous run's async continuations (SDK import, anchor
+    // fetch) checked it, so a restart during that window resumed the dead
+    // run: a second poll loop and a visibility listener nobody removes.
+    let stopped = false;
     setStatus("starting");
     setError(null);
 
@@ -128,24 +131,24 @@ export function useStellarEvents(
       try {
         // Lazy-load the SDK on first use — keeps it out of the initial bundle.
         const { rpc, scValToNative } = await import("@stellar/stellar-sdk");
-        if (stoppedRef.current) return;
+        if (stopped) return;
         const server = new rpc.Server(RPC_URL);
 
         const latest = await server.getLatestLedger();
         // Anchor 50 ledgers back so we catch fresh events for active workflows.
         startLedgerRef.current = Math.max(latest.sequence - 50, 1);
         setLatestLedger(latest.sequence);
-        if (stoppedRef.current) return;
+        if (stopped) return;
 
         // Self-scheduling poll: pauses while the tab is hidden (no RPC calls
         // in the background) and backs off ×2 up to ×4 after consecutive
         // failures, resetting on the first success.
         let fails = 0;
         const schedule = () => {
-          if (stoppedRef.current) return;
+          if (stopped) return;
           const delay = Math.min(intervalMs * 2 ** fails, intervalMs * 4);
           timer = setTimeout(async () => {
-            if (stoppedRef.current) return;
+            if (stopped) return;
             if (typeof document !== "undefined" && document.hidden) {
               schedule();
               return;
@@ -158,7 +161,7 @@ export function useStellarEvents(
 
         // Poll promptly when the tab becomes visible again.
         const onVisible = () => {
-          if (document.hidden || stoppedRef.current) return;
+          if (document.hidden || stopped) return;
           if (timer) clearTimeout(timer);
           void tick(server, scValToNative).then((ok) => {
             fails = ok ? 0 : Math.min(fails + 1, 2);
@@ -181,7 +184,7 @@ export function useStellarEvents(
     })();
 
     return () => {
-      stoppedRef.current = true;
+      stopped = true;
       if (timer) clearTimeout(timer);
       removeVisListener?.();
     };

@@ -207,4 +207,51 @@ describe("useStellarEvents", () => {
     await advance(INTERVAL * 5);
     expect(getEventsMock).toHaveBeenCalledTimes(1);
   });
+
+  it("does not resume a dead run when contractIds identity changes mid-start", async () => {
+    // Park the FIRST run on getLatestLedger, restart the effect while it is
+    // in flight, then release it: the dead run must not start a second poll
+    // loop or register a visibility listener its cleanup already missed.
+    let releaseFirst: (v: { sequence: number }) => void = () => {};
+    getLatestLedgerMock.mockImplementationOnce(
+      () =>
+        new Promise<{ sequence: number }>((resolve) => {
+          releaseFirst = resolve;
+        }),
+    );
+    // Non-empty pages keep tick() returning true, so the poll cadence stays
+    // at one interval instead of drifting into the empty-page backoff.
+    getEventsMock.mockResolvedValue(page("cur-1", 1000, [ev("e1")]));
+
+    const addSpy = vi.spyOn(document, "addEventListener");
+    const removeSpy = vi.spyOn(document, "removeEventListener");
+    const visCalls = (spy: typeof addSpy) =>
+      spy.mock.calls.filter(([type]) => type === "visibilitychange").length;
+
+    const { rerender, unmount } = renderHook(
+      ({ ids }: { ids: string[] }) =>
+        useStellarEvents(ids, { intervalMs: INTERVAL }),
+      { initialProps: { ids: [...IDS] } },
+    );
+    await flush(); // run 1 is parked on getLatestLedger
+    rerender({ ids: [...IDS] }); // new identity → cleanup run 1, start run 2
+    await flush(); // run 2 anchors, ticks, goes live
+    expect(getEventsMock).toHaveBeenCalledTimes(1);
+
+    releaseFirst({ sequence: 1000 }); // run 1 resumes on a dead run
+    await flush();
+
+    // Only run 2's listener is live; run 1 registered none after its death.
+    expect(visCalls(addSpy)).toBe(1);
+
+    // Exactly one poll loop: each interval produces one getEvents, not two.
+    await advance(INTERVAL);
+    expect(getEventsMock).toHaveBeenCalledTimes(2);
+    await advance(INTERVAL);
+    expect(getEventsMock).toHaveBeenCalledTimes(3);
+
+    // And the surviving listener is balanced by unmount.
+    unmount();
+    expect(visCalls(removeSpy)).toBe(visCalls(addSpy));
+  });
 });
