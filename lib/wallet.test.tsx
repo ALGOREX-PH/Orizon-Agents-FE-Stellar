@@ -252,14 +252,14 @@ describe("signXdr", () => {
     expect(err).toMatchObject({ kind: "wrong_network" });
     expect(kitMock.signTransaction).not.toHaveBeenCalled();
     // The fresh probe also refreshed the exposed snapshot.
-    await waitFor(() => expect(result.current.walletNetworkMismatch).toBe(true));
+    await waitFor(() =>
+      expect(result.current.walletNetworkMismatch).toBe(true),
+    );
   });
 
   it("rejects with a friendly timeout when the signing popup never settles", async () => {
     const { result } = await mountProbed();
-    kitMock.signTransaction.mockImplementationOnce(
-      () => new Promise(() => {}),
-    );
+    kitMock.signTransaction.mockImplementationOnce(() => new Promise(() => {}));
 
     vi.useFakeTimers();
     try {
