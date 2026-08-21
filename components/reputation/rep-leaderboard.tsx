@@ -6,7 +6,11 @@ import { ErrorNote } from "@/components/ui/error-note";
 import { Skeleton, LoadingStatus } from "@/components/ui/skeleton";
 import { StaleBadge } from "@/components/ui/stale-badge";
 import { ReputationBadge } from "@/components/ui/reputation-badge";
-import { lowerBoundBps, scoreOutOfFive } from "@/lib/reputation-math";
+import {
+  DEFAULT_REP_PARAMS,
+  lowerBoundBps,
+  scoreOutOfFive,
+} from "@/lib/reputation-math";
 import type { Agent, ReputationBatch, ReputationInfo } from "@/lib/types";
 
 // ReputationInfo.weight arrives in stroops; 10^7 stroops = 1 USDC.
@@ -28,13 +32,15 @@ const sortValue: Record<SortCol, (r: Row) => number> = {
 function ScoreMeter({
   bps,
   floorBps,
+  belowFloor,
   prior,
 }: {
   bps: number;
   floorBps?: number;
+  /** Routability is decided upstream on the Wilson lower bound, not `bps`. */
+  belowFloor: boolean;
   prior: boolean;
 }) {
-  const belowFloor = floorBps != null && bps < floorBps;
   return (
     <div
       role="img"
@@ -78,6 +84,7 @@ function SortableTh({
   const active = sort.col === col;
   return (
     <th
+      scope="col"
       className={cn("pb-3", align === "right" ? "text-right" : "text-left")}
       aria-sort={
         active ? (sort.dir === "desc" ? "descending" : "ascending") : undefined
@@ -102,8 +109,9 @@ function SortableTh({
 
 /**
  * Sortable reputation leaderboard joining the agent registry with live
- * on-chain scores. Agents without on-chain evidence fall back to their seeded
- * prior, so a failed *batch* fetch genuinely degrades the table to priors.
+ * on-chain scores. Agents without on-chain evidence mirror the backend's
+ * prior fallback under the live params, so only a failed *batch* fetch
+ * genuinely degrades the table to seeded priors.
  *
  * The two failures are reported separately because they mean opposite things:
  * a batch failure leaves every row rendered against its seeded prior, while an
@@ -152,20 +160,41 @@ export function RepLeaderboard({
     if (!agents) return [];
     const joined = agents.map((agent) => {
       const live = batch?.reputations[agent.id];
+      // Mirrors the backend's prior fallback (`_prior_info`): the smoothed
+      // score IS the live prior, there is no evidence mean, and the lower
+      // bound is taken on the prior with zero weight under the live params.
+      // Only without a batch (so no live params either) does the row degrade
+      // to the seeded prior.
       const rep: ReputationInfo =
         live && live.source === "onchain"
           ? live
-          : {
-              agent_id: agent.id,
-              smoothed_bps: agent.rep * 2000,
-              lower_bound_bps: lowerBoundBps(agent.rep * 2000, 0),
-              avg_bps: agent.rep * 2000,
-              count: 0,
-              weight: 0,
-              disputed: 0,
-              dispute_rate_bps: 0,
-              source: "prior",
-            };
+          : batch != null
+            ? {
+                agent_id: agent.id,
+                smoothed_bps: batch.prior_bps,
+                lower_bound_bps: lowerBoundBps(batch.prior_bps, 0, {
+                  ...DEFAULT_REP_PARAMS,
+                  prior_bps: batch.prior_bps,
+                  floor_bps: batch.floor_bps,
+                }),
+                avg_bps: 0,
+                count: 0,
+                weight: 0,
+                disputed: 0,
+                dispute_rate_bps: 0,
+                source: "prior",
+              }
+            : {
+                agent_id: agent.id,
+                smoothed_bps: agent.rep * 2000,
+                lower_bound_bps: lowerBoundBps(agent.rep * 2000, 0),
+                avg_bps: agent.rep * 2000,
+                count: 0,
+                weight: 0,
+                disputed: 0,
+                dispute_rate_bps: 0,
+                source: "prior",
+              };
       return { agent, rep };
     });
     const dir = sort.dir === "desc" ? -1 : 1;
@@ -295,8 +324,10 @@ export function RepLeaderboard({
             {!showSkeletons &&
               rows.map(({ agent, rep }, i) => {
                 const prior = rep.source === "prior";
+                // The backend's `passes_floor` gates routing on the Wilson
+                // lower bound, never the smoothed score.
                 const belowFloor =
-                  batch != null && rep.smoothed_bps < batch.floor_bps;
+                  batch != null && rep.lower_bound_bps < batch.floor_bps;
                 return (
                   <m.tr
                     key={agent.id}
@@ -320,6 +351,7 @@ export function RepLeaderboard({
                     <td className="py-3 pr-4">
                       <ReputationBadge
                         bps={rep.smoothed_bps}
+                        lowerBoundBps={rep.lower_bound_bps}
                         source={rep.source}
                         count={rep.count}
                         disputeRateBps={rep.dispute_rate_bps}
@@ -330,6 +362,7 @@ export function RepLeaderboard({
                       <ScoreMeter
                         bps={rep.smoothed_bps}
                         floorBps={batch?.floor_bps}
+                        belowFloor={belowFloor}
                         prior={prior}
                       />
                     </td>
