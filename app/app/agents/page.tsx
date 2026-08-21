@@ -66,6 +66,7 @@ export default function AgentsPage() {
       return (
         <ReputationBadge
           bps={live.smoothed_bps}
+          lowerBoundBps={live.lower_bound_bps}
           source="onchain"
           count={live.count}
           disputeRateBps={live.dispute_rate_bps}
@@ -76,6 +77,7 @@ export default function AgentsPage() {
     return (
       <ReputationBadge
         bps={a.rep * 2000}
+        lowerBoundBps={live?.lower_bound_bps}
         source="prior"
         floorBps={repBatch?.floor_bps}
       />
