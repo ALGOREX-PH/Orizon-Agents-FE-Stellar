@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { track } from "@vercel/analytics";
+import { reportClientError } from "@/lib/report-error";
 
 // Renders in place of the root layout, so globals.css is not guaranteed
 // to be present — style inline with the design-language palette.
@@ -13,15 +13,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error(error);
-    try {
-      track("client-error", {
-        digest: error.digest ?? "none",
-        message: String(error.message).slice(0, 120),
-      });
-    } catch {
-      // Telemetry must never throw inside an error boundary.
-    }
+    reportClientError(error);
   }, [error]);
 
   return (
