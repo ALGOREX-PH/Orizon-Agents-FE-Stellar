@@ -10,13 +10,18 @@ import { describe, expect, it } from "vitest";
 import {
   isAgentList,
   isArtifactResponse,
+  isAuthorizeBuild,
   isDecomposeResponse,
   isFlow,
   isOverview,
   isReputationBatch,
+  isReputationInfo,
   isReputationParams,
   isStellarNetworkInfo,
+  isSubmitResult,
   isTaskList,
+  isTraceLine,
+  isTraceLineList,
 } from "./guards";
 
 describe("isAgentList", () => {
@@ -204,6 +209,52 @@ describe("isTaskList", () => {
   });
 });
 
+describe("isTraceLine / isTraceLineList", () => {
+  const line = { t: "0.4", level: "cost", msg: "0.010 USDC" };
+
+  it("accepts a valid line and a valid history (empty included)", () => {
+    expect(isTraceLine(line)).toBe(true);
+    expect(isTraceLineList([line, { ...line, level: "proof" }])).toBe(true);
+    expect(isTraceLineList([])).toBe(true);
+  });
+
+  it("accepts every backend trace level", () => {
+    for (const level of [
+      "input",
+      "exec",
+      "proof",
+      "cost",
+      "out",
+      "error",
+      "artifact",
+    ]) {
+      expect(isTraceLine({ ...line, level })).toBe(true);
+    }
+  });
+
+  it("rejects a level outside the backend literal (keys the color map)", () => {
+    expect(isTraceLine({ ...line, level: "warn" })).toBe(false);
+    const { level: _drop, ...missing } = line;
+    expect(isTraceLine(missing)).toBe(false);
+  });
+
+  it("rejects a row with a non-string msg or timestamp", () => {
+    expect(isTraceLine({ ...line, msg: { text: "0.010 USDC" } })).toBe(false);
+    expect(isTraceLine({ ...line, t: 0.4 })).toBe(false);
+  });
+
+  it("rejects non-objects and non-arrays", () => {
+    expect(isTraceLine(null)).toBe(false);
+    expect(isTraceLine([line])).toBe(false);
+    expect(isTraceLineList({ lines: [line] })).toBe(false);
+    expect(isTraceLineList("<html>proxy error</html>")).toBe(false);
+  });
+
+  it("rejects a history where any single row is malformed", () => {
+    expect(isTraceLineList([line, { ...line, level: "warn" }])).toBe(false);
+  });
+});
+
 describe("isDecomposeResponse", () => {
   const valid = {
     plan_id: "pln_1",
@@ -239,6 +290,47 @@ describe("isDecomposeResponse", () => {
     expect(isDecomposeResponse({ ...valid, steps: [missing] })).toBe(false);
     const objectish = { ...valid.steps[0], rationale: { text: "codes" } };
     expect(isDecomposeResponse({ ...valid, steps: [objectish] })).toBe(false);
+  });
+});
+
+describe("isReputationInfo", () => {
+  const valid = {
+    agent_id: "agt_01",
+    smoothed_bps: 7000,
+    lower_bound_bps: 5677,
+    avg_bps: 0,
+    count: 0,
+    weight: 0,
+    disputed: 0,
+    dispute_rate_bps: 0,
+    source: "prior",
+  };
+
+  it("accepts a valid row, with or without the degraded flag", () => {
+    expect(isReputationInfo(valid)).toBe(true);
+    expect(isReputationInfo({ ...valid, degraded: false })).toBe(true);
+    expect(isReputationInfo({ ...valid, degraded: true })).toBe(true);
+  });
+
+  it("rejects a non-boolean degraded flag (a truthy string reads as true)", () => {
+    expect(isReputationInfo({ ...valid, degraded: "false" })).toBe(false);
+    expect(isReputationInfo({ ...valid, degraded: 0 })).toBe(false);
+  });
+
+  it("rejects a missing weight or dispute rate (both feed evidence sums)", () => {
+    const { weight: _w, ...noWeight } = valid;
+    expect(isReputationInfo(noWeight)).toBe(false);
+    const { dispute_rate_bps: _d, ...noRate } = valid;
+    expect(isReputationInfo(noRate)).toBe(false);
+  });
+
+  it("rejects a source outside the backend literal", () => {
+    expect(isReputationInfo({ ...valid, source: "cached" })).toBe(false);
+  });
+
+  it("rejects non-objects", () => {
+    expect(isReputationInfo(null)).toBe(false);
+    expect(isReputationInfo([valid])).toBe(false);
   });
 });
 
@@ -312,6 +404,21 @@ describe("isReputationBatch", () => {
     expect(
       isReputationBatch({ ...valid, reputations: { agt_01: onchain } }),
     ).toBe(true);
+  });
+
+  // The ledger read failed and the service answered with the prior: the batch
+  // has to carry that flag through, and only as a real boolean.
+  it("carries a degraded entry through and rejects a non-boolean flag", () => {
+    const fellBack = { ...rep, degraded: true };
+    expect(
+      isReputationBatch({ ...valid, reputations: { agt_01: fellBack } }),
+    ).toBe(true);
+    expect(
+      isReputationBatch({
+        ...valid,
+        reputations: { agt_01: { ...rep, degraded: "true" } },
+      }),
+    ).toBe(false);
   });
 });
 
@@ -451,5 +558,74 @@ describe("isStellarNetworkInfo", () => {
   it("rejects a missing asset_sac", () => {
     const { asset_sac: _drop, ...rest } = valid;
     expect(isStellarNetworkInfo(rest)).toBe(false);
+  });
+});
+
+describe("isAuthorizeBuild", () => {
+  const valid = { xdr: "AAAAAgAAAAB…", expires_at: 1_764_000_000 };
+
+  it("accepts a build envelope (extra keys tolerated)", () => {
+    expect(isAuthorizeBuild({ ...valid, extra: 1 })).toBe(true);
+  });
+
+  it("accepts a build with no expires_at (never read by the UI)", () => {
+    const { expires_at: _drop, ...rest } = valid;
+    expect(isAuthorizeBuild(rest)).toBe(true);
+  });
+
+  it("rejects a missing or non-string xdr (handed to the wallet to sign)", () => {
+    const { xdr: _drop, ...rest } = valid;
+    expect(isAuthorizeBuild(rest)).toBe(false);
+    expect(isAuthorizeBuild({ ...valid, xdr: null })).toBe(false);
+  });
+
+  it("rejects non-objects", () => {
+    expect(isAuthorizeBuild(null)).toBe(false);
+    expect(isAuthorizeBuild("AAAAAgAAAAB…")).toBe(false);
+  });
+});
+
+describe("isSubmitResult", () => {
+  const valid = {
+    hash: "9f2c1a",
+    status: "SUCCESS",
+    return_value: "00112233445566778899aabbccddeeff",
+  };
+
+  it("accepts a broadcast result, with and without the failure fields", () => {
+    expect(isSubmitResult(valid)).toBe(true);
+    expect(
+      isSubmitResult({
+        ...valid,
+        status: "FAILED",
+        diagnostic: "tx_bad_auth",
+        explorer: "https://stellar.expert/…",
+      }),
+    ).toBe(true);
+  });
+
+  it("accepts any return_value, including none (bytesToHex takes anything)", () => {
+    expect(isSubmitResult({ ...valid, return_value: [1, 2, 3] })).toBe(true);
+    const { return_value: _drop, ...rest } = valid;
+    expect(isSubmitResult(rest)).toBe(true);
+  });
+
+  it("rejects a missing hash (linked into the explorer URL)", () => {
+    const { hash: _drop, ...rest } = valid;
+    expect(isSubmitResult(rest)).toBe(false);
+  });
+
+  it("rejects a non-string status (branched on for SUCCESS)", () => {
+    expect(isSubmitResult({ ...valid, status: 1 })).toBe(false);
+  });
+
+  it("rejects non-string diagnostic or explorer when present", () => {
+    expect(isSubmitResult({ ...valid, diagnostic: { code: 1 } })).toBe(false);
+    expect(isSubmitResult({ ...valid, explorer: 404 })).toBe(false);
+  });
+
+  it("rejects non-objects", () => {
+    expect(isSubmitResult(null)).toBe(false);
+    expect(isSubmitResult([valid])).toBe(false);
   });
 });
