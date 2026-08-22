@@ -174,16 +174,40 @@ export default function AgentsPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
+            {/* The page heading names this table on screen; the caption
+                repeats it for assistive tech only. */}
+            <caption className="sr-only">
+              Agent registry — identity, skills, price, reputation, runs and
+              status
+            </caption>
             <thead>
               <tr className="border-b border-border font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-                <th className="pb-3 text-left">id</th>
-                <th className="pb-3 text-left">agent</th>
-                <th className="pb-3 text-left">skills</th>
-                <th className="pb-3 text-right">price / call</th>
-                <th className="pb-3 text-right">reputation</th>
-                <th className="pb-3 text-right">runs</th>
-                <th className="pb-3 text-left">status</th>
-                <th className="pb-3"></th>
+                <th scope="col" className="pb-3 text-left">
+                  id
+                </th>
+                <th scope="col" className="pb-3 text-left">
+                  agent
+                </th>
+                <th scope="col" className="pb-3 text-left">
+                  skills
+                </th>
+                <th scope="col" className="pb-3 text-right">
+                  price / call
+                </th>
+                <th scope="col" className="pb-3 text-right">
+                  reputation
+                </th>
+                <th scope="col" className="pb-3 text-right">
+                  runs
+                </th>
+                <th scope="col" className="pb-3 text-left">
+                  status
+                </th>
+                {/* The actions column is unlabelled by design — name it for
+                    screen readers without printing a header. */}
+                <th scope="col" className="pb-3">
+                  <span className="sr-only">actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -220,7 +244,15 @@ export default function AgentsPage() {
                   transition={{ duration: 0.25, delay: i * 0.03 }}
                   className="border-b border-border/50 last:border-0 hover:bg-violet/5 transition"
                 >
-                  <td className="py-3 font-mono text-xs text-muted">{a.id}</td>
+                  {/* The agent id identifies the row, so it is the row
+                      header; `text-left font-normal` only holds the cell's
+                      existing look against the th defaults. */}
+                  <th
+                    scope="row"
+                    className="py-3 text-left font-mono text-xs font-normal text-muted"
+                  >
+                    {a.id}
+                  </th>
                   <td className="py-3 font-mono">
                     <div className="flex items-center gap-2">
                       {a.name}
