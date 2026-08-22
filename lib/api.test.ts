@@ -18,6 +18,7 @@ import {
   GET_TIMEOUT_MS,
   STREAM_CONNECT_TIMEOUT_MS,
   TRACE_POLL_MS,
+  buildAuthorize,
   clearGetCache,
   decompose,
   execute,
@@ -30,6 +31,7 @@ import {
   listAgents,
   listReputation,
   openTraceStream,
+  submitSigned,
 } from "./api";
 import { rememberTaskToken } from "./task-tokens";
 import type { TraceLine } from "./types";
@@ -420,6 +422,78 @@ describe("response guards", () => {
     );
   });
 
+  it("rejects a trace history carrying a row that is not a trace line", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, [{ t: "0.1", level: "warn", msg: "unknown level" }]),
+    );
+
+    await expect(getTrace("tsk_bad")).rejects.toThrow(
+      "malformed response from /trace/tsk_bad",
+    );
+  });
+
+  it("rejects a per-agent reputation payload with no source", async () => {
+    const { source: _drop, ...rest } = repInfo;
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, rest));
+
+    await expect(getReputation("agt_01h8")).rejects.toThrow(
+      "malformed response from /stellar/reputation/agt_01h8",
+    );
+  });
+
+  it("rejects an authorize build with no xdr for the wallet to sign", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { expires_at: 1_764_000_000 }),
+    );
+
+    await expect(
+      buildAuthorize({
+        payer: "GABC",
+        agent_id: "orizon_batch",
+        max_amount_usdc: 0.5,
+      }),
+    ).rejects.toThrow("malformed response from /stellar/build/authorize");
+  });
+
+  it("rejects a submit result with no transaction hash", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { status: "SUCCESS", return_value: null }),
+    );
+
+    await expect(submitSigned("AAAAAgAAAAB…")).rejects.toThrow(
+      "malformed response from /stellar/submit",
+    );
+  });
+
+  it("passes a well-formed trace history through", async () => {
+    const history = [{ t: "0.1", level: "cost", msg: "0.010 USDC" }];
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, history));
+
+    await expect(getTrace("tsk_ok")).resolves.toEqual(history);
+  });
+
+  // `degraded` is optional and has to survive the seam untouched — it is the
+  // only thing telling a failed ledger read from a cold-start newcomer.
+  it("passes a per-agent reputation through, degraded flag included", async () => {
+    const degraded = { ...repInfo, degraded: true };
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, degraded));
+
+    await expect(getReputation("agt_ok")).resolves.toEqual(degraded);
+  });
+
+  it("passes a well-formed authorize build and submit result through", async () => {
+    const build = { xdr: "AAAAAgAAAAB…", expires_at: 1_764_000_000 };
+    const receipt = { hash: "9f2c1a", status: "SUCCESS", return_value: null };
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, build))
+      .mockResolvedValueOnce(jsonResponse(200, receipt));
+
+    await expect(
+      buildAuthorize({ payer: "GABC", agent_id: "a", max_amount_usdc: 1 }),
+    ).resolves.toEqual(build);
+    await expect(submitSigned("AAAAAgAAAAB…")).resolves.toEqual(receipt);
+  });
+
   it("resolves a well-formed guarded payload untouched", async () => {
     const overview = {
       agents_online: 12,
@@ -458,6 +532,27 @@ describe("get dedupe cache", () => {
     nowSpy.mockReturnValue(1_000_000 + GET_DEDUPE_MS + 1);
     await listAgents();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("evicts a resolved entry from the cache once the dedupe window elapses", async () => {
+    vi.useFakeTimers({ now: 1_000_000 });
+    try {
+      fetchMock.mockResolvedValue(jsonResponse(200, []));
+
+      await listAgents();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // Let the eviction timer fire, then rewind the clock so the lazy
+      // dedupe-window check would still call the entry fresh: a refetch
+      // proves the map entry itself is gone, not merely aged past reuse.
+      await vi.advanceTimersByTimeAsync(GET_DEDUPE_MS + 1);
+      vi.setSystemTime(1_000_000);
+
+      await listAgents();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("evicts rejected requests so the next call retries the network", async () => {

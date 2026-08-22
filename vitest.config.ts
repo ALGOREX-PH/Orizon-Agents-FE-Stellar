@@ -13,13 +13,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["**/*.test.ts", "**/*.test.tsx"],
-    exclude: [
-      "node_modules/**",
-      ".next/**",
-      "contract/**",
-      "backend/**",
-      "e2e/**",
-    ],
+    exclude: ["node_modules/**", ".next/**", "e2e/**"],
     reporters: "verbose",
     coverage: {
       // Gate only what the unit suite is meant to cover: the lib layer (pure

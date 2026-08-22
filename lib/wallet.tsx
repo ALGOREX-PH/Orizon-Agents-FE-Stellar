@@ -19,11 +19,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { Networks as KitNetworks } from "@creit.tech/stellar-wallets-kit";
 import {
   classifyError,
+  isFriendlyError,
   wrongNetworkError,
   type FriendlyError,
 } from "@/lib/wallet-errors";
@@ -196,6 +198,48 @@ async function probeWalletNetwork(kit: Kit): Promise<NetworkDetails | null> {
   return null;
 }
 
+/**
+ * Deadline on the signing popup. Legitimate signing is interactive and can
+ * take a while, so this is deliberately generous — it exists for the popup
+ * that will never settle (blocked, orphaned, or dismissed without the kit
+ * hearing about it), which otherwise pins the caller's loading state forever.
+ */
+const SIGN_TIMEOUT_MS = 120_000;
+
+function signTimeoutError(): FriendlyError {
+  return {
+    kind: "unknown",
+    title: "Wallet timed out",
+    detail:
+      "The wallet didn't respond within 2 minutes. The signing popup may have been blocked or closed — check your wallet extension and try again.",
+    raw: `wallet did not settle within ${SIGN_TIMEOUT_MS / 1000}s`,
+  };
+}
+
+/** The promise's own outcome, or `onTimeout()` as a rejection if it doesn't settle in time. */
+function withDeadline<T>(
+  promise: Promise<T>,
+  ms: number,
+  onTimeout: () => FriendlyError,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(onTimeout()), ms);
+    // A settled sign must not hold the event loop open (node only —
+    // browsers return a number).
+    (timer as unknown as { unref?: () => void }).unref?.();
+    promise.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+}
+
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const installed = true; // kit modal handles the "no wallet" state inline
   const [address, setAddress] = useState<string | null>(null);
@@ -234,17 +278,28 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
    * place until this attempt resolves, so a retry keeps the message on
    * screen instead of flashing back to a placeholder.
    */
+  const balanceRunRef = useRef(0);
   const fetchBalance = useCallback(async (g: string) => {
+    // Monotonic epoch, same shape as use-async-action.ts: two balance reads
+    // overlap easily (the address effect fires one on connect, refreshBalance
+    // fires another), and without this an older response settling last would
+    // overwrite a newer one — a stale failure wiping a good balance blocks the
+    // Send form's affordability guard, and a stale success un-blocks it on a
+    // balance that is no longer true.
+    const run = ++balanceRunRef.current;
+    const isCurrent = () => balanceRunRef.current === run;
     setBalanceLoading(true);
     try {
       const r = await fetch(`${HORIZON_URL}/accounts/${g}`);
       if (r.status === 404) {
         // Unfunded account — friendbot needed. A real, known balance of zero.
+        if (!isCurrent()) return;
         setXlmBalance("0");
         setBalanceError(null);
         return;
       }
       if (!r.ok) {
+        if (!isCurrent()) return;
         setXlmBalance(null);
         setBalanceError(`Horizon responded ${r.status}`);
         return;
@@ -254,13 +309,17 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         (b: { asset_type: string; balance: string }) =>
           b.asset_type === "native",
       );
+      if (!isCurrent()) return;
       setXlmBalance(native?.balance ?? "0");
       setBalanceError(null);
     } catch (e) {
+      if (!isCurrent()) return;
       setXlmBalance(null);
       setBalanceError(e instanceof Error ? e.message : String(e));
     } finally {
-      setBalanceLoading(false);
+      // Only the newest run owns the spinner; an older one settling later
+      // must not clear a load that is still in flight.
+      if (isCurrent()) setBalanceLoading(false);
     }
   }, []);
 
@@ -366,12 +425,28 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       }
       try {
         const kit = await loadKit();
-        const res = await kit.signTransaction(xdr, {
-          networkPassphrase: opts?.networkPassphrase ?? NETWORK_PASSPHRASE,
-          address,
-        });
+        // The connect-time snapshot goes stale the moment the user switches
+        // networks in the extension, so ask again right before signing —
+        // otherwise the tx dies on-chain with tx_bad_auth anyway.
+        const net = await probeWalletNetwork(kit);
+        setWalletNetwork(net);
+        if (net && net.networkPassphrase !== NETWORK_PASSPHRASE) {
+          throw wrongNetworkError(
+            `wallet reports ${net.network || net.networkPassphrase}; app expects ${NETWORK_NAME} (${NETWORK_PASSPHRASE})`,
+          );
+        }
+        const res = await withDeadline(
+          kit.signTransaction(xdr, {
+            networkPassphrase: opts?.networkPassphrase ?? NETWORK_PASSPHRASE,
+            address,
+          }),
+          SIGN_TIMEOUT_MS,
+          signTimeoutError,
+        );
         return res.signedTxXdr;
       } catch (e) {
+        // Already classified (wrong network, sign timeout) — pass through.
+        if (isFriendlyError(e)) throw e;
         // Surface a classified error to call-sites that show toasts.
         throw e instanceof Error ? e : new Error(String(e));
       }

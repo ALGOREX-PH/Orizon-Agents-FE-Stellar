@@ -1,9 +1,0 @@
-target/
-Cargo.lock
-.stellar/
-*.wasm
-*.log
-.DS_Store
-addresses.json
-addresses.*.json
-.env

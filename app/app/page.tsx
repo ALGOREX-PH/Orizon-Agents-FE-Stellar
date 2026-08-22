@@ -45,6 +45,8 @@ function Sparkline({ points }: { points: number[] }) {
 
   return (
     <svg
+      role="img"
+      aria-label="Sparkline of tasks executed over the last 24 hours"
       viewBox={`0 0 ${w} ${h}`}
       className="h-36 w-full"
       preserveAspectRatio="none"
@@ -315,14 +317,31 @@ export default function OverviewPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
+            {/* The heading above already names this table on screen, so the
+                caption carries the same name for assistive tech only. */}
+            <caption className="sr-only">
+              Recent tasks — id, intent, agents, spend, status and start time
+            </caption>
             <thead>
               <tr className="border-b border-border font-mono text-[10px] uppercase tracking-[0.25em] text-muted">
-                <th className="pb-3 text-left">id</th>
-                <th className="pb-3 text-left">intent</th>
-                <th className="pb-3 text-left">agents</th>
-                <th className="pb-3 text-left">spent</th>
-                <th className="pb-3 text-left">status</th>
-                <th className="pb-3 text-right">started</th>
+                <th scope="col" className="pb-3 text-left">
+                  id
+                </th>
+                <th scope="col" className="pb-3 text-left">
+                  intent
+                </th>
+                <th scope="col" className="pb-3 text-left">
+                  agents
+                </th>
+                <th scope="col" className="pb-3 text-left">
+                  spent
+                </th>
+                <th scope="col" className="pb-3 text-left">
+                  status
+                </th>
+                <th scope="col" className="pb-3 text-right">
+                  started
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -331,7 +350,15 @@ export default function OverviewPage() {
                   key={t.id}
                   className="border-b border-border/50 last:border-0 hover:bg-violet/5 transition"
                 >
-                  <td className="py-3 font-mono text-xs text-muted">{t.id}</td>
+                  {/* The task id is what identifies the row, so it is the
+                      row header; `text-left font-normal` only holds the
+                      cell's existing look against the th defaults. */}
+                  <th
+                    scope="row"
+                    className="py-3 text-left font-mono text-xs font-normal text-muted"
+                  >
+                    {t.id}
+                  </th>
                   <td className="py-3 max-w-md truncate">{t.intent}</td>
                   <td className="py-3 font-mono text-xs">{t.agents}</td>
                   <td className="py-3 font-mono text-xs text-cyan">

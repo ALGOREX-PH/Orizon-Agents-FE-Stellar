@@ -1,6 +1,6 @@
 # Orizon Agents
 
-[![CI](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml/badge.svg)](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml) [![tests](https://img.shields.io/badge/tests-280%20passing-brightgreen)](./lib) [![Stellar Testnet](https://img.shields.io/badge/Stellar-Testnet-cyan)](https://stellar.expert/explorer/testnet/contract/CBJPTMAPMGODGZCZ2IMEQSRUX3WGUXNMKDTNN2KMJ3NFGYZ5OJ5525PI)
+[![CI](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml/badge.svg)](https://github.com/ALGOREX-PH/Orizon-Agents-FE-Stellar/actions/workflows/ci.yml) [![tests](https://img.shields.io/badge/tests-373%20passing-brightgreen)](./lib) [![Stellar Testnet](https://img.shields.io/badge/Stellar-Testnet-cyan)](https://stellar.expert/explorer/testnet/contract/CBJPTMAPMGODGZCZ2IMEQSRUX3WGUXNMKDTNN2KMJ3NFGYZ5OJ5525PI)
 
 > **Type what you want. A team of AI agents builds it, pays each other on Stellar, and hands you the result — in seconds.**
 
@@ -147,13 +147,13 @@ npm test
 
 | Orange Belt requirement   | Where                                                                                                                                                                                                                                                                                                           |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **3+ tests passing**      | 280 unit tests across 18 files, plus 13 Playwright E2E specs — [`lib/wallet-errors.test.ts`](./lib/wallet-errors.test.ts), [`lib/api.test.ts`](./lib/api.test.ts), [`lib/reputation-math.test.ts`](./lib/reputation-math.test.ts), [`components/ui/stellar-link.test.ts`](./components/ui/stellar-link.test.ts) |
+| **3+ tests passing**      | 373 unit tests across 18 files, plus 13 Playwright E2E specs — [`lib/wallet-errors.test.ts`](./lib/wallet-errors.test.ts), [`lib/api.test.ts`](./lib/api.test.ts), [`lib/reputation-math.test.ts`](./lib/reputation-math.test.ts), [`components/ui/stellar-link.test.ts`](./components/ui/stellar-link.test.ts) |
 | README with complete docs | this file (White-Belt + Yellow-Belt + Orange-Belt sections)                                                                                                                                                                                                                                                     |
 | **Demo video (1 min)**    | [▸ watch on YouTube](https://youtu.be/E4EYx-RoxpY) — full intent → wallet → on-chain settlement flow                                                                                                                                                                                                            |
 | Live deploy               | https://orizon-agents-fe-stellar.vercel.app                                                                                                                                                                                                                                                                     |
 | 3+ meaningful commits     | `git log --oneline                                                                                                                                                                                                                                                                                              | head -20` — well over 3 |
 
-**Test output (`npm test`)** — Orange-Belt-era screenshot; the suite has since grown to 280 unit tests across 18 files, plus 13 Playwright E2E specs:
+**Test output (`npm test`)** — Orange-Belt-era screenshot; the suite has since grown to 373 unit tests across 18 files, plus 13 Playwright E2E specs:
 
 ![tests passing in Vitest](./docs/tests-passing.png)
 
@@ -171,7 +171,7 @@ Green Belt is about making the dApp ship-grade: cross-contract logic, CI, and mo
 
 | Green Belt requirement          | Where                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Inter-contract call** working | `PaymentEscrow.charge()` calls `AgentRegistry.owner_of()` + `Token.transfer()` — see [`contract/contract/payment-escrow/src/lib.rs:140`](./contract/contract/payment-escrow/src/lib.rs#L140) and [`:149`](./contract/contract/payment-escrow/src/lib.rs#L149)                                                                                                                                                                                                                                                                                               |
+| **Inter-contract call** working | `PaymentEscrow.charge()` calls `AgentRegistry.owner_of()` + `Token.transfer()` — see [`contract/contract/payment-escrow/src/lib.rs:140`](https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar/blob/main/contract/payment-escrow/src/lib.rs#L140) and [`:149`](https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar/blob/main/contract/payment-escrow/src/lib.rs#L149)                                                                                                                                                           |
 | **CI/CD pipeline**              | GitHub Actions — [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs typecheck, lint, format, coverage-gated tests, build, a bundle-size budget, and a Playwright E2E job (including outage-regression specs) on every push and PR. A second workflow, [`smoke.yml`](./.github/workflows/smoke.yml), probes the **deployed** site every 6 hours via `scripts/smoke-deploy.mjs` — calling the API through the live proxy is the only thing that catches a broken proxy target, which a green build cannot. Status badge at the top of this README. |
 | **Mobile responsive**           | App shell (sidebar collapses behind a hamburger drawer; main content reflows) — see screenshot below.                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | **Custom token / pool**         | _Not applicable_ — workflow settles in **native XLM** via the Stellar Asset Contract (SAC) [`CDLZFC3S…CYSC`](https://stellar.expert/explorer/testnet/contract/CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC). No custom asset issued.                                                                                                                                                                                                                                                                                                            |
@@ -185,7 +185,7 @@ When the FE submits a signed `PaymentEscrow.authorize(payer, agent_id, max, ttl)
 1. `AgentRegistry::owner_of(agent_id) → Address` — looks up who gets paid (registry contract).
 2. `Token::transfer(payer, agent_owner, amount)` — moves XLM via the SAC token contract.
 
-Both are typed `contractclient` calls in [`contract/contract/payment-escrow/src/lib.rs`](./contract/contract/payment-escrow/src/lib.rs) — so the call graph is verified at compile time, not strings-soup at runtime.
+Both are typed `contractclient` calls in [`contract/contract/payment-escrow/src/lib.rs`](https://github.com/ALGOREX-PH/Orizon-Agents-Smart-Contract-Stellar/blob/main/contract/payment-escrow/src/lib.rs) — so the call graph is verified at compile time, not strings-soup at runtime.
 
 > **Sample contract-call tx hash:** [`47a13c4b…78299a`](https://stellar.expert/explorer/testnet/tx/47a13c4b4b3aa6ec25ba742f0e52857872fac49273620ba991b3795b4d78299a) — `PaymentEscrow.authorize(...)`. Run a fresh `Authorize & Execute` flow on `/app/orchestrator` to also produce a `charge` tx, which is the inter-contract one (Registry + SAC).
 
@@ -390,8 +390,6 @@ lib/
   wallet.tsx                 # StellarWalletsKit provider (multi-wallet)
   wallet-errors.ts           # classifyError() — wallet_not_found / user_rejected / insufficient_balance
   stellar-events.ts          # useStellarEvents() — polls RPC getEvents
-contract/                    # snapshot of the Soroban contracts (per White-Belt revision)
-backend/                     # snapshot of the FastAPI + Agno backend
 components/ui/
   connect-wallet.tsx         # Freighter button
   artifact-viewer.tsx        # Preview + Files + Download

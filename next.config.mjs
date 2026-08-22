@@ -26,6 +26,10 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
           { key: "X-Frame-Options", value: "DENY" },
           {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
+          {
             // Conservative CSP: hardens plugin/base/framing/form vectors only.
             // Deliberately no default-src/script-src/style-src/connect-src —
             // a nonce-based CSP would force dynamic rendering and break the

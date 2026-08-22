@@ -12,14 +12,18 @@
 import type {
   Agent,
   ArtifactResponse,
+  AuthorizeBuild,
   CodeArtifact,
   DecomposeResponse,
   Flow,
   Overview,
   ReputationBatch,
+  ReputationInfo,
   ReputationParams,
   StellarNetworkInfo,
+  SubmitResult,
   Task,
+  TraceLine,
 } from "./types";
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -34,6 +38,11 @@ const isStr = (v: unknown): v is string => typeof v === "string";
  * *type* is still rejected, a missing one is not. */
 const isOptionalStr = (v: unknown): v is string | undefined =>
   v === undefined || v === null || isStr(v);
+
+/** A boolean, or absent. Same contract as `isOptionalStr` — the point is to
+ * stop a truthy non-boolean (the string `"false"`) from reading as `true`. */
+const isOptionalBool = (v: unknown): v is boolean | undefined =>
+  v === undefined || v === null || typeof v === "boolean";
 
 const isNumArray = (v: unknown): v is number[] =>
   Array.isArray(v) && v.every(isNum);
@@ -140,6 +149,43 @@ export function isTaskList(v: unknown): v is Task[] {
   );
 }
 
+/** Backend `TraceLevel` literal (`app/schemas.py`). Checked as a set because
+ * the trace view colors each row with `levelColor[line.level]` — an unlisted
+ * level resolves to `undefined` and renders the row unstyled. */
+const TRACE_LEVELS = new Set([
+  "input",
+  "exec",
+  "proof",
+  "cost",
+  "out",
+  "error",
+  "artifact",
+]);
+
+/** One replayed trace row: `t`, `level` and `msg` are all rendered, and
+ * `level` additionally keys the color map above.
+ *
+ * Exported on its own because lib/api.ts screens rows individually on the
+ * SSE/polling path, where an unusable row is skipped rather than failing the
+ * whole read. */
+export function isTraceLine(v: unknown): v is TraceLine {
+  return (
+    isRecord(v) &&
+    isStr(v.t) &&
+    isStr(v.msg) &&
+    isStr(v.level) &&
+    TRACE_LEVELS.has(v.level)
+  );
+}
+
+/** Trace history: the trace view `.map`s it into rows, and the polling
+ * fallback slices its tail by index — a non-array (a proxy error page, an
+ * error envelope) silently reads as "no lines yet" and pins the page on
+ * "awaiting next step…" forever. */
+export function isTraceLineList(v: unknown): v is TraceLine[] {
+  return Array.isArray(v) && v.every(isTraceLine);
+}
+
 /** Plan panel: `total_usdc`/`total_eta` get `.toFixed`, steps are mapped with
  * `.toFixed` on each estimate, and every step renders `rationale` as a React
  * child — a non-string (a dict from a half-rolled backend) throws "Objects are
@@ -170,30 +216,44 @@ export function isDecomposeResponse(v: unknown): v is DecomposeResponse {
  * measured. */
 const REPUTATION_SOURCES = new Set(["onchain", "prior"]);
 
-/** Reputation pages: `reputations` values feed bps→score math, evidence sums
- * (`weight`), counts and dispute rates; `floor_bps` feeds the floor badge.
- * `disputed` is also a sort comparator (`sortValue.disputes`) — a non-number
- * makes every comparison NaN and silently scrambles row order — and `avg_bps`
- * is the unsmoothed on-chain mean. All required on the backend model. */
+/** One agent's reputation, served on its own by
+ * GET /api/stellar/reputation/{agent_id} and as every value of the batch
+ * below: the numbers feed bps→score math, evidence sums (`weight`), counts
+ * and dispute rates. `disputed` is also a sort comparator
+ * (`sortValue.disputes`) — a non-number makes every comparison NaN and
+ * silently scrambles row order — and `avg_bps` is the unsmoothed on-chain
+ * mean. All required on the backend model.
+ *
+ * `degraded` is the ledger-read-failed flag (the service fails open and
+ * answers with the prior). Optional, because a backend predating it omits the
+ * key entirely, but type-checked when present: it is the only signal telling
+ * a fallback score from a real cold start, and a truthy non-boolean would
+ * report every healthy read as a failed one. */
+export function isReputationInfo(v: unknown): v is ReputationInfo {
+  return (
+    isRecord(v) &&
+    isNum(v.smoothed_bps) &&
+    isNum(v.lower_bound_bps) &&
+    isNum(v.avg_bps) &&
+    isNum(v.count) &&
+    isNum(v.weight) &&
+    isNum(v.disputed) &&
+    isNum(v.dispute_rate_bps) &&
+    isStr(v.source) &&
+    REPUTATION_SOURCES.has(v.source) &&
+    isOptionalBool(v.degraded)
+  );
+}
+
+/** Reputation pages: `reputations` values feed the math above and `floor_bps`
+ * feeds the floor badge. */
 export function isReputationBatch(v: unknown): v is ReputationBatch {
   return (
     isRecord(v) &&
     isNum(v.floor_bps) &&
     isNum(v.prior_bps) &&
     isRecord(v.reputations) &&
-    Object.values(v.reputations).every(
-      (r) =>
-        isRecord(r) &&
-        isNum(r.smoothed_bps) &&
-        isNum(r.lower_bound_bps) &&
-        isNum(r.avg_bps) &&
-        isNum(r.count) &&
-        isNum(r.weight) &&
-        isNum(r.disputed) &&
-        isNum(r.dispute_rate_bps) &&
-        isStr(r.source) &&
-        REPUTATION_SOURCES.has(r.source),
-    )
+    Object.values(v.reputations).every(isReputationInfo)
   );
 }
 
@@ -266,5 +326,30 @@ export function isStellarNetworkInfo(v: unknown): v is StellarNetworkInfo {
     isStr(v.asset_sac) &&
     isRecord(v.contracts) &&
     Object.values(v.contracts).every(isStr)
+  );
+}
+
+/** Authorize build: `xdr` is handed straight to the wallet
+ * (`wallet.signXdr(xdr)`) as the transaction to sign, so a missing one
+ * reaches Freighter as the literal "undefined" and comes back as an opaque
+ * wallet error rather than the backend failure it is. `expires_at` is
+ * returned but never read by the UI, so it stays unchecked. */
+export function isAuthorizeBuild(v: unknown): v is AuthorizeBuild {
+  return isRecord(v) && isStr(v.xdr);
+}
+
+/** Submit result: the plan card branches on `status !== "SUCCESS"` and links
+ * `hash` into the explorer, where a missing one builds a URL the user cannot
+ * tell from a real transaction. `return_value` is deliberately unchecked —
+ * it is typed `unknown` and `bytesToHex` already accepts anything — while
+ * `diagnostic`/`explorer` only join into a failure sentence, so they are
+ * type-checked when present rather than required. */
+export function isSubmitResult(v: unknown): v is SubmitResult {
+  return (
+    isRecord(v) &&
+    isStr(v.hash) &&
+    isStr(v.status) &&
+    isOptionalStr(v.diagnostic) &&
+    isOptionalStr(v.explorer)
   );
 }

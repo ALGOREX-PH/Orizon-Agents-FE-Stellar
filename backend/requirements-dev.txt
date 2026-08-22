@@ -1,5 +1,0 @@
--r requirements.txt
-pytest>=8
-ruff>=0.9
-mypy>=2
-pytest-cov>=7

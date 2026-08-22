@@ -18,4 +18,15 @@ describe("stellarExpertUrl", () => {
       "/explorer/public/",
     );
   });
+
+  it("normalizes backend network names onto stellar.expert's segments", () => {
+    // GET /stellar/network reports "mainnet"; the explorer only knows "public".
+    expect(stellarExpertUrl("contract", "abc", "mainnet")).toBe(
+      "https://stellar.expert/explorer/public/contract/abc",
+    );
+    // Anything unrecognized falls back to the testnet explorer.
+    expect(stellarExpertUrl("tx", "abc", "futurenet")).toContain(
+      "/explorer/testnet/",
+    );
+  });
 });

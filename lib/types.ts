@@ -107,6 +107,14 @@ export type ReputationInfo = {
   disputed: number;
   dispute_rate_bps: number;
   source: ReputationSource;
+  /**
+   * The on-chain ledger read failed and this score is the Bayesian prior
+   * served in its place — the reputation service fails OPEN. It is the only
+   * thing separating "we could not read the chain" from a genuine cold-start
+   * newcomer, which `source: "prior"` alone reports identically. Optional:
+   * absent on any response from a backend that predates the flag.
+   */
+  degraded?: boolean;
 };
 
 /** Response of GET /api/stellar/reputation — all agents keyed by id. */
@@ -131,6 +139,24 @@ export type ReputationParams = {
   max_decay_epochs: number;
   contract_id: string;
   network: string;
+};
+
+/** Response of POST /api/stellar/build/authorize — the unsigned x402
+ * authorization the wallet is asked to sign. */
+export type AuthorizeBuild = {
+  xdr: string;
+  expires_at: number;
+};
+
+/** Response of POST /api/stellar/submit — the outcome of broadcasting a
+ * signed envelope. `return_value` is the contract's raw return, normalized
+ * by the caller (hex, base64 or a byte list). */
+export type SubmitResult = {
+  hash: string;
+  status: string;
+  return_value: unknown;
+  diagnostic?: string;
+  explorer?: string;
 };
 
 /** Response of GET /api/stellar/network — network meta + deployed contract ids. */
