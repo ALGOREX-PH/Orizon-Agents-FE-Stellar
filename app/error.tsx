@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { track } from "@vercel/analytics";
+import { reportClientError } from "@/lib/report-error";
 import { Button } from "@/components/ui/button";
 
 export default function Error({
@@ -12,15 +12,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error(error);
-    try {
-      track("client-error", {
-        digest: error.digest ?? "none",
-        message: String(error.message).slice(0, 120),
-      });
-    } catch {
-      // Telemetry must never throw inside an error boundary.
-    }
+    reportClientError(error);
   }, [error]);
 
   return (
