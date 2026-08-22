@@ -18,6 +18,7 @@ import {
   GET_TIMEOUT_MS,
   STREAM_CONNECT_TIMEOUT_MS,
   TRACE_POLL_MS,
+  buildAuthorize,
   clearGetCache,
   decompose,
   execute,
@@ -30,6 +31,7 @@ import {
   listAgents,
   listReputation,
   openTraceStream,
+  submitSigned,
 } from "./api";
 import { rememberTaskToken } from "./task-tokens";
 import type { TraceLine } from "./types";
@@ -418,6 +420,78 @@ describe("response guards", () => {
     await expect(decompose("x")).rejects.toThrow(
       "malformed response from /orchestrator/decompose",
     );
+  });
+
+  it("rejects a trace history carrying a row that is not a trace line", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, [{ t: "0.1", level: "warn", msg: "unknown level" }]),
+    );
+
+    await expect(getTrace("tsk_bad")).rejects.toThrow(
+      "malformed response from /trace/tsk_bad",
+    );
+  });
+
+  it("rejects a per-agent reputation payload with no source", async () => {
+    const { source: _drop, ...rest } = repInfo;
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, rest));
+
+    await expect(getReputation("agt_01h8")).rejects.toThrow(
+      "malformed response from /stellar/reputation/agt_01h8",
+    );
+  });
+
+  it("rejects an authorize build with no xdr for the wallet to sign", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { expires_at: 1_764_000_000 }),
+    );
+
+    await expect(
+      buildAuthorize({
+        payer: "GABC",
+        agent_id: "orizon_batch",
+        max_amount_usdc: 0.5,
+      }),
+    ).rejects.toThrow("malformed response from /stellar/build/authorize");
+  });
+
+  it("rejects a submit result with no transaction hash", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { status: "SUCCESS", return_value: null }),
+    );
+
+    await expect(submitSigned("AAAAAgAAAAB…")).rejects.toThrow(
+      "malformed response from /stellar/submit",
+    );
+  });
+
+  it("passes a well-formed trace history through", async () => {
+    const history = [{ t: "0.1", level: "cost", msg: "0.010 USDC" }];
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, history));
+
+    await expect(getTrace("tsk_ok")).resolves.toEqual(history);
+  });
+
+  // `degraded` is optional and has to survive the seam untouched — it is the
+  // only thing telling a failed ledger read from a cold-start newcomer.
+  it("passes a per-agent reputation through, degraded flag included", async () => {
+    const degraded = { ...repInfo, degraded: true };
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, degraded));
+
+    await expect(getReputation("agt_ok")).resolves.toEqual(degraded);
+  });
+
+  it("passes a well-formed authorize build and submit result through", async () => {
+    const build = { xdr: "AAAAAgAAAAB…", expires_at: 1_764_000_000 };
+    const receipt = { hash: "9f2c1a", status: "SUCCESS", return_value: null };
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, build))
+      .mockResolvedValueOnce(jsonResponse(200, receipt));
+
+    await expect(
+      buildAuthorize({ payer: "GABC", agent_id: "a", max_amount_usdc: 1 }),
+    ).resolves.toEqual(build);
+    await expect(submitSigned("AAAAAgAAAAB…")).resolves.toEqual(receipt);
   });
 
   it("resolves a well-formed guarded payload untouched", async () => {

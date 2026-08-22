@@ -1,18 +1,24 @@
 import {
   isAgentList,
   isArtifactResponse,
+  isAuthorizeBuild,
   isDecomposeResponse,
   isFlow,
   isOverview,
   isReputationBatch,
+  isReputationInfo,
   isReputationParams,
   isStellarNetworkInfo,
+  isSubmitResult,
   isTaskList,
+  isTraceLine,
+  isTraceLineList,
 } from "./guards";
 import { getTaskToken, rememberTaskToken } from "./task-tokens";
 import type {
   Agent,
   ArtifactResponse,
+  AuthorizeBuild,
   DecomposeResponse,
   ExecuteResponse,
   Flow,
@@ -21,6 +27,7 @@ import type {
   ReputationInfo,
   ReputationParams,
   StellarNetworkInfo,
+  SubmitResult,
   Task,
   TraceLine,
 } from "./types";
@@ -316,7 +323,11 @@ export const getOverview = () =>
 export const getFlow = () =>
   get<Flow>("/flow/default", ensure("/flow/default", isFlow));
 export const getTrace = (taskId: string) =>
-  get<TraceLine[]>(`/trace/${taskId}`, undefined, taskAuthHeaders(taskId));
+  get<TraceLine[]>(
+    `/trace/${taskId}`,
+    ensure(`/trace/${taskId}`, isTraceLineList),
+    taskAuthHeaders(taskId),
+  );
 
 export const decompose = (intent: string) =>
   post<DecomposeResponse, { intent: string }>(
@@ -360,9 +371,10 @@ export const buildAuthorize = (body: {
   max_amount_usdc: number;
   ttl_seconds?: number;
 }) =>
-  post<{ xdr: string; expires_at: number }, typeof body>(
+  post<AuthorizeBuild, typeof body>(
     "/stellar/build/authorize",
     body,
+    ensure("/stellar/build/authorize", isAuthorizeBuild),
   );
 
 export const listReputation = () =>
@@ -376,19 +388,17 @@ export const getReputationParams = () =>
     ensure("/stellar/reputation/params", isReputationParams),
   );
 export const getReputation = (agentId: string) =>
-  get<ReputationInfo>(`/stellar/reputation/${agentId}`);
+  get<ReputationInfo>(
+    `/stellar/reputation/${agentId}`,
+    ensure(`/stellar/reputation/${agentId}`, isReputationInfo),
+  );
 
 export const submitSigned = (signedXdr: string) =>
-  post<
-    {
-      hash: string;
-      status: string;
-      return_value: unknown;
-      diagnostic?: string;
-      explorer?: string;
-    },
-    { signed_xdr: string }
-  >("/stellar/submit", { signed_xdr: signedXdr });
+  post<SubmitResult, { signed_xdr: string }>(
+    "/stellar/submit",
+    { signed_xdr: signedXdr },
+    ensure("/stellar/submit", isSubmitResult),
+  );
 
 /** Consecutive failed reconnects tolerated before SSE is given up on. */
 const MAX_RECONNECTS = 3;
@@ -510,18 +520,14 @@ export function openTraceStream(
     else (onError ?? onDone)?.();
   };
 
-  // The history endpoint is untyped on the wire; a junk row must not reach
-  // the renderer as `undefined.level`.
-  const isTraceLine = (v: unknown): v is TraceLine =>
-    typeof v === "object" &&
-    v !== null &&
-    typeof (v as TraceLine).t === "string" &&
-    typeof (v as TraceLine).level === "string" &&
-    typeof (v as TraceLine).msg === "string";
-
   /**
    * Forwards only the part of the history the consumer has not seen.
    * Returns whether anything new arrived.
+   *
+   * Rows are screened with the shared `isTraceLine` (lib/guards.ts) — a junk
+   * row must not reach the renderer as `undefined.level` — but only skipped,
+   * never fatal: `getTrace` already rejects a wholly malformed history, so
+   * what survives to here is worth showing.
    */
   const drain = (history: unknown): boolean => {
     const rows = Array.isArray(history) ? (history as unknown[]) : [];
