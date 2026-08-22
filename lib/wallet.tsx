@@ -447,7 +447,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {
         // Already classified (wrong network, sign timeout) — pass through.
         if (isFriendlyError(e)) throw e;
-        // Surface a classified error to call-sites that show toasts.
+        // Normalize to an Error and rethrow raw — both call sites
+        // (send page, execution plan) run it through classifyError
+        // themselves so they can add their own context to the copy.
         throw e instanceof Error ? e : new Error(String(e));
       }
     },
