@@ -1,6 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { CodeArtifact } from "@/lib/types";
@@ -23,6 +23,9 @@ const CodeViewer = dynamic(
 
 type Tab = "preview" | "files";
 
+// Rendered order of the tablist — arrow-key navigation walks this.
+const TAB_ORDER: Tab[] = ["preview", "files"];
+
 // Blob MIME per artifact file language; anything unrecognized downloads as
 // plain text rather than mislabelled HTML.
 const MIME_BY_LANGUAGE: Record<string, string> = {
@@ -41,6 +44,40 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
   );
   const current =
     artifact.files.find((f) => f.path === activeFile) ?? artifact.files[0];
+
+  // Ids are per-instance so two viewers on one page cannot cross-wire their
+  // tabs to each other's panels.
+  const uid = useId();
+  const tabId: Record<Tab, string> = {
+    preview: `${uid}-tab-preview`,
+    files: `${uid}-tab-files`,
+  };
+  const panelId: Record<Tab, string> = {
+    preview: `${uid}-panel-preview`,
+    files: `${uid}-panel-files`,
+  };
+  const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
+
+  // Arrow keys move between tabs, Home/End jump to the ends. Selection
+  // follows focus — both panels render instantly, so nothing is gained by
+  // making it a second keypress.
+  const onTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const i = TAB_ORDER.indexOf(tab);
+    const next =
+      e.key === "ArrowRight"
+        ? TAB_ORDER[(i + 1) % TAB_ORDER.length]
+        : e.key === "ArrowLeft"
+          ? TAB_ORDER[(i - 1 + TAB_ORDER.length) % TAB_ORDER.length]
+          : e.key === "Home"
+            ? TAB_ORDER[0]
+            : e.key === "End"
+              ? TAB_ORDER[TAB_ORDER.length - 1]
+              : null;
+    if (!next) return;
+    e.preventDefault();
+    setTab(next);
+    tabRefs.current[next]?.focus();
+  };
 
   const download = () => {
     const file = current;
@@ -70,34 +107,59 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-pressed={tab === "preview"}
-            onClick={() => setTab("preview")}
-            className={cn(
-              "clip-cyber-sm border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition",
-              focusRing,
-              tab === "preview"
-                ? "border-violet bg-violet/20 text-text"
-                : "border-border text-muted hover:text-text",
-            )}
+          {/* The download button sits alongside the tabs but is not one of
+              them, so the tablist wraps only the two tabs. */}
+          <div
+            className="flex items-center gap-2"
+            role="tablist"
+            aria-label="Artifact views"
           >
-            preview
-          </button>
-          <button
-            type="button"
-            aria-pressed={tab === "files"}
-            onClick={() => setTab("files")}
-            className={cn(
-              "clip-cyber-sm border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition",
-              focusRing,
-              tab === "files"
-                ? "border-violet bg-violet/20 text-text"
-                : "border-border text-muted hover:text-text",
-            )}
-          >
-            files
-          </button>
+            <button
+              type="button"
+              role="tab"
+              id={tabId.preview}
+              aria-selected={tab === "preview"}
+              aria-controls={panelId.preview}
+              // Roving tabIndex: the pair is one tab stop, arrows move inside.
+              tabIndex={tab === "preview" ? 0 : -1}
+              ref={(el) => {
+                tabRefs.current.preview = el;
+              }}
+              onKeyDown={onTabKeyDown}
+              onClick={() => setTab("preview")}
+              className={cn(
+                "clip-cyber-sm border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition",
+                focusRing,
+                tab === "preview"
+                  ? "border-violet bg-violet/20 text-text"
+                  : "border-border text-muted hover:text-text",
+              )}
+            >
+              preview
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id={tabId.files}
+              aria-selected={tab === "files"}
+              aria-controls={panelId.files}
+              tabIndex={tab === "files" ? 0 : -1}
+              ref={(el) => {
+                tabRefs.current.files = el;
+              }}
+              onKeyDown={onTabKeyDown}
+              onClick={() => setTab("files")}
+              className={cn(
+                "clip-cyber-sm border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition",
+                focusRing,
+                tab === "files"
+                  ? "border-violet bg-violet/20 text-text"
+                  : "border-border text-muted hover:text-text",
+              )}
+            >
+              files
+            </button>
+          </div>
           <Button size="sm" variant="outline" onClick={download}>
             ↓ download
           </Button>
@@ -105,7 +167,12 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
       </div>
 
       {tab === "preview" ? (
-        <div className="p-4 bg-[#060010]">
+        <div
+          role="tabpanel"
+          id={panelId.preview}
+          aria-labelledby={tabId.preview}
+          className="p-4 bg-[#060010]"
+        >
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted mb-3">
             ◉ sandboxed iframe · no cookies, no parent DOM access
           </p>
@@ -119,7 +186,12 @@ export function ArtifactViewer({ artifact }: { artifact: CodeArtifact }) {
           />
         </div>
       ) : (
-        <div className="flex flex-col md:flex-row">
+        <div
+          role="tabpanel"
+          id={panelId.files}
+          aria-labelledby={tabId.files}
+          className="flex flex-col md:flex-row"
+        >
           {artifact.files.length > 1 && (
             <nav className="md:w-[180px] md:border-r border-border p-3 space-y-1 shrink-0">
               {artifact.files.map((f) => (
