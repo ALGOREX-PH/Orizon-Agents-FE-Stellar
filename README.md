@@ -153,7 +153,7 @@ npm test
 | Live deploy               | https://orizon-agents-fe-stellar.vercel.app                                                                                                                                                                                                                                                                     |
 | 3+ meaningful commits     | `git log --oneline                                                                                                                                                                                                                                                                                              | head -20` — well over 3 |
 
-**Test output (`npm test`)** — Orange-Belt-era screenshot; the suite has since grown to 280 unit tests across 18 files, plus 13 Playwright E2E specs:
+**Test output (`npm test`)** — Orange-Belt-era screenshot; the suite has since grown to 373 unit tests across 18 files, plus 13 Playwright E2E specs:
 
 ![tests passing in Vitest](./docs/tests-passing.png)
 
