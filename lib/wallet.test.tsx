@@ -279,6 +279,43 @@ describe("WalletProvider balance state", () => {
     expect(result.current.xlmBalance).toBe("7.0000000");
   });
 
+  it("ignores a stale balance response that settles after a newer one", async () => {
+    // Two reads overlap in normal use: the address effect fires one on
+    // connect, refreshBalance() fires another. Here the OLDER one settles
+    // last, with a failure. Without request sequencing it would wipe the
+    // newer, correct balance and set an error — blocking the Send form's
+    // affordability guard on a wallet that is actually funded.
+    let settleFirst: (r: Response) => void = () => {};
+    const fetchMock = vi
+      .fn<() => Promise<Response>>()
+      .mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) => {
+            settleFirst = resolve;
+          }),
+      )
+      .mockImplementationOnce(async () => horizonOk("42.0000000"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = await mountConnected();
+
+    act(() => {
+      void result.current.refreshBalance();
+    });
+
+    await waitFor(() => expect(result.current.xlmBalance).toBe("42.0000000"));
+    expect(result.current.balanceError).toBeNull();
+
+    await act(async () => {
+      settleFirst(horizonStatus(500));
+    });
+
+    // The obsolete failure is discarded, not applied.
+    expect(result.current.xlmBalance).toBe("42.0000000");
+    expect(result.current.balanceError).toBeNull();
+    expect(result.current.balanceLoading).toBe(false);
+  });
+
   it("clears the balance and its error on disconnect", async () => {
     vi.stubGlobal(
       "fetch",
