@@ -3,8 +3,10 @@ import {
   Suspense,
   memo,
   useEffect,
+  useId,
   useRef,
   useState,
+  type KeyboardEvent,
   type ReactNode,
 } from "react";
 import { useSearchParams } from "next/navigation";
@@ -32,6 +34,9 @@ const levelColor: Record<TraceLine["level"], string> = {
 };
 
 type Tab = "trace" | "artifact";
+
+// Rendered order of the tablist — arrow-key navigation walks this.
+const TAB_ORDER: Tab[] = ["trace", "artifact"];
 
 // Memoized row: every SSE tick appends a line — previously the whole list
 // re-rendered per tick. Line objects are stable references, so memo skips
@@ -89,6 +94,40 @@ function TracePageInner() {
   // Demo replay data loads on demand — live-task views never ship it.
   const [demoTrace, setDemoTrace] = useState<TraceLine[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Ids are per-instance so a second Trace view on a page cannot cross-wire
+  // its tabs to this one's panels.
+  const uid = useId();
+  const tabId: Record<Tab, string> = {
+    trace: `${uid}-tab-trace`,
+    artifact: `${uid}-tab-artifact`,
+  };
+  const panelId: Record<Tab, string> = {
+    trace: `${uid}-panel-trace`,
+    artifact: `${uid}-panel-artifact`,
+  };
+  const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
+
+  // Arrow keys move between tabs, Home/End jump to the ends. Selection
+  // follows focus: both panels are already rendered client-side, so there is
+  // nothing slow to defer to a second keypress.
+  const onTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const i = TAB_ORDER.indexOf(tab);
+    const next =
+      e.key === "ArrowRight"
+        ? TAB_ORDER[(i + 1) % TAB_ORDER.length]
+        : e.key === "ArrowLeft"
+          ? TAB_ORDER[(i - 1 + TAB_ORDER.length) % TAB_ORDER.length]
+          : e.key === "Home"
+            ? TAB_ORDER[0]
+            : e.key === "End"
+              ? TAB_ORDER[TAB_ORDER.length - 1]
+              : null;
+    if (!next) return;
+    e.preventDefault();
+    setTab(next);
+    tabRefs.current[next]?.focus();
+  };
 
   useEffect(() => {
     if (taskId) return;
@@ -333,10 +372,19 @@ function TracePageInner() {
       </div>
 
       {artifact && (
-        <div className="flex gap-2">
+        <div className="flex gap-2" role="tablist" aria-label="Trace views">
           <button
             type="button"
-            aria-pressed={tab === "trace"}
+            role="tab"
+            id={tabId.trace}
+            aria-selected={tab === "trace"}
+            aria-controls={panelId.trace}
+            // Roving tabIndex: the pair is one tab stop, arrows move inside it.
+            tabIndex={tab === "trace" ? 0 : -1}
+            ref={(el) => {
+              tabRefs.current.trace = el;
+            }}
+            onKeyDown={onTabKeyDown}
             onClick={() => setTab("trace")}
             className={cn(
               "clip-cyber-sm border px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] transition",
@@ -350,7 +398,15 @@ function TracePageInner() {
           </button>
           <button
             type="button"
-            aria-pressed={tab === "artifact"}
+            role="tab"
+            id={tabId.artifact}
+            aria-selected={tab === "artifact"}
+            aria-controls={panelId.artifact}
+            tabIndex={tab === "artifact" ? 0 : -1}
+            ref={(el) => {
+              tabRefs.current.artifact = el;
+            }}
+            onKeyDown={onTabKeyDown}
             onClick={() => setTab("artifact")}
             className={cn(
               "clip-cyber-sm border px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] transition",
@@ -372,7 +428,13 @@ function TracePageInner() {
       )}
 
       {tab === "artifact" && artifact ? (
-        <>
+        // space-y-6 keeps the gap the outer stack used to give these two.
+        <div
+          role="tabpanel"
+          id={panelId.artifact}
+          aria-labelledby={tabId.artifact}
+          className="space-y-6"
+        >
           <ArtifactViewer artifact={artifact} />
           {(artifactData?.charge_tx || artifactData?.proof_tx) && (
             <Card>
@@ -389,9 +451,21 @@ function TracePageInner() {
               </dl>
             </Card>
           )}
-        </>
+        </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+        <div
+          // Panel semantics only hold while the tablist above is rendered:
+          // with no artifact there is no tab to label this, and a panel
+          // pointing at a button that never mounted is worse than a plain div.
+          {...(artifact
+            ? {
+                role: "tabpanel" as const,
+                id: panelId.trace,
+                "aria-labelledby": tabId.trace,
+              }
+            : {})}
+          className="grid gap-6 lg:grid-cols-[1fr_280px]"
+        >
           <Card className="!p-0 overflow-hidden">
             <div className="flex items-center justify-between border-b border-border bg-surface/80 px-4 py-2.5">
               <div className="flex items-center gap-3">
