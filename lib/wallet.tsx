@@ -19,6 +19,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { Networks as KitNetworks } from "@creit.tech/stellar-wallets-kit";
@@ -277,17 +278,28 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
    * place until this attempt resolves, so a retry keeps the message on
    * screen instead of flashing back to a placeholder.
    */
+  const balanceRunRef = useRef(0);
   const fetchBalance = useCallback(async (g: string) => {
+    // Monotonic epoch, same shape as use-async-action.ts: two balance reads
+    // overlap easily (the address effect fires one on connect, refreshBalance
+    // fires another), and without this an older response settling last would
+    // overwrite a newer one — a stale failure wiping a good balance blocks the
+    // Send form's affordability guard, and a stale success un-blocks it on a
+    // balance that is no longer true.
+    const run = ++balanceRunRef.current;
+    const isCurrent = () => balanceRunRef.current === run;
     setBalanceLoading(true);
     try {
       const r = await fetch(`${HORIZON_URL}/accounts/${g}`);
       if (r.status === 404) {
         // Unfunded account — friendbot needed. A real, known balance of zero.
+        if (!isCurrent()) return;
         setXlmBalance("0");
         setBalanceError(null);
         return;
       }
       if (!r.ok) {
+        if (!isCurrent()) return;
         setXlmBalance(null);
         setBalanceError(`Horizon responded ${r.status}`);
         return;
@@ -297,13 +309,17 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         (b: { asset_type: string; balance: string }) =>
           b.asset_type === "native",
       );
+      if (!isCurrent()) return;
       setXlmBalance(native?.balance ?? "0");
       setBalanceError(null);
     } catch (e) {
+      if (!isCurrent()) return;
       setXlmBalance(null);
       setBalanceError(e instanceof Error ? e.message : String(e));
     } finally {
-      setBalanceLoading(false);
+      // Only the newest run owns the spinner; an older one settling later
+      // must not clear a load that is still in flight.
+      if (isCurrent()) setBalanceLoading(false);
     }
   }, []);
 
