@@ -57,9 +57,15 @@ export function useStellarEvents(
   const cursorRef = useRef<string | null>(null);
   const startLedgerRef = useRef<number | null>(null);
 
+  // Resolves true when the poll succeeded (with or without new events) and
+  // false only when it failed — the scheduler backs off on false alone.
   const tick = useCallback(
-    async (server: RpcNs.Server, scValToNative: ScValToNativeFn) => {
-      if (!contractIds || contractIds.length === 0) return;
+    async (
+      server: RpcNs.Server,
+      scValToNative: ScValToNativeFn,
+    ): Promise<boolean> => {
+      // Nothing to poll is not a failure.
+      if (!contractIds || contractIds.length === 0) return true;
       try {
         // First call: anchor on a recent ledger; later: advance with cursor.
         const useCursor = cursorRef.current !== null;
@@ -82,7 +88,9 @@ export function useStellarEvents(
         // A successful poll clears any stale error from a prior transient failure.
         setError(null);
 
-        if (resp.events.length === 0) return;
+        // A quiet contract is the steady state, not a failure: report success
+        // so the poll keeps its normal interval instead of backing off.
+        if (resp.events.length === 0) return true;
 
         const mapped: FeedEvent[] = resp.events.map((e) => ({
           id: e.id,
