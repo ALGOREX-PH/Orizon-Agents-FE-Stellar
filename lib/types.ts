@@ -9,6 +9,8 @@ export type Agent = {
   status: AgentStatus;
   runs: number;
   real?: boolean;
+  /** Registering wallet's G-address; on-chain indexed agents only, null for seeded. */
+  owner?: string | null;
 };
 
 export type TaskStatus = "pending" | "running" | "complete" | "failed";

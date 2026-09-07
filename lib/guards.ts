@@ -58,7 +58,10 @@ const AGENT_STATUSES = new Set(["online", "idle", "offline"]);
 /** Agents table + reputation leaderboard: `price.toFixed(3)`,
  * `runs.toLocaleString()`, `skills.map`, `rep * 2000`, and `status` keys a
  * tone map. Mirrors backend `Agent` (`app/schemas.py`); `real` has a server
- * default and is only used as a truthiness flag, so it stays unchecked. */
+ * default and is only used as a truthiness flag, so it stays unchecked.
+ * `owner` is the registering wallet (on-chain indexed agents only, null for
+ * seeded) and feeds the "my agents" wallet comparison, so a wrong type is
+ * rejected while absent/null is tolerated. */
 export function isAgentList(v: unknown): v is Agent[] {
   return (
     Array.isArray(v) &&
@@ -71,6 +74,7 @@ export function isAgentList(v: unknown): v is Agent[] {
         isNum(a.price) &&
         isNum(a.rep) &&
         isNum(a.runs) &&
+        isOptionalStr(a.owner) &&
         isStr(a.status) &&
         AGENT_STATUSES.has(a.status),
     )
