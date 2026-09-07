@@ -164,10 +164,14 @@ export default function RegisterPage() {
               autoComplete="off"
               disabled={build.pending}
               aria-invalid={Boolean(
-                (touched.agent_id && idError) || idUnavailableMsg,
+                (touched.agent_id && idError) ||
+                idUnavailableMsg ||
+                idCheck.error,
               )}
               aria-describedby={
-                (touched.agent_id && idError) || idUnavailableMsg
+                (touched.agent_id && idError) ||
+                idUnavailableMsg ||
+                idCheck.error
                   ? "reg-agent-id-err"
                   : undefined
               }
@@ -184,6 +188,13 @@ export default function RegisterPage() {
               <div className="mt-1 font-mono text-[11px] text-muted">
                 ◉ checking availability…
               </div>
+            ) : idCheck.error ? (
+              <ErrorNote
+                id="reg-agent-id-err"
+                className="border-0 bg-transparent p-0 mt-1 text-[11px]"
+              >
+                ⚠ Couldn&apos;t check availability — try again.
+              </ErrorNote>
             ) : idUnavailableMsg ? (
               <ErrorNote
                 id="reg-agent-id-err"
