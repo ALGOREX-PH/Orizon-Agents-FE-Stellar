@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from "react";
 import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { ErrorNote } from "@/components/ui/error-note";
 import { LoadingStatus, Skeleton } from "@/components/ui/skeleton";
 import { StaleBadge } from "@/components/ui/stale-badge";
@@ -95,9 +95,9 @@ export default function AgentsPage() {
             ERC-8004 profiles — identity, skills, price, reputation.
           </p>
         </div>
-        <Button variant="primary" disabled title="coming soon">
+        <ButtonLink variant="primary" href="/app/register">
           + Register agent
-        </Button>
+        </ButtonLink>
       </div>
 
       <Card>

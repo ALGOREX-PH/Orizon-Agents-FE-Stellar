@@ -11,6 +11,7 @@
 
 import type {
   Agent,
+  AgentIdAvailability,
   ArtifactResponse,
   AuthorizeBuild,
   CodeArtifact,
@@ -22,8 +23,10 @@ import type {
   ReputationParams,
   StellarNetworkInfo,
   SubmitResult,
+  SyncResponse,
   Task,
   TraceLine,
+  XdrResponse,
 } from "./types";
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -356,4 +359,31 @@ export function isSubmitResult(v: unknown): v is SubmitResult {
     isOptionalStr(v.diagnostic) &&
     isOptionalStr(v.explorer)
   );
+}
+
+/** Register-agent build: `xdr` is handed straight to the wallet to sign, so a
+ * missing one reaches Freighter as the literal "undefined" — the same contract
+ * as `isAuthorizeBuild`, without the unread `expires_at`. */
+export function isXdrResponse(v: unknown): v is XdrResponse {
+  return isRecord(v) && isStr(v.xdr);
+}
+
+/** Agent-id availability check: the register form gates its submit button on
+ * `available` and renders `reason`/`message`/`owner` as the inline hint. A
+ * non-boolean `available` (the string "false") would read as free, so it is
+ * checked strictly, while the optional strings only reject a wrong type. */
+export function isAgentIdAvailability(v: unknown): v is AgentIdAvailability {
+  return (
+    isRecord(v) &&
+    typeof v.available === "boolean" &&
+    isOptionalStr(v.reason) &&
+    isOptionalStr(v.message) &&
+    isOptionalStr(v.owner)
+  );
+}
+
+/** Agents sync: `synced` is rendered as a count ("indexed N agents"), so a
+ * non-number would print `NaN`. */
+export function isSyncResponse(v: unknown): v is SyncResponse {
+  return isRecord(v) && isNum(v.synced);
 }

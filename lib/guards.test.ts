@@ -8,6 +8,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  isAgentIdAvailability,
   isAgentList,
   isArtifactResponse,
   isAuthorizeBuild,
@@ -19,9 +20,11 @@ import {
   isReputationParams,
   isStellarNetworkInfo,
   isSubmitResult,
+  isSyncResponse,
   isTaskList,
   isTraceLine,
   isTraceLineList,
+  isXdrResponse,
 } from "./guards";
 
 describe("isAgentList", () => {
@@ -641,5 +644,60 @@ describe("isSubmitResult", () => {
   it("rejects non-objects", () => {
     expect(isSubmitResult(null)).toBe(false);
     expect(isSubmitResult([valid])).toBe(false);
+  });
+});
+
+describe("isXdrResponse", () => {
+  it("accepts a bare xdr envelope", () => {
+    expect(isXdrResponse({ xdr: "AA" })).toBe(true);
+  });
+
+  it("rejects a missing or non-string xdr (handed to the wallet to sign)", () => {
+    expect(isXdrResponse({})).toBe(false);
+    expect(isXdrResponse({ xdr: 1 })).toBe(false);
+  });
+
+  it("rejects non-objects", () => {
+    expect(isXdrResponse(null)).toBe(false);
+  });
+});
+
+describe("isAgentIdAvailability", () => {
+  it("accepts an available result and a taken one carrying its owner", () => {
+    expect(isAgentIdAvailability({ available: true })).toBe(true);
+    expect(
+      isAgentIdAvailability({
+        available: false,
+        reason: "id_taken",
+        owner: "GBVN3FUM3TPMZXNSBMEGBLYBM2QFGXN7QCZL4TWZ5PJ7V36E",
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects a non-boolean available (a truthy string reads as free)", () => {
+    expect(isAgentIdAvailability({ available: "yes" })).toBe(false);
+  });
+
+  it("rejects a non-string reason", () => {
+    expect(isAgentIdAvailability({ available: true, reason: 5 })).toBe(false);
+  });
+
+  it("rejects non-objects", () => {
+    expect(isAgentIdAvailability(null)).toBe(false);
+  });
+});
+
+describe("isSyncResponse", () => {
+  it("accepts a numeric synced count", () => {
+    expect(isSyncResponse({ synced: 3 })).toBe(true);
+  });
+
+  it("rejects a missing or non-numeric synced count (rendered as a count)", () => {
+    expect(isSyncResponse({ synced: "3" })).toBe(false);
+    expect(isSyncResponse({})).toBe(false);
+  });
+
+  it("rejects non-objects", () => {
+    expect(isSyncResponse(null)).toBe(false);
   });
 });

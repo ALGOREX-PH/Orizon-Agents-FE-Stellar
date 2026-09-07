@@ -59,6 +59,23 @@ test.describe("console under a total backend outage", () => {
     await expect(page.getByText(/No events yet/i)).toHaveCount(0);
   });
 
+  test("/app/register announces a failed availability check", async ({
+    page,
+  }) => {
+    // The register page is form-first — nothing fetches on mount, so the
+    // outage only shows once the availability check fires on blur. Typing a
+    // valid id and blurring must still ANNOUNCE the failure, not swallow it.
+    await mockApiOutage(page);
+    await page.goto("/app/register");
+
+    await page.fill("#reg-agent-id", "weather_bot");
+    await page.locator("#reg-agent-id").blur();
+
+    await expect(page.locator('[role="alert"]').first()).toBeVisible({
+      timeout: ALERT_TIMEOUT,
+    });
+  });
+
   test("no money or trust figure is fabricated while failing", async ({
     page,
   }) => {

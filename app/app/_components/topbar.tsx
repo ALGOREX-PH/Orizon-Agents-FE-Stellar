@@ -14,6 +14,7 @@ import { useMobileNav } from "./mobile-nav-context";
 const titles: Record<string, { t: string; b: string[] }> = {
   "/app": { t: "Overview", b: ["console", "overview"] },
   "/app/agents": { t: "Agent Registry", b: ["console", "agents"] },
+  "/app/register": { t: "Register Agent", b: ["console", "register"] },
   "/app/orchestrator": { t: "Orchestrator", b: ["console", "orchestrator"] },
   "/app/trace": { t: "Trace", b: ["console", "trace"] },
   "/app/events": { t: "Events", b: ["console", "events"] },

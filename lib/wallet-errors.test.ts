@@ -51,6 +51,24 @@ afterEach(() => {
 });
 
 describe("classifyError", () => {
+  it("maps a locked wallet to wallet_locked with an unlock message", () => {
+    const f = classifyError(new Error("The wallet is locked"));
+    expect(f.kind).toBe("wallet_locked");
+    expect(f.title).toBe("Wallet is locked");
+    expect(f.detail.toLowerCase()).toContain("unlock");
+  });
+
+  it("classifies an 'access denied while locked' message as locked, not rejected", () => {
+    // A locked wallet can word itself as denial; locked must win over reject.
+    const f = classifyError(new Error("Please unlock your wallet to continue"));
+    expect(f.kind).toBe("wallet_locked");
+  });
+
+  it("does not mistake an unlocked confirmation for a locked wallet", () => {
+    const f = classifyError(new Error("wallet successfully connected"));
+    expect(f.kind).not.toBe("wallet_locked");
+  });
+
   it("maps Freighter user-rejected message to user_rejected", () => {
     const e = new Error("User declined access");
     const f = classifyError(e);

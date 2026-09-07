@@ -1,4 +1,5 @@
 import {
+  isAgentIdAvailability,
   isAgentList,
   isArtifactResponse,
   isAuthorizeBuild,
@@ -10,26 +11,32 @@ import {
   isReputationParams,
   isStellarNetworkInfo,
   isSubmitResult,
+  isSyncResponse,
   isTaskList,
   isTraceLine,
   isTraceLineList,
+  isXdrResponse,
 } from "./guards";
 import { getTaskToken, rememberTaskToken } from "./task-tokens";
 import type {
   Agent,
+  AgentIdAvailability,
   ArtifactResponse,
   AuthorizeBuild,
   DecomposeResponse,
   ExecuteResponse,
   Flow,
   Overview,
+  RegisterAgentReq,
   ReputationBatch,
   ReputationInfo,
   ReputationParams,
   StellarNetworkInfo,
   SubmitResult,
+  SyncResponse,
   Task,
   TraceLine,
+  XdrResponse,
 } from "./types";
 
 const base = "/api";
@@ -140,12 +147,22 @@ export async function fetchWithTimeout(
 export class ApiError extends Error {
   readonly status: number;
   readonly retryAfterMs?: number;
+  // The stable machine-readable code from the error envelope (e.g. "id_taken",
+  // "owner_account_unfunded"). Callers that map codes to inline field errors —
+  // the register form — key on this, never on the human message.
+  readonly code?: string;
 
-  constructor(message: string, status: number, retryAfterMs?: number) {
+  constructor(
+    message: string,
+    status: number,
+    retryAfterMs?: number,
+    code?: string,
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     if (retryAfterMs !== undefined) this.retryAfterMs = retryAfterMs;
+    if (code !== undefined) this.code = code;
   }
 }
 
@@ -179,8 +196,10 @@ async function httpError(
   res: Response,
 ): Promise<ApiError> {
   let detail = "";
+  let code: string | undefined;
   try {
     const j = await res.json();
+    if (typeof j?.error?.code === "string") code = j.error.code;
     const envelopeMsg =
       typeof j?.error?.message === "string" ? j.error.message : undefined;
     const msg = envelopeMsg ?? j?.detail;
@@ -206,6 +225,7 @@ async function httpError(
     `${method} ${path} → ${res.status}${detail}`,
     res.status,
     wait,
+    code,
   );
 }
 
@@ -398,6 +418,26 @@ export const submitSigned = (signedXdr: string) =>
     "/stellar/submit",
     { signed_xdr: signedXdr },
     ensure("/stellar/submit", isSubmitResult),
+  );
+
+export const buildRegisterAgent = (body: RegisterAgentReq) =>
+  post<XdrResponse, RegisterAgentReq>(
+    "/stellar/build/register-agent",
+    body,
+    ensure("/stellar/build/register-agent", isXdrResponse),
+  );
+
+export const agentIdAvailable = (id: string) =>
+  get<AgentIdAvailability>(
+    `/stellar/agent-id-available/${encodeURIComponent(id)}`,
+    ensure("/stellar/agent-id-available", isAgentIdAvailability),
+  );
+
+export const syncAgents = () =>
+  post<SyncResponse, Record<string, never>>(
+    "/stellar/agents/sync",
+    {},
+    ensure("/stellar/agents/sync", isSyncResponse),
   );
 
 /** Consecutive failed reconnects tolerated before SSE is given up on. */
