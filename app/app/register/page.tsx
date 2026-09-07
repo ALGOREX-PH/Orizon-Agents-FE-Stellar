@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { buildRegisterAgent } from "@/lib/api";
-import { ApiError } from "@/lib/api";
+import { ApiError, agentIdAvailable, buildRegisterAgent } from "@/lib/api";
 import {
   normalizeSkills,
   usdcToStroops,
@@ -69,9 +68,30 @@ export default function RegisterPage() {
     return xdrResp;
   });
 
+  // On-chain id availability, checked on blur once the id is locally valid.
+  // useAsyncAction is race- and unmount-safe, so a slow check for an old id
+  // can never overwrite a newer one. The result is reset on every keystroke,
+  // so stale availability never leaks past an edit.
+  const idCheck = useAsyncAction(agentIdAvailable);
+  const idAvailable = idCheck.data?.available === true;
+  const idUnavailableMsg =
+    idCheck.data && !idCheck.data.available
+      ? ((idCheck.data.reason === "id_taken"
+          ? "Already registered — pick another id."
+          : idCheck.data.message) ?? "That id is not available.")
+      : null;
+
+  function runIdCheck() {
+    touch("agent_id");
+    if (!validateAgentId(agentId)) idCheck.run(agentId);
+  }
+
   const syncValid =
     !idError && !nameError && !skillsError && !priceError && owner !== "";
-  const canSubmit = syncValid && wallet.connected && !build.pending;
+  // The button stays disabled until the id check has returned available —
+  // never let an operator sign against an unverified id (story 1.04 rule).
+  const canSubmit =
+    syncValid && idAvailable && wallet.connected && !build.pending;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -134,15 +154,22 @@ export default function RegisterPage() {
             <input
               id="reg-agent-id"
               value={agentId}
-              onChange={(e) => setAgentId(e.target.value)}
-              onBlur={() => touch("agent_id")}
+              onChange={(e) => {
+                setAgentId(e.target.value);
+                idCheck.reset();
+              }}
+              onBlur={runIdCheck}
               placeholder="weather_bot"
               spellCheck={false}
               autoComplete="off"
               disabled={build.pending}
-              aria-invalid={Boolean(touched.agent_id && idError)}
+              aria-invalid={Boolean(
+                (touched.agent_id && idError) || idUnavailableMsg,
+              )}
               aria-describedby={
-                touched.agent_id && idError ? "reg-agent-id-err" : undefined
+                (touched.agent_id && idError) || idUnavailableMsg
+                  ? "reg-agent-id-err"
+                  : undefined
               }
               className={inputCls}
             />
@@ -153,6 +180,21 @@ export default function RegisterPage() {
               >
                 ⚠ {idError}
               </ErrorNote>
+            ) : idCheck.pending ? (
+              <div className="mt-1 font-mono text-[11px] text-muted">
+                ◉ checking availability…
+              </div>
+            ) : idUnavailableMsg ? (
+              <ErrorNote
+                id="reg-agent-id-err"
+                className="border-0 bg-transparent p-0 mt-1 text-[11px]"
+              >
+                ⚠ {idUnavailableMsg}
+              </ErrorNote>
+            ) : idAvailable ? (
+              <div className="mt-1 font-mono text-[11px] text-cyan">
+                ✓ available
+              </div>
             ) : (
               <div className="mt-1 font-mono text-[11px] text-muted">
                 letters, digits and underscore · 1–32 chars
