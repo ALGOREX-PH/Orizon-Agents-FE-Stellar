@@ -1,4 +1,5 @@
 import {
+  isAgentIdAvailability,
   isAgentList,
   isArtifactResponse,
   isAuthorizeBuild,
@@ -10,26 +11,32 @@ import {
   isReputationParams,
   isStellarNetworkInfo,
   isSubmitResult,
+  isSyncResponse,
   isTaskList,
   isTraceLine,
   isTraceLineList,
+  isXdrResponse,
 } from "./guards";
 import { getTaskToken, rememberTaskToken } from "./task-tokens";
 import type {
   Agent,
+  AgentIdAvailability,
   ArtifactResponse,
   AuthorizeBuild,
   DecomposeResponse,
   ExecuteResponse,
   Flow,
   Overview,
+  RegisterAgentReq,
   ReputationBatch,
   ReputationInfo,
   ReputationParams,
   StellarNetworkInfo,
   SubmitResult,
+  SyncResponse,
   Task,
   TraceLine,
+  XdrResponse,
 } from "./types";
 
 const base = "/api";
@@ -411,6 +418,26 @@ export const submitSigned = (signedXdr: string) =>
     "/stellar/submit",
     { signed_xdr: signedXdr },
     ensure("/stellar/submit", isSubmitResult),
+  );
+
+export const buildRegisterAgent = (body: RegisterAgentReq) =>
+  post<XdrResponse, RegisterAgentReq>(
+    "/stellar/build/register-agent",
+    body,
+    ensure("/stellar/build/register-agent", isXdrResponse),
+  );
+
+export const agentIdAvailable = (id: string) =>
+  get<AgentIdAvailability>(
+    `/stellar/agent-id-available/${encodeURIComponent(id)}`,
+    ensure("/stellar/agent-id-available", isAgentIdAvailability),
+  );
+
+export const syncAgents = () =>
+  post<SyncResponse, Record<string, never>>(
+    "/stellar/agents/sync",
+    {},
+    ensure("/stellar/agents/sync", isSyncResponse),
   );
 
 /** Consecutive failed reconnects tolerated before SSE is given up on. */
