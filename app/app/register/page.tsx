@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ApiError, agentIdAvailable, buildRegisterAgent } from "@/lib/api";
+import {
+  ApiError,
+  agentIdAvailable,
+  buildRegisterAgent,
+  submitSigned,
+  syncAgents,
+} from "@/lib/api";
 import {
   normalizeSkills,
   usdcToStroops,
@@ -10,14 +16,21 @@ import {
   validatePriceUsdc,
   validateSkills,
 } from "@/lib/register-validation";
+import {
+  interpretRegisterSubmit,
+  isAgentAlreadyExists,
+} from "@/lib/register-submit";
+import type { SubmitResult } from "@/lib/types";
 import { useAsyncAction } from "@/lib/use-async-action";
 import { useWallet } from "@/lib/wallet";
+import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
 import { focusRing } from "@/lib/ui";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { ErrorNote } from "@/components/ui/error-note";
 import { SkillsInput } from "@/components/ui/skills-input";
+import { TxStatus, type TxState } from "@/components/ui/tx-status";
 import { NETWORK_LABEL } from "@/components/ui/stellar-link";
 
 // The build endpoint speaks stable error codes (story 1.03). Map the ones a
@@ -57,11 +70,19 @@ export default function RegisterPage() {
   const stroops =
     priceStr.trim() !== "" && !priceError ? usdcToStroops(priceNum) : null;
 
-  // Build submit runs directly (not through useAsyncAction) so the ApiError's
-  // stable `code` survives — useAsyncAction flattens errors to a message and
-  // would drop the code the field-error mapping below depends on.
-  const [building, setBuilding] = useState(false);
-  const [built, setBuilt] = useState(false);
+  // The submit runs the tx lifecycle by hand (not through useAsyncAction) so
+  // the ApiError's stable `code` survives the build step and each stage can
+  // drive the TxStatus machine. building → signing → broadcasting → pending →
+  // success | failed.
+  const [txState, setTxState] = useState<TxState>("idle");
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [txError, setTxError] = useState<FriendlyError | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const submitting =
+    txState === "building" ||
+    txState === "signing" ||
+    txState === "broadcasting" ||
+    txState === "pending";
 
   // On-chain id availability, checked on blur once the id is locally valid.
   // useAsyncAction is race- and unmount-safe, so a slow check for an old id
@@ -85,38 +106,112 @@ export default function RegisterPage() {
     !idError && !nameError && !skillsError && !priceError && owner !== "";
   // The button stays disabled until the id check has returned available —
   // never let an operator sign against an unverified id (story 1.04 rule).
-  const canSubmit = syncValid && idAvailable && wallet.connected && !building;
+  const canSubmit = syncValid && idAvailable && wallet.connected && !submitting;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setTouched({
-      agent_id: true,
-      name: true,
-      skills: true,
-      price_usdc: true,
-    });
+    setTouched({ agent_id: true, name: true, skills: true, price_usdc: true });
     setFormError(null);
+    setTxError(null);
+    setNotice(null);
     if (!canSubmit) return;
-    setBuilding(true);
-    setBuilt(false);
+
+    // 1. Build the unsigned XDR. A duplicate/reserved id is caught here (the
+    // build simulates), so it surfaces as a field-level form error, not a
+    // failed transaction — the operator just changes the id, form intact.
+    setTxState("building");
+    let xdr: string;
     try {
-      await buildRegisterAgent({
+      ({ xdr } = await buildRegisterAgent({
         owner,
         agent_id: agentId,
         name: name.trim(),
         skills: normalizeSkills(skills),
         price_usdc: priceNum,
-      });
-      setBuilt(true);
+      }));
     } catch (err) {
       const code = err instanceof ApiError ? err.code : undefined;
+      if (code === "id_taken" || code === "id_reserved") idCheck.reset();
       setFormError(
         (code && FORM_LEVEL_ERRORS[code]) ??
           "Could not prepare the registration. Please try again.",
       );
-    } finally {
-      setBuilding(false);
+      setTxState("idle");
+      return;
     }
+
+    // 2. Sign in the wallet. A declined prompt is a normal action — keep the
+    // form and stay neutral; a locked wallet gets its specific message.
+    setTxState("signing");
+    let signedXdr: string;
+    try {
+      signedXdr = await wallet.signXdr(xdr);
+    } catch (err) {
+      const friendly = classifyError(err);
+      if (
+        friendly.kind === "user_rejected" &&
+        friendly.title === "Signature cancelled"
+      ) {
+        setNotice(
+          "Signing cancelled — your details are saved. Click Register when you're ready.",
+        );
+        setTxState("idle");
+        return;
+      }
+      setTxError(friendly);
+      setTxState("failed");
+      return;
+    }
+
+    // 3. Broadcast. A dropped network mid-submit may still have landed, so we
+    // never auto-retry — the operator checks the explorer first.
+    setTxState("broadcasting");
+    let result: SubmitResult;
+    try {
+      result = await submitSigned(signedXdr);
+    } catch {
+      setTxError({
+        kind: "unknown",
+        title: "Submission interrupted",
+        detail:
+          "The network dropped while submitting. Your transaction may still have landed — check Stellar Expert for your agent before registering again.",
+        raw: "",
+      });
+      setTxState("failed");
+      return;
+    }
+
+    // 4. Interpret the on-chain result (a FAILED tx still returns 200 + hash).
+    const outcome = interpretRegisterSubmit(result);
+    setTxHash(outcome.hash);
+    if (!outcome.ok) {
+      if (isAgentAlreadyExists(result)) {
+        idCheck.reset();
+        setFormError(outcome.message);
+        setTxState("idle");
+        return;
+      }
+      setTxError({
+        kind: "unknown",
+        title: "Registration failed",
+        detail: outcome.message,
+        raw: result.diagnostic ?? result.status,
+      });
+      setTxState("failed");
+      return;
+    }
+
+    // 5. Confirmed. Index it so the marketplace shows it without a reload (the
+    // submit endpoint already kicks a server-side sync on SUCCESS; awaiting
+    // here is the deterministic belt-and-suspenders), then show the success
+    // card.
+    setTxState("pending");
+    try {
+      await syncAgents();
+    } catch {
+      // ignore — the server already kicked a sync; the agents page refetches
+    }
+    setTxState("success");
   }
 
   return (
@@ -167,7 +262,7 @@ export default function RegisterPage() {
               placeholder="weather_bot"
               spellCheck={false}
               autoComplete="off"
-              disabled={building}
+              disabled={submitting}
               aria-invalid={Boolean(
                 (touched.agent_id && idError) ||
                 idUnavailableMsg ||
@@ -228,7 +323,7 @@ export default function RegisterPage() {
               onChange={(e) => setName(e.target.value)}
               onBlur={() => touch("name")}
               placeholder="Weather Bot"
-              disabled={building}
+              disabled={submitting}
               aria-invalid={Boolean(touched.name && nameError)}
               aria-describedby={
                 touched.name && nameError ? "reg-name-err" : undefined
@@ -254,7 +349,7 @@ export default function RegisterPage() {
                 id="reg-skills"
                 value={skills}
                 onChange={setSkills}
-                disabled={building}
+                disabled={submitting}
                 aria-invalid={Boolean(touched.skills && skillsError)}
                 aria-describedby={
                   touched.skills && skillsError ? "reg-skills-err" : undefined
@@ -288,7 +383,7 @@ export default function RegisterPage() {
               }
               onBlur={() => touch("price_usdc")}
               placeholder="0.054"
-              disabled={building}
+              disabled={submitting}
               aria-invalid={Boolean(touched.price_usdc && priceError)}
               aria-describedby={
                 touched.price_usdc && priceError ? "reg-price-err" : undefined
@@ -312,11 +407,15 @@ export default function RegisterPage() {
           </div>
 
           {formError ? <ErrorNote>{formError}</ErrorNote> : null}
-          {built ? (
-            <div className="font-mono text-[11px] text-cyan">
-              ✓ transaction prepared — wallet signing arrives in the next step.
-            </div>
+          {notice ? (
+            <div className="font-mono text-[11px] text-muted">{notice}</div>
           ) : null}
+
+          <TxStatus
+            state={txState}
+            hash={txHash ?? undefined}
+            error={txError}
+          />
 
           <div className="flex items-center gap-3 pt-1">
             <Button
@@ -325,7 +424,7 @@ export default function RegisterPage() {
               size="md"
               disabled={!canSubmit}
             >
-              {building ? "◉ Building…" : "Register agent ▸"}
+              {submitting ? "◉ Working…" : "Register agent ▸"}
             </Button>
             {!wallet.connected ? (
               <span className="font-mono text-[11px] text-muted">
