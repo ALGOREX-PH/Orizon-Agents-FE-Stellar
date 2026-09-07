@@ -189,8 +189,10 @@ async function httpError(
   res: Response,
 ): Promise<ApiError> {
   let detail = "";
+  let code: string | undefined;
   try {
     const j = await res.json();
+    if (typeof j?.error?.code === "string") code = j.error.code;
     const envelopeMsg =
       typeof j?.error?.message === "string" ? j.error.message : undefined;
     const msg = envelopeMsg ?? j?.detail;
@@ -216,6 +218,7 @@ async function httpError(
     `${method} ${path} → ${res.status}${detail}`,
     res.status,
     wait,
+    code,
   );
 }
 
