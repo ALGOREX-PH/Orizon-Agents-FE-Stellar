@@ -156,6 +156,12 @@ export async function mockApi(page: Page): Promise<void> {
     if (method === "GET" && pathname === "/api/agents") {
       return json(route, []);
     }
+    if (
+      method === "GET" &&
+      pathname.startsWith("/api/stellar/agent-id-available/")
+    ) {
+      return json(route, { available: true });
+    }
     // Anything else gets an empty-but-valid JSON body so stray fetches
     // resolve instead of hanging or erroring.
     return json(route, {});
