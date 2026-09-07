@@ -25,7 +25,7 @@ import { useAsyncAction } from "@/lib/use-async-action";
 import { useWallet } from "@/lib/wallet";
 import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
 import { focusRing } from "@/lib/ui";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { ErrorNote } from "@/components/ui/error-note";
@@ -417,21 +417,39 @@ export default function RegisterPage() {
             error={txError}
           />
 
-          <div className="flex items-center gap-3 pt-1">
-            <Button
-              type="submit"
-              variant="cyan"
-              size="md"
-              disabled={!canSubmit}
-            >
-              {submitting ? "◉ Working…" : "Register agent ▸"}
-            </Button>
-            {!wallet.connected ? (
-              <span className="font-mono text-[11px] text-muted">
-                connect a wallet to register
-              </span>
-            ) : null}
-          </div>
+          {txState === "success" ? (
+            <div className="border border-cyan/30 bg-cyan/5 p-4 space-y-2">
+              <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan">
+                ▸ next step
+              </div>
+              <p className="text-sm text-text">
+                <b className="font-mono">{agentId}</b> is registered on-chain.
+                Bind an execution endpoint (story 2.05) so it can take work — or
+                see it in the marketplace now.
+              </p>
+              <ButtonLink variant="cyan" size="sm" href="/app/agents">
+                View in marketplace ▸
+              </ButtonLink>
+            </div>
+          ) : null}
+
+          {txState === "success" ? null : (
+            <div className="flex items-center gap-3 pt-1">
+              <Button
+                type="submit"
+                variant="cyan"
+                size="md"
+                disabled={!canSubmit}
+              >
+                {submitting ? "◉ Working…" : "Register agent ▸"}
+              </Button>
+              {!wallet.connected ? (
+                <span className="font-mono text-[11px] text-muted">
+                  connect a wallet to register
+                </span>
+              ) : null}
+            </div>
+          )}
         </form>
       </Card>
     </div>
