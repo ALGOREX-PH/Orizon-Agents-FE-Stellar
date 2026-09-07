@@ -93,6 +93,18 @@ const NOT_FOUND_PATTERNS = [
   /no extension/i,
 ];
 
+// A locked wallet is distinct from a declined prompt — the operator just
+// needs to unlock the extension. Checked before REJECT_PATTERNS because some
+// wallets word a locked state as "access denied", which would otherwise be
+// mis-tagged as a user cancellation.
+const LOCKED_PATTERNS = [
+  /is locked/i,
+  /wallet locked/i,
+  /please unlock/i,
+  /unlock your wallet/i,
+  /account is locked/i,
+];
+
 const INSUFFICIENT_PATTERNS = [
   /tx_insufficient_balance/i,
   /op_underfunded/i,
@@ -198,6 +210,16 @@ export function classifyError(e: unknown): FriendlyError {
       title: "No wallet detected",
       detail:
         "We couldn't find a Stellar wallet extension. Install Freighter, xBull, or Albedo and refresh the page.",
+      raw,
+    };
+  }
+
+  if (LOCKED_PATTERNS.some((re) => re.test(raw))) {
+    return {
+      kind: "wallet_locked",
+      title: "Wallet is locked",
+      detail:
+        "Unlock your wallet extension, then click Register again. Nothing was sent on-chain.",
       raw,
     };
   }
