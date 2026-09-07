@@ -18,7 +18,9 @@ import {
   GET_TIMEOUT_MS,
   STREAM_CONNECT_TIMEOUT_MS,
   TRACE_POLL_MS,
+  agentIdAvailable,
   buildAuthorize,
+  buildRegisterAgent,
   clearGetCache,
   decompose,
   execute,
@@ -32,6 +34,7 @@ import {
   listReputation,
   openTraceStream,
   submitSigned,
+  syncAgents,
 } from "./api";
 import { rememberTaskToken } from "./task-tokens";
 import type { TraceLine } from "./types";
@@ -533,6 +536,128 @@ describe("response guards", () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(200, overview));
 
     await expect(getOverview()).resolves.toEqual(overview);
+  });
+});
+
+describe("buildRegisterAgent", () => {
+  const body = {
+    owner: "GBVN3FUM3TPMZXNSBMEGBLYBM2QFGXN7QCZL4TWZ5PJ7V36E",
+    agent_id: "orizon_batch",
+    name: "Batch Runner",
+    skills: ["content", "seo"],
+    price_usdc: 0.5,
+  };
+
+  it("posts the register body and resolves the parsed xdr envelope", async () => {
+    const build = { xdr: "AAAAAgAAAAB…" };
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, build));
+
+    await expect(buildRegisterAgent(body)).resolves.toEqual(build);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/stellar/build/register-agent",
+      expect.objectContaining({
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+
+  it("rejects a build with no xdr for the wallet to sign", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, {}));
+
+    await expect(buildRegisterAgent(body)).rejects.toThrow(
+      "malformed response from /stellar/build/register-agent",
+    );
+  });
+
+  // Proves the whole seam the register form keys on: a 409 id_taken envelope
+  // surfaces as an ApiError carrying the machine-readable code, never the human
+  // message.
+  it("carries the id_taken code on a 409 conflict", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(409, {
+        error: { code: "id_taken", message: "agent id already registered" },
+      }),
+    );
+
+    const err = await buildRegisterAgent(body).then(
+      () => {
+        throw new Error("expected rejection");
+      },
+      (e: unknown) => e as ApiError,
+    );
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.status).toBe(409);
+    expect(err.code).toBe("id_taken");
+  });
+});
+
+describe("agentIdAvailable", () => {
+  const owner = "GBVN3FUM3TPMZXNSBMEGBLYBM2QFGXN7QCZL4TWZ5PJ7V36E";
+
+  it("hits the availability endpoint with the id in the path", async () => {
+    const free = { available: true };
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, free));
+
+    await expect(agentIdAvailable("orizon_batch")).resolves.toEqual(free);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/stellar/agent-id-available/orizon_batch",
+      expect.objectContaining({
+        cache: "no-store",
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+
+  it("carries the id_taken reason and owner through", async () => {
+    const taken = { available: false, reason: "id_taken", owner };
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, taken));
+
+    const res = await agentIdAvailable("orizon_batch");
+
+    expect(res.available).toBe(false);
+    expect(res.reason).toBe("id_taken");
+    expect(res.owner).toBe(owner);
+  });
+
+  it("rejects a malformed availability payload as a normal request error", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { available: "yes" }));
+
+    await expect(agentIdAvailable("orizon_batch")).rejects.toThrow(
+      "malformed response from /stellar/agent-id-available",
+    );
+  });
+});
+
+describe("syncAgents", () => {
+  it("posts an empty body and resolves the parsed count", async () => {
+    const result = { synced: 4 };
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, result));
+
+    await expect(syncAgents()).resolves.toEqual(result);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/stellar/agents/sync",
+      expect.objectContaining({
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({}),
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+
+  it("rejects a malformed sync payload as a normal request error", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { synced: "4" }));
+
+    await expect(syncAgents()).rejects.toThrow(
+      "malformed response from /stellar/agents/sync",
+    );
   });
 });
 
