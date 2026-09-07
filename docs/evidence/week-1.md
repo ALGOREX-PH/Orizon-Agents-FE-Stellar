@@ -23,16 +23,3 @@
   ("all 6 checks passed"), FE deployment record, and live ref parity
   (FE `5e5069a`/`45d2e95`, BE `27e96ff`/`0c64765` — no delta).
   Procedure: see the *Production Promotion Runbook* project document in Linear.
-
-## Registry split-brain closed (story 1.02 / BLO-12, 2026-09-07)
-
-- The M1 exit criterion demonstrated live: the externally-registered agent
-  `w1_audit_a7x` appears in `GET /api/agents` **3.0 s** after backend boot
-  (sync pass runs at startup, then every 15 s; `POST /api/stellar/agents/sync`
-  re-indexes on demand in 1.78 s; a successful `/api/stellar/submit` kicks a
-  fire-and-forget pass so fresh registrations list within seconds).
-- Payload carries the contracted provenance: `"source": "onchain"`, owner
-  `GBI2…ADBH`, price 0.001 USDC (converted from 10,000 stroops), status
-  online — while all 12 seeded agents remain `"source": "seeded"` and intact.
-- Planner safety proven: the kit plan and the routability suite (4 tests)
-  show indexed worker-less agents are marketplace-visible but never planned.
