@@ -80,6 +80,31 @@ const items = [
     ),
   },
   {
+    href: "/app/register",
+    label: "Register",
+    icon: (
+      <svg
+        viewBox="0 0 20 20"
+        fill="none"
+        className="h-4 w-4"
+        aria-hidden="true"
+      >
+        <circle cx="8" cy="6" r="3" stroke="currentColor" strokeWidth="1.5" />
+        <path
+          d="M2.5 17c0-3.038 2.462-5.5 5.5-5.5"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
+        <path
+          d="M15 11.5v5M12.5 14h5"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+  },
+  {
     href: "/app/reputation",
     label: "Reputation",
     icon: (
