@@ -144,6 +144,33 @@ describe("get (via listAgents)", () => {
     );
   });
 
+  it("carries the envelope code on the ApiError for field mapping", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(409, {
+        error: { code: "id_taken", message: "id taken" },
+      }),
+    );
+
+    await expect(listAgents()).rejects.toMatchObject({
+      status: 409,
+      code: "id_taken",
+    });
+  });
+
+  it("leaves the code undefined when the envelope has none", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(500, { detail: "boom" }));
+
+    await listAgents().then(
+      () => {
+        throw new Error("expected a rejection");
+      },
+      (err) => {
+        expect(err).toBeInstanceOf(ApiError);
+        expect(err.code).toBeUndefined();
+      },
+    );
+  });
+
   it("falls back to the legacy detail field", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(404, { detail: "no agents" }));
 
