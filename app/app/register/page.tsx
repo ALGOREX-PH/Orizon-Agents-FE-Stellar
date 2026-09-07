@@ -57,16 +57,11 @@ export default function RegisterPage() {
   const stroops =
     priceStr.trim() !== "" && !priceError ? usdcToStroops(priceNum) : null;
 
-  const build = useAsyncAction(async () => {
-    const xdrResp = await buildRegisterAgent({
-      owner,
-      agent_id: agentId,
-      name: name.trim(),
-      skills: normalizeSkills(skills),
-      price_usdc: priceNum,
-    });
-    return xdrResp;
-  });
+  // Build submit runs directly (not through useAsyncAction) so the ApiError's
+  // stable `code` survives — useAsyncAction flattens errors to a message and
+  // would drop the code the field-error mapping below depends on.
+  const [building, setBuilding] = useState(false);
+  const [built, setBuilt] = useState(false);
 
   // On-chain id availability, checked on blur once the id is locally valid.
   // useAsyncAction is race- and unmount-safe, so a slow check for an old id
@@ -90,8 +85,7 @@ export default function RegisterPage() {
     !idError && !nameError && !skillsError && !priceError && owner !== "";
   // The button stays disabled until the id check has returned available —
   // never let an operator sign against an unverified id (story 1.04 rule).
-  const canSubmit =
-    syncValid && idAvailable && wallet.connected && !build.pending;
+  const canSubmit = syncValid && idAvailable && wallet.connected && !building;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -103,14 +97,25 @@ export default function RegisterPage() {
     });
     setFormError(null);
     if (!canSubmit) return;
+    setBuilding(true);
+    setBuilt(false);
     try {
-      await build.run();
+      await buildRegisterAgent({
+        owner,
+        agent_id: agentId,
+        name: name.trim(),
+        skills: normalizeSkills(skills),
+        price_usdc: priceNum,
+      });
+      setBuilt(true);
     } catch (err) {
       const code = err instanceof ApiError ? err.code : undefined;
       setFormError(
         (code && FORM_LEVEL_ERRORS[code]) ??
           "Could not prepare the registration. Please try again.",
       );
+    } finally {
+      setBuilding(false);
     }
   }
 
@@ -162,7 +167,7 @@ export default function RegisterPage() {
               placeholder="weather_bot"
               spellCheck={false}
               autoComplete="off"
-              disabled={build.pending}
+              disabled={building}
               aria-invalid={Boolean(
                 (touched.agent_id && idError) ||
                 idUnavailableMsg ||
@@ -223,7 +228,7 @@ export default function RegisterPage() {
               onChange={(e) => setName(e.target.value)}
               onBlur={() => touch("name")}
               placeholder="Weather Bot"
-              disabled={build.pending}
+              disabled={building}
               aria-invalid={Boolean(touched.name && nameError)}
               aria-describedby={
                 touched.name && nameError ? "reg-name-err" : undefined
@@ -249,7 +254,7 @@ export default function RegisterPage() {
                 id="reg-skills"
                 value={skills}
                 onChange={setSkills}
-                disabled={build.pending}
+                disabled={building}
                 aria-invalid={Boolean(touched.skills && skillsError)}
                 aria-describedby={
                   touched.skills && skillsError ? "reg-skills-err" : undefined
@@ -283,7 +288,7 @@ export default function RegisterPage() {
               }
               onBlur={() => touch("price_usdc")}
               placeholder="0.054"
-              disabled={build.pending}
+              disabled={building}
               aria-invalid={Boolean(touched.price_usdc && priceError)}
               aria-describedby={
                 touched.price_usdc && priceError ? "reg-price-err" : undefined
@@ -307,7 +312,7 @@ export default function RegisterPage() {
           </div>
 
           {formError ? <ErrorNote>{formError}</ErrorNote> : null}
-          {build.data ? (
+          {built ? (
             <div className="font-mono text-[11px] text-cyan">
               ✓ transaction prepared — wallet signing arrives in the next step.
             </div>
@@ -320,7 +325,7 @@ export default function RegisterPage() {
               size="md"
               disabled={!canSubmit}
             >
-              {build.pending ? "◉ Building…" : "Register agent ▸"}
+              {building ? "◉ Building…" : "Register agent ▸"}
             </Button>
             {!wallet.connected ? (
               <span className="font-mono text-[11px] text-muted">
