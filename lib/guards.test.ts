@@ -71,6 +71,20 @@ describe("isAgentList", () => {
     expect(isAgentList([{ ...agent, status: undefined }])).toBe(false);
   });
 
+  it("accepts an owner as a G-address, absent, or null (seeded agents)", () => {
+    expect(
+      isAgentList([
+        { ...agent, owner: "GBVN3FUM3TPMZXNSBMEGBLYBM2QFGXN7QCZL4TWZ5PJ7V36E" },
+      ]),
+    ).toBe(true);
+    expect(isAgentList([agent])).toBe(true);
+    expect(isAgentList([{ ...agent, owner: null }])).toBe(true);
+  });
+
+  it("rejects a non-string owner (compared against the connected wallet)", () => {
+    expect(isAgentList([{ ...agent, owner: 42 }])).toBe(false);
+  });
+
   it("rejects when any single entry is malformed", () => {
     expect(isAgentList([agent, { ...agent, price: undefined }])).toBe(false);
   });
