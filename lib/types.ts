@@ -171,3 +171,31 @@ export type StellarNetworkInfo = {
   asset: string;
   asset_sac: string;
 };
+
+/** Request body of POST /api/stellar/build/register-agent — the fields the
+ * backend assembles the unsigned register-agent transaction from. */
+export type RegisterAgentReq = {
+  owner: string;
+  agent_id: string;
+  name: string;
+  skills: string[];
+  price_usdc: number;
+};
+
+/** A bare unsigned-XDR envelope: the register-agent build hands `xdr` straight
+ * to the wallet to sign. */
+export type XdrResponse = { xdr: string };
+
+/** Response of GET /api/stellar/agent-id-available/{id} — whether a desired
+ * agent id can be claimed, and why not when it cannot. `reason` is one of
+ * id_malformed | id_reserved | id_taken; `owner` is present only for id_taken. */
+export type AgentIdAvailability = {
+  available: boolean;
+  reason?: string | null; // id_malformed | id_reserved | id_taken
+  message?: string | null;
+  owner?: string | null; // present for id_taken
+};
+
+/** Response of POST /api/stellar/agents/sync — how many on-chain agents were
+ * reindexed. */
+export type SyncResponse = { synced: number };
