@@ -25,6 +25,7 @@ const TOP_UP_ADVICE = IS_MAINNET
 
 export type WalletErrorKind =
   | "wallet_not_found"
+  | "wallet_locked"
   | "user_rejected"
   | "insufficient_balance"
   | "wrong_network"
@@ -40,6 +41,7 @@ export type FriendlyError = {
 
 const ERROR_KINDS: ReadonlySet<string> = new Set([
   "wallet_not_found",
+  "wallet_locked",
   "user_rejected",
   "insufficient_balance",
   "wrong_network",
