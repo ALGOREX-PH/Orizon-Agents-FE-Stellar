@@ -36,3 +36,16 @@
   online — while all 12 seeded agents remain `"source": "seeded"` and intact.
 - Planner safety proven: the kit plan and the routability suite (4 tests)
   show indexed worker-less agents are marketplace-visible but never planned.
+
+## Sign & submit from the operator's wallet (story 1.05 / BLO-15, 2026-09-07)
+
+- Full sign→submit→confirm→appears sequence verified live on testnet with a
+  real registration (`sign_probe_bb5c12`, owner `GBI2…ADBH`):
+  build (1.7s) → local sign → `POST /submit` **SUCCESS** in 8.8s (the ledger-close
+  confirmation window the UI holds a visible pending state for) → `syncAgents()`
+  → listed in `GET /api/agents` with `source:"onchain"`, price 0.021, online.
+- Tx: https://stellar.expert/explorer/testnet/tx/416bea4f83e5afd9fc80e38c75ba4b1050031a2d590b0fe6232aa00d6a846393
+- Duplicate ids are caught at the BUILD preflight (409 `id_taken`) before any
+  signature; the FAILED-tx path still returns hash + decoded diagnostic (no crash).
+- A new `wallet_locked` error kind gives a locked wallet its own "unlock" message
+  (previously fell through to generic "Transaction failed").
