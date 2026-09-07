@@ -140,12 +140,22 @@ export async function fetchWithTimeout(
 export class ApiError extends Error {
   readonly status: number;
   readonly retryAfterMs?: number;
+  // The stable machine-readable code from the error envelope (e.g. "id_taken",
+  // "owner_account_unfunded"). Callers that map codes to inline field errors —
+  // the register form — key on this, never on the human message.
+  readonly code?: string;
 
-  constructor(message: string, status: number, retryAfterMs?: number) {
+  constructor(
+    message: string,
+    status: number,
+    retryAfterMs?: number,
+    code?: string,
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     if (retryAfterMs !== undefined) this.retryAfterMs = retryAfterMs;
+    if (code !== undefined) this.code = code;
   }
 }
 
