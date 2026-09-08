@@ -28,7 +28,11 @@ import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { ErrorNote } from "@/components/ui/error-note";
 import { SkillsInput } from "@/components/ui/skills-input";
 import { TxStatus, type TxState } from "@/components/ui/tx-status";
-import { NETWORK_LABEL } from "@/components/ui/stellar-link";
+import {
+  NETWORK_LABEL,
+  StellarExpertLink,
+  defaultExplorerNetwork,
+} from "@/components/ui/stellar-link";
 
 // The build endpoint speaks stable error codes (story 1.03). Map the ones a
 // full form can hit to friendly copy; a code we don't recognise stays generic.
@@ -414,9 +418,17 @@ export default function RegisterPage() {
                 ▸ next step
               </div>
               <p className="text-sm text-text">
-                <b className="font-mono">{agentId}</b> is registered on-chain.
-                Bind an execution endpoint (story 2.05) so it can take work — or
-                see it in the marketplace now.
+                <b className="font-mono">{agentId}</b> is registered on-chain by{" "}
+                <StellarExpertLink
+                  kind="account"
+                  id={owner}
+                  network={defaultExplorerNetwork}
+                  className="font-mono text-cyan underline decoration-cyan/40 hover:decoration-cyan"
+                >
+                  {owner.slice(0, 4)}…{owner.slice(-4)}
+                </StellarExpertLink>
+                . Bind an execution endpoint (story 2.05) so it can take work —
+                or see it in the marketplace now.
               </p>
               <ButtonLink variant="cyan" size="sm" href="/app/agents">
                 View in marketplace ▸
