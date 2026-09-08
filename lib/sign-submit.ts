@@ -39,6 +39,9 @@ export async function signAndSubmit(
   opts: {
     submit?: (signedXdr: string) => Promise<SubmitResult>;
     interpret?: (result: SubmitResult) => RegisterOutcome;
+    // Fired once the wallet has signed, before the submit — lets the caller
+    // advance its UI from "signing" to "broadcasting".
+    onSigned?: () => void;
   } = {},
 ): Promise<SignSubmitOutcome> {
   const submit = opts.submit ?? submitSigned;
@@ -53,6 +56,7 @@ export async function signAndSubmit(
       ? { stage: "rejected" }
       : { stage: "sign_error", error };
   }
+  opts.onSigned?.();
 
   let result: SubmitResult;
   try {

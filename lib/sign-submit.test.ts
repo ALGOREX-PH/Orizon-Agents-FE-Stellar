@@ -74,6 +74,32 @@ describe("signAndSubmit", () => {
     expect(r.stage).toBe("submit_error");
   });
 
+  it("fires onSigned after signing, before submit, only when signing succeeds", async () => {
+    const order: string[] = [];
+    await signAndSubmit("XDR", async () => "SIGNED", {
+      onSigned: () => order.push("signed"),
+      submit: async () => {
+        order.push("submit");
+        return OK_RESULT;
+      },
+      interpret: okInterpret,
+    });
+    expect(order).toEqual(["signed", "submit"]);
+
+    // not fired when signing is declined
+    const declined: string[] = [];
+    await signAndSubmit(
+      "XDR",
+      async () => {
+        throw new Error("user rejected");
+      },
+      {
+        onSigned: () => declined.push("signed"),
+      },
+    );
+    expect(declined).toEqual([]);
+  });
+
   it("never reaches submit once signing was declined", async () => {
     let submitCalls = 0;
     const r = await signAndSubmit(
