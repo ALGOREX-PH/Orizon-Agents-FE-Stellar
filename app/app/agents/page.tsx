@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useMemo, useState } from "react";
+import { Fragment, useCallback, useMemo, useState } from "react";
 import { m } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,9 @@ import { ReputationBadge } from "@/components/ui/reputation-badge";
 import { listAgents, listReputation } from "@/lib/api";
 import { focusRing } from "@/lib/ui";
 import { useFetch } from "@/lib/use-fetch";
+import { useWallet } from "@/lib/wallet";
 import type { Agent } from "@/lib/types";
+import { ManagePanel } from "./manage-panel";
 
 const statusTone = {
   online: "cyan" as const,
@@ -46,6 +48,10 @@ export default function AgentsPage() {
   const [filter, setFilter] = useState<"all" | "online" | "idle" | "offline">(
     "all",
   );
+  // Operator management (story 1.08): the connected wallet reveals Manage on
+  // the agents it owns on-chain; one row expands at a time.
+  const wallet = useWallet();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const rows = useMemo(() => {
     if (!agents) return [];
@@ -236,65 +242,94 @@ export default function AgentsPage() {
                 </tr>
               )}
 
-              {rows.map((a, i) => (
-                <m.tr
-                  key={a.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25, delay: i * 0.03 }}
-                  className="border-b border-border/50 last:border-0 hover:bg-violet/5 transition"
-                >
-                  {/* The agent id identifies the row, so it is the row
+              {rows.map((a, i) => {
+                // Ownership is resolved from the connected wallet against the
+                // on-chain owner — never a local record (story 1.08 rule).
+                const owned =
+                  wallet.connected && !!a.owner && a.owner === wallet.address;
+                const open = owned && expandedId === a.id;
+                return (
+                  <Fragment key={a.id}>
+                    <m.tr
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25, delay: i * 0.03 }}
+                      className="border-b border-border/50 last:border-0 hover:bg-violet/5 transition"
+                    >
+                      {/* The agent id identifies the row, so it is the row
                       header; `text-left font-normal` only holds the cell's
                       existing look against the th defaults. */}
-                  <th
-                    scope="row"
-                    className="py-3 text-left font-mono text-xs font-normal text-muted"
-                  >
-                    {a.id}
-                  </th>
-                  <td className="py-3 font-mono">
-                    <div className="flex items-center gap-2">
-                      {a.name}
-                      {a.real && <Badge tone="cyan">LIVE</Badge>}
-                    </div>
-                  </td>
-                  <td className="py-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      {a.skills.map((s) => (
-                        <Badge key={s} tone="muted">
-                          {s}
+                      <th
+                        scope="row"
+                        className="py-3 text-left font-mono text-xs font-normal text-muted"
+                      >
+                        {a.id}
+                      </th>
+                      <td className="py-3 font-mono">
+                        <div className="flex items-center gap-2">
+                          {a.name}
+                          {a.real && <Badge tone="cyan">LIVE</Badge>}
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {a.skills.map((s) => (
+                            <Badge key={s} tone="muted">
+                              {s}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-3 text-right font-mono text-cyan">
+                        {a.price.toFixed(3)}
+                      </td>
+                      <td className="py-3 text-right">{renderReputation(a)}</td>
+                      <td className="py-3 text-right font-mono text-xs text-muted">
+                        {a.runs.toLocaleString()}
+                      </td>
+                      <td className="py-3">
+                        <Badge
+                          tone={statusTone[a.status]}
+                          dot={a.status === "online"}
+                        >
+                          {a.status}
                         </Badge>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="py-3 text-right font-mono text-cyan">
-                    {a.price.toFixed(3)}
-                  </td>
-                  <td className="py-3 text-right">{renderReputation(a)}</td>
-                  <td className="py-3 text-right font-mono text-xs text-muted">
-                    {a.runs.toLocaleString()}
-                  </td>
-                  <td className="py-3">
-                    <Badge
-                      tone={statusTone[a.status]}
-                      dot={a.status === "online"}
-                    >
-                      {a.status}
-                    </Badge>
-                  </td>
-                  <td className="py-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled
-                      title="coming soon"
-                    >
-                      ▸ view
-                    </Button>
-                  </td>
-                </m.tr>
-              ))}
+                      </td>
+                      <td className="py-3 text-right">
+                        {owned ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setExpandedId(open ? null : a.id)}
+                          >
+                            {open ? "▾ close" : "⚙ manage"}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled
+                            title="coming soon"
+                          >
+                            ▸ view
+                          </Button>
+                        )}
+                      </td>
+                    </m.tr>
+                    {open && (
+                      <tr className="border-b border-border/50 bg-bg/20">
+                        <td colSpan={8} className="px-1 pb-4">
+                          <ManagePanel
+                            agent={a}
+                            owner={a.owner ?? ""}
+                            onChanged={retry}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
               {agents && rows.length === 0 && (
                 <tr>
                   <td

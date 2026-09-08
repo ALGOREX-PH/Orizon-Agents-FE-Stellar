@@ -182,6 +182,23 @@ export type RegisterAgentReq = {
   price_usdc: number;
 };
 
+/** Body of POST /api/stellar/build/update-price — the owner re-prices their
+ * own agent (story 1.08). Ownership is the contract's require_auth. */
+export type UpdatePriceReq = {
+  owner: string;
+  agent_id: string;
+  price_usdc: number;
+};
+
+/** Body of POST /api/stellar/build/set-active — delist (`active: false`) or
+ * relist (`active: true`) an owned agent (story 1.08). Reversible; never a
+ * delete. */
+export type SetActiveReq = {
+  owner: string;
+  agent_id: string;
+  active: boolean;
+};
+
 /** A bare unsigned-XDR envelope: the register-agent build hands `xdr` straight
  * to the wallet to sign. */
 export type XdrResponse = { xdr: string };

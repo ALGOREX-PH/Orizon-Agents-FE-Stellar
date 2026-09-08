@@ -5,7 +5,6 @@ import {
   ApiError,
   agentIdAvailable,
   buildRegisterAgent,
-  submitSigned,
   syncAgents,
 } from "@/lib/api";
 import {
@@ -16,14 +15,13 @@ import {
   validatePriceUsdc,
   validateSkills,
 } from "@/lib/register-validation";
-import {
-  interpretRegisterSubmit,
-  isAgentAlreadyExists,
-} from "@/lib/register-submit";
-import type { SubmitResult } from "@/lib/types";
+import { isAgentAlreadyExists } from "@/lib/register-submit";
+import { signAndSubmit } from "@/lib/sign-submit";
+import { buildRegistrationEvidence } from "@/lib/registration-evidence";
+import { rateLimitMessage } from "@/lib/rate-limit-message";
 import { useAsyncAction } from "@/lib/use-async-action";
 import { useWallet } from "@/lib/wallet";
-import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
+import { type FriendlyError } from "@/lib/wallet-errors";
 import { focusRing } from "@/lib/ui";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -31,7 +29,11 @@ import { ConnectWallet } from "@/components/ui/connect-wallet";
 import { ErrorNote } from "@/components/ui/error-note";
 import { SkillsInput } from "@/components/ui/skills-input";
 import { TxStatus, type TxState } from "@/components/ui/tx-status";
-import { NETWORK_LABEL } from "@/components/ui/stellar-link";
+import {
+  NETWORK_LABEL,
+  StellarExpertLink,
+  defaultExplorerNetwork,
+} from "@/components/ui/stellar-link";
 
 // The build endpoint speaks stable error codes (story 1.03). Map the ones a
 // full form can hit to friendly copy; a code we don't recognise stays generic.
@@ -78,6 +80,7 @@ export default function RegisterPage() {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [txError, setTxError] = useState<FriendlyError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const submitting =
     txState === "building" ||
     txState === "signing" ||
@@ -133,43 +136,37 @@ export default function RegisterPage() {
       const code = err instanceof ApiError ? err.code : undefined;
       if (code === "id_taken" || code === "id_reserved") idCheck.reset();
       setFormError(
-        (code && FORM_LEVEL_ERRORS[code]) ??
+        rateLimitMessage(err) ??
+          (code && FORM_LEVEL_ERRORS[code]) ??
           "Could not prepare the registration. Please try again.",
       );
       setTxState("idle");
       return;
     }
 
-    // 2. Sign in the wallet. A declined prompt is a normal action — keep the
-    // form and stay neutral; a locked wallet gets its specific message.
+    // 2–5. Sign, submit and interpret through the shared sequence — the same
+    // path agent management uses, so error handling can't drift — driving the
+    // tx machine off the returned stage. onSigned advances signing → broadcasting.
     setTxState("signing");
-    let signedXdr: string;
-    try {
-      signedXdr = await wallet.signXdr(xdr);
-    } catch (err) {
-      const friendly = classifyError(err);
-      if (
-        friendly.kind === "user_rejected" &&
-        friendly.title === "Signature cancelled"
-      ) {
-        setNotice(
-          "Signing cancelled — your details are saved. Click Register when you're ready.",
-        );
-        setTxState("idle");
-        return;
-      }
-      setTxError(friendly);
+    const r = await signAndSubmit(xdr, wallet.signXdr, {
+      onSigned: () => setTxState("broadcasting"),
+    });
+
+    if (r.stage === "rejected") {
+      // A declined prompt is a normal action — keep the form, stay neutral.
+      setNotice(
+        "Signing cancelled — your details are saved. Click Register when you're ready.",
+      );
+      setTxState("idle");
+      return;
+    }
+    if (r.stage === "sign_error") {
+      setTxError(r.error);
       setTxState("failed");
       return;
     }
-
-    // 3. Broadcast. A dropped network mid-submit may still have landed, so we
-    // never auto-retry — the operator checks the explorer first.
-    setTxState("broadcasting");
-    let result: SubmitResult;
-    try {
-      result = await submitSigned(signedXdr);
-    } catch {
+    if (r.stage === "submit_error") {
+      // A dropped network mid-submit may still have landed; never auto-retry.
       setTxError({
         kind: "unknown",
         title: "Submission interrupted",
@@ -181,30 +178,30 @@ export default function RegisterPage() {
       return;
     }
 
-    // 4. Interpret the on-chain result (a FAILED tx still returns 200 + hash).
-    const outcome = interpretRegisterSubmit(result);
-    setTxHash(outcome.hash);
-    if (!outcome.ok) {
-      if (isAgentAlreadyExists(result)) {
+    // settled — a FAILED tx still returns 200 + a hash.
+    setTxHash(r.outcome.hash);
+    if (!r.outcome.ok) {
+      // A duplicate id reaches here only as a rare race (the build preflight
+      // catches it first); recover to the form so the operator changes the id.
+      if (isAgentAlreadyExists(r.result)) {
         idCheck.reset();
-        setFormError(outcome.message);
+        setFormError(r.outcome.message);
         setTxState("idle");
         return;
       }
       setTxError({
         kind: "unknown",
         title: "Registration failed",
-        detail: outcome.message,
-        raw: result.diagnostic ?? result.status,
+        detail: r.outcome.message,
+        raw: r.result.diagnostic ?? r.result.status,
       });
       setTxState("failed");
       return;
     }
 
-    // 5. Confirmed. Index it so the marketplace shows it without a reload (the
+    // Confirmed. Index it so the marketplace shows it without a reload (the
     // submit endpoint already kicks a server-side sync on SUCCESS; awaiting
-    // here is the deterministic belt-and-suspenders), then show the success
-    // card.
+    // here is the deterministic belt-and-suspenders), then show the success card.
     setTxState("pending");
     try {
       await syncAgents();
@@ -212,6 +209,26 @@ export default function RegisterPage() {
       // ignore — the server already kicked a sync; the agents page refetches
     }
     setTxState("success");
+  }
+
+  // Capture the whole evidence bundle (id, owner, tx, both explorer links,
+  // network, timestamp) in one click, at the moment of the run — story 1.07.
+  async function copyEvidence() {
+    if (!txHash) return;
+    const block = buildRegistrationEvidence({
+      agentId,
+      owner,
+      txHash,
+      network: defaultExplorerNetwork,
+    });
+    try {
+      await navigator.clipboard.writeText(block);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Clipboard blocked — the tx hash and links stay visible above to copy
+      // by hand; capture is never lost.
+    }
   }
 
   return (
@@ -423,13 +440,36 @@ export default function RegisterPage() {
                 ▸ next step
               </div>
               <p className="text-sm text-text">
-                <b className="font-mono">{agentId}</b> is registered on-chain.
-                Bind an execution endpoint (story 2.05) so it can take work — or
-                see it in the marketplace now.
+                <b className="font-mono">{agentId}</b> is registered on-chain by{" "}
+                <StellarExpertLink
+                  kind="account"
+                  id={owner}
+                  network={defaultExplorerNetwork}
+                  className="font-mono text-cyan underline decoration-cyan/40 hover:decoration-cyan"
+                >
+                  {owner.slice(0, 4)}…{owner.slice(-4)}
+                </StellarExpertLink>
+                . Bind an execution endpoint (story 2.05) so it can take work —
+                or see it in the marketplace now.
               </p>
-              <ButtonLink variant="cyan" size="sm" href="/app/agents">
-                View in marketplace ▸
-              </ButtonLink>
+              <div className="flex flex-wrap items-center gap-2">
+                <ButtonLink variant="cyan" size="sm" href="/app/agents">
+                  View in marketplace ▸
+                </ButtonLink>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={copyEvidence}
+                >
+                  {copied ? "✓ evidence copied" : "⧉ copy evidence"}
+                </Button>
+              </div>
+              <p className="font-mono text-[10px] leading-relaxed text-muted">
+                Copy evidence grabs the agent id, wallet, tx hash and both
+                stellar.expert links for the evidence index (stories 1.07 /
+                5.05).
+              </p>
             </div>
           ) : null}
 

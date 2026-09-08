@@ -28,6 +28,8 @@ import type {
   Flow,
   Overview,
   RegisterAgentReq,
+  SetActiveReq,
+  UpdatePriceReq,
   ReputationBatch,
   ReputationInfo,
   ReputationParams,
@@ -425,6 +427,20 @@ export const buildRegisterAgent = (body: RegisterAgentReq) =>
     "/stellar/build/register-agent",
     body,
     ensure("/stellar/build/register-agent", isXdrResponse),
+  );
+
+export const buildUpdatePrice = (body: UpdatePriceReq) =>
+  post<XdrResponse, UpdatePriceReq>(
+    "/stellar/build/update-price",
+    body,
+    ensure("/stellar/build/update-price", isXdrResponse),
+  );
+
+export const buildSetActive = (body: SetActiveReq) =>
+  post<XdrResponse, SetActiveReq>(
+    "/stellar/build/set-active",
+    body,
+    ensure("/stellar/build/set-active", isXdrResponse),
   );
 
 export const agentIdAvailable = (id: string) =>
