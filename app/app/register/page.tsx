@@ -17,6 +17,7 @@ import {
 } from "@/lib/register-validation";
 import { isAgentAlreadyExists } from "@/lib/register-submit";
 import { signAndSubmit } from "@/lib/sign-submit";
+import { buildRegistrationEvidence } from "@/lib/registration-evidence";
 import { rateLimitMessage } from "@/lib/rate-limit-message";
 import { useAsyncAction } from "@/lib/use-async-action";
 import { useWallet } from "@/lib/wallet";
@@ -79,6 +80,7 @@ export default function RegisterPage() {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [txError, setTxError] = useState<FriendlyError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const submitting =
     txState === "building" ||
     txState === "signing" ||
@@ -207,6 +209,26 @@ export default function RegisterPage() {
       // ignore — the server already kicked a sync; the agents page refetches
     }
     setTxState("success");
+  }
+
+  // Capture the whole evidence bundle (id, owner, tx, both explorer links,
+  // network, timestamp) in one click, at the moment of the run — story 1.07.
+  async function copyEvidence() {
+    if (!txHash) return;
+    const block = buildRegistrationEvidence({
+      agentId,
+      owner,
+      txHash,
+      network: defaultExplorerNetwork,
+    });
+    try {
+      await navigator.clipboard.writeText(block);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Clipboard blocked — the tx hash and links stay visible above to copy
+      // by hand; capture is never lost.
+    }
   }
 
   return (
@@ -430,9 +452,24 @@ export default function RegisterPage() {
                 . Bind an execution endpoint (story 2.05) so it can take work —
                 or see it in the marketplace now.
               </p>
-              <ButtonLink variant="cyan" size="sm" href="/app/agents">
-                View in marketplace ▸
-              </ButtonLink>
+              <div className="flex flex-wrap items-center gap-2">
+                <ButtonLink variant="cyan" size="sm" href="/app/agents">
+                  View in marketplace ▸
+                </ButtonLink>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={copyEvidence}
+                >
+                  {copied ? "✓ evidence copied" : "⧉ copy evidence"}
+                </Button>
+              </div>
+              <p className="font-mono text-[10px] leading-relaxed text-muted">
+                Copy evidence grabs the agent id, wallet, tx hash and both
+                stellar.expert links for the evidence index (stories 1.07 /
+                5.05).
+              </p>
             </div>
           ) : null}
 
