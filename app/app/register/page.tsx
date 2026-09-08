@@ -20,6 +20,7 @@ import {
   interpretRegisterSubmit,
   isAgentAlreadyExists,
 } from "@/lib/register-submit";
+import { rateLimitMessage } from "@/lib/rate-limit-message";
 import type { SubmitResult } from "@/lib/types";
 import { useAsyncAction } from "@/lib/use-async-action";
 import { useWallet } from "@/lib/wallet";
@@ -133,7 +134,8 @@ export default function RegisterPage() {
       const code = err instanceof ApiError ? err.code : undefined;
       if (code === "id_taken" || code === "id_reserved") idCheck.reset();
       setFormError(
-        (code && FORM_LEVEL_ERRORS[code]) ??
+        rateLimitMessage(err) ??
+          (code && FORM_LEVEL_ERRORS[code]) ??
           "Could not prepare the registration. Please try again.",
       );
       setTxState("idle");
