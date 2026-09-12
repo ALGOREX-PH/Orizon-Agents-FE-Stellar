@@ -16,7 +16,7 @@ noted.
 | 1.04 | [BLO-14](https://linear.app/bl0cksmiths/issue/BLO-14) | 8 | "Register an Agent" page — form + client-side validation |
 | 1.05 | [BLO-15](https://linear.app/bl0cksmiths/issue/BLO-15) | 6 | Sign + submit the registration XDR from the operator's own wallet → **real testnet tx** (see `03`) |
 | 1.06 | [BLO-16](https://linear.app/bl0cksmiths/issue/BLO-16) | 3 | **SPIKE** — decided how an external agent receives and executes work (see `04`) |
-| 1.07 | [BLO-17](https://linear.app/bl0cksmiths/issue/BLO-17) | 2 | External-wallet registration: verifier tooling + runbook + evidence surface (D1 — see `03` for honest status) |
+| 1.07 | [BLO-17](https://linear.app/bl0cksmiths/issue/BLO-17) | 2 | Wallet registration on testnet + tx capture: verifier tooling, runbook, evidence surface (D1 — see `03`) |
 | 1.08 | [BLO-44](https://linear.app/bl0cksmiths/issue/BLO-44) | 4 | Operator agent management — change price, delist, relist (owner-gated) |
 | 1.09 | [BLO-45](https://linear.app/bl0cksmiths/issue/BLO-45) | 3 | Abuse bounds on the newly public registration endpoints (rate limit, body limit, cached availability) |
 | 1.10 | [BLO-119](https://linear.app/bl0cksmiths/issue/BLO-119) | 1 | Promoted Update-2 to main and restored production parity |
@@ -34,12 +34,6 @@ noted.
 |-------|--------|-----|--------------|
 | 3.01 | [BLO-23](https://linear.app/bl0cksmiths/issue/BLO-23) | 4 | Applied the reputation floor on the demo-kit planning path (closing a live defect); 100% coverage |
 | 7.04 | [BLO-106](https://linear.app/bl0cksmiths/issue/BLO-106) | 2 | Public commit cadence + multi-contributor visibility audit (see `02`) |
-
-## In review (a human step remains)
-
-| Story | Ticket | Pts | Remaining |
-|-------|--------|-----|-----------|
-| 7.08 | [BLO-110](https://linear.app/bl0cksmiths/issue/BLO-110) | 1 | KYC / payout-wallet / tranche retention record — placeholders to fill; wallet-export line closes at sprint end |
 
 ## Totals
 
