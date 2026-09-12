@@ -13,10 +13,19 @@ import { buildAuthorize, execute, submitSigned } from "@/lib/api";
 import { useAsyncAction } from "@/lib/use-async-action";
 import { useWallet } from "@/lib/wallet";
 import { classifyError, type FriendlyError } from "@/lib/wallet-errors";
-import type { DecomposeResponse } from "@/lib/types";
+import type { DecomposeResponse, PlanFloorNoticeKind } from "@/lib/types";
 import { FiatFund } from "./fiat-fund";
 
 // Display label for the configured network — "mainnet" | "testnet".
+
+/** Tone per floor-notice kind (story 3.02). Meaning is never carried by the
+ * color alone — every row also prints the kind word and the reason. */
+const NOTICE_TONE: Record<PlanFloorNoticeKind, "magenta" | "cyan" | "violet"> =
+  {
+    excluded: "magenta",
+    substituted: "cyan",
+    degraded: "violet",
+  };
 
 /** Which stage of the on-chain authorize flow is running (for button copy). */
 type ExecStep = "" | "sign" | "broadcast" | "execute";
@@ -210,6 +219,18 @@ export function ExecutionPlan({ plan }: { plan: DecomposeResponse }) {
                     source={s.rep_source ?? "prior"}
                   />
                 )}
+                {s.substituted_for && (
+                  <span
+                    title={`Routed in place of ${s.substituted_for}, which scored below the routing floor.`}
+                  >
+                    <Badge tone="cyan">⇄ for {s.substituted_for}</Badge>
+                  </span>
+                )}
+                {s.degraded && (
+                  <span title="Kept by the starvation backstop despite scoring below the routing floor.">
+                    <Badge tone="magenta">▾ below floor</Badge>
+                  </span>
+                )}
               </div>
               <span className="text-sm text-muted">→</span>
               <div className="flex-1 text-sm">{s.rationale}</div>
@@ -219,6 +240,38 @@ export function ExecutionPlan({ plan }: { plan: DecomposeResponse }) {
             </m.li>
           ))}
         </ol>
+
+        {(plan.notices?.length ?? 0) > 0 && (
+          <div className="mt-4 clip-cyber-sm border border-violet/40 bg-violet/5 p-4">
+            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-violet mb-2">
+              ▸ reputation floor — why this plan changed shape
+            </div>
+            <ul className="space-y-2">
+              {plan.notices?.map((n, i) => (
+                <li
+                  key={`${n.kind}-${n.agent_id}-${i}`}
+                  className="flex flex-wrap items-center gap-2 text-sm"
+                >
+                  <Badge tone={NOTICE_TONE[n.kind]}>{n.kind}</Badge>
+                  <span>
+                    <b className="text-text">{n.agent_name ?? n.agent_id}</b>
+                    {n.kind === "substituted" && (
+                      <>
+                        {" → "}
+                        <b className="text-text">
+                          {n.replacement_name ?? n.replacement_id}
+                        </b>
+                      </>
+                    )}
+                  </span>
+                  <span className="font-mono text-xs text-muted">
+                    {n.reason}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <m.div
           initial={{ opacity: 0, y: 8 }}

@@ -32,6 +32,26 @@ export type PlanStep = {
   est_eta_seconds: number;
   rep_bps?: number | null;
   rep_source?: ReputationSource | null;
+  /** The designated kit agent this step replaced when the reputation floor
+   * forced a substitution; absent/null on the normal path (story 3.02). */
+  substituted_for?: string | null;
+  /** True when the starvation backstop re-admitted this step below the
+   * routing floor — kept workable, flagged as a degraded choice. */
+  degraded?: boolean;
+};
+
+export type PlanFloorNoticeKind = "excluded" | "substituted" | "degraded";
+
+/** One reputation-floor action taken while building the plan
+ * (`PlanFloorNotice` in the backend's app/schemas.py). `replacement_*` are
+ * set only when kind is "substituted". */
+export type PlanFloorNotice = {
+  kind: PlanFloorNoticeKind;
+  agent_id: string;
+  agent_name?: string | null;
+  replacement_id?: string | null;
+  replacement_name?: string | null;
+  reason: string;
 };
 
 export type DecomposeResponse = {
@@ -40,6 +60,9 @@ export type DecomposeResponse = {
   steps: PlanStep[];
   total_usdc: number;
   total_eta: number;
+  /** Floor actions behind this plan's shape; empty on the common path where
+   * every routed agent clears the floor. Absent from backends predating it. */
+  notices?: PlanFloorNotice[];
 };
 
 /** Response of POST /api/orchestrator/execute. */

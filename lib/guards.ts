@@ -198,7 +198,12 @@ export function isTraceLineList(v: unknown): v is TraceLine[] {
  * child — a non-string (a dict from a half-rolled backend) throws "Objects are
  * not valid as a React child". Required on backend `PlanStep`
  * (`app/schemas.py`); `agent_name`/`rep_bps`/`rep_source` are optional there
- * and already have render-time fallbacks, so they stay unchecked. */
+ * and already have render-time fallbacks, so they stay unchecked.
+ *
+ * `notices` and the floor fields on steps (story 3.02) are additive: absent
+ * is fine (a backend predating them), but a present value is type-checked —
+ * `degraded` because a truthy non-boolean would badge a healthy step as
+ * below-floor, `kind` because it indexes the notice tone map. */
 export function isDecomposeResponse(v: unknown): v is DecomposeResponse {
   return (
     isRecord(v) &&
@@ -212,8 +217,30 @@ export function isDecomposeResponse(v: unknown): v is DecomposeResponse {
         isStr(s.agent_id) &&
         isStr(s.rationale) &&
         isNum(s.est_price_usdc) &&
-        isNum(s.est_eta_seconds),
-    )
+        isNum(s.est_eta_seconds) &&
+        isOptionalStr(s.substituted_for) &&
+        isOptionalBool(s.degraded),
+    ) &&
+    (v.notices == null ||
+      (Array.isArray(v.notices) && v.notices.every(isPlanFloorNotice)))
+  );
+}
+
+/** Backend `PlanFloorNotice.kind` literal (`app/schemas.py`). Checked as a
+ * set because the kind picks the notice's tone and label on the plan card —
+ * an unlisted value would render an unstyled, unexplained row. */
+const FLOOR_NOTICE_KINDS = new Set(["excluded", "substituted", "degraded"]);
+
+function isPlanFloorNotice(v: unknown): boolean {
+  return (
+    isRecord(v) &&
+    isStr(v.kind) &&
+    FLOOR_NOTICE_KINDS.has(v.kind) &&
+    isStr(v.agent_id) &&
+    isStr(v.reason) &&
+    isOptionalStr(v.agent_name) &&
+    isOptionalStr(v.replacement_id) &&
+    isOptionalStr(v.replacement_name)
   );
 }
 

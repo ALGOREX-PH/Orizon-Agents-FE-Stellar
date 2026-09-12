@@ -25,5 +25,14 @@ test.describe("orchestrator", () => {
     await expect(
       page.getByText(`${mockPlan.total_usdc.toFixed(3)} USDC`).first(),
     ).toBeVisible();
+
+    // story 3.02 — the reputation-floor block explains the plan's shape and
+    // the affected steps carry inline marks, never a silent reshuffle.
+    await expect(page.getByText(/reputation floor/i)).toBeVisible();
+    for (const notice of mockPlan.notices) {
+      await expect(page.getByText(notice.reason)).toBeVisible();
+    }
+    await expect(steps.filter({ hasText: "⇄ for vision.ocr" })).toBeVisible();
+    await expect(steps.filter({ hasText: "▾ below floor" })).toBeVisible();
   });
 });
