@@ -4,7 +4,7 @@ Every non-dependabot PR **created or merged on/after 2026-09-07** across the fou
 public repos. All repos are public, default branch `main`, in the `Bl0cksmiths`
 org. Merges are authored by the web-merge identity `ALGOREX-PH` (Dan).
 
-## Merged this week — 11 PRs
+## Merged this week — 12 PRs
 
 ### Frontend — [Orizon-Agents-FE-Stellar](https://github.com/Bl0cksmiths/Orizon-Agents-FE-Stellar)
 | PR | Title | Merged | head → base |
@@ -18,6 +18,7 @@ org. Merges are authored by the web-merge identity `ALGOREX-PH` (Dan).
 ### Backend — [Orizon-Agents-BE-Stellar](https://github.com/Bl0cksmiths/Orizon-Agents-BE-Stellar)
 | PR | Title | Merged | head → base |
 |----|-------|--------|-------------|
+| [#40](https://github.com/Bl0cksmiths/Orizon-Agents-BE-Stellar/pull/40) | 4.01 refund spike + landed testnet tx + Week-1 compliance records | 2026-09-12 | Update-2 → main |
 | [#39](https://github.com/Bl0cksmiths/Orizon-Agents-BE-Stellar/pull/39) | Added the orizons.xyz testnet flip runbook | 2026-09-09 | Update-2 → main |
 | [#34](https://github.com/Bl0cksmiths/Orizon-Agents-BE-Stellar/pull/34) | Update-2 | 2026-09-08 | Update-2 → main |
 | [#33](https://github.com/Bl0cksmiths/Orizon-Agents-BE-Stellar/pull/33) | Update-2 | 2026-09-07 | Update-2 → main |
@@ -28,14 +29,6 @@ org. Merges are authored by the web-merge identity `ALGOREX-PH` (Dan).
 | PR | Title | Merged | head → base |
 |----|-------|--------|-------------|
 | [#1](https://github.com/Bl0cksmiths/Orizon-Agents-UAT-Stellar/pull/1) | UAT suite (Rie's 99 commits) | 2026-09-12 | uat → main |
-
-## Open — 1 PR (awaiting merge)
-
-| PR | Title | State | head → base |
-|----|-------|-------|-------------|
-| [BE #40](https://github.com/Bl0cksmiths/Orizon-Agents-BE-Stellar/pull/40) | 4.01 partial-credit refund spike + landed testnet tx; Week-1 compliance records | **open** | Update-2 → main |
-
-> BE #40 carries the 4.01 refund service + tests + ADR 0002 + the live-refund evidence + the Week-1 compliance records (7.04, 7.08). It is additive and inert (the refund service is not yet wired into any router). Merging it redeploys the backend, so it is held for the lead's decision.
 
 ## Note
 
