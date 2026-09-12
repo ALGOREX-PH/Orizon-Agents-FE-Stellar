@@ -17,6 +17,7 @@ const SHOTS = [
   ["06-be-pull-requests.png", "https://github.com/Bl0cksmiths/Orizon-Agents-BE-Stellar/pulls?q=is%3Apr"],
   ["07-orizons-home.png", "https://orizons.xyz"],
   ["08-orizons-agents.png", "https://orizons.xyz/app/agents"],
+  ["09-dan-registration-tx-stellar-expert.png", "https://stellar.expert/explorer/testnet/tx/f07aab3e17afeca65c30719962bba5cc0f97bf58e22f659e429c3e8b44198a78"],
 ];
 
 const browser = await chromium.launch();

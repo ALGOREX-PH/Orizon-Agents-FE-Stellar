@@ -1,6 +1,6 @@
 # Screenshots — evidence manifest
 
-**Status: ✅ all 8 captured (2026-09-12).** Each is a full-page PNG of a public
+**Status: ✅ all 9 captured (2026-09-12).** Each is a full-page PNG of a public
 page; the underlying artifact is also linked by URL below so a reviewer can
 verify it live.
 
@@ -16,6 +16,7 @@ verify it live.
 | 6 | `06-be-pull-requests.png` | Backend PR list (Week-1 merges) | ✅ 347 KB | https://github.com/Bl0cksmiths/Orizon-Agents-BE-Stellar/pulls?q=is%3Apr |
 | 7 | `07-orizons-home.png` | The live dApp home | ✅ 448 KB | https://orizons.xyz |
 | 8 | `08-orizons-agents.png` | The live marketplace / agents page | ✅ 961 KB | https://orizons.xyz/app/agents |
+| 9 | `09-dan-registration-tx-stellar-expert.png` | The operator-wallet registration `register(dan_w1_probe)` — Successful, ledger 4636035 | ✅ 105 KB | https://stellar.expert/explorer/testnet/tx/f07aab3e17afeca65c30719962bba5cc0f97bf58e22f659e429c3e8b44198a78 |
 
 > Note on #7–#8: `orizons.xyz` currently serves the **mainnet** build (the
 > testnet dashboard flip, story 1.11, is a pending Render/Vercel step). For a

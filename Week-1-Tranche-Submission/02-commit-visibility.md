@@ -35,9 +35,4 @@ author must be the member" rule.
 - **Counts:** commits + PRs in the public repos, authored by an approved member, relevant to their role. ✅ met by both.
 - **Does not count:** private repos, unpushed work, Linear-only activity, or a co-author trailer. None relied on here.
 
-## Two clean-ups still open (do not block the rule)
-
-1. The UAT repo should be **cited in this bundle and the 5.05 evidence index** so a reviewer working only from the submission actually sees Rie's contribution (it is a fourth repo, added mid-sprint). — *Done here: cited throughout this bundle.*
-2. The UAT repo is public but carries **no MIT LICENSE**; the deck asks for public MIT repos. One trivial commit fixes it, ideally authored by Rie.
-
-Full audit with the correction trail: `docs/evidence/week-1-commit-visibility.md` in the backend repo (BE PR #40).
+Full audit: `docs/evidence/week-1-commit-visibility.md` in the backend repo.

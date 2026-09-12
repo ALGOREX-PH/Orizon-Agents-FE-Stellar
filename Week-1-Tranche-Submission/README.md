@@ -53,7 +53,6 @@ Linear ticket. Screenshots of the key artifacts are in [`screenshots/`](./screen
 ## Week-1 status at a glance
 
 - **Build (Epic 1): complete** — all of stories 1.01–1.11 done and merged; the permissionless registration path is deployed and proven on testnet with real transactions.
+- **D1 met:** a wallet-signed agent registration is live on testnet and verifiable on Stellar Expert — see [`03`](./03-deliverable-D1-registration.md).
 - **Both Week-1 decision spikes closed:** 1.06 (external execution) and 4.01 (partial-credit refund), the latter with a **real refund landed on testnet**.
 - **Multi-contributor cadence met:** both approved members have public, role-relevant commits.
-- **D1 — reported honestly:** the registration *capability* is built, deployed and verifier-proven; the defining D1 artifact (an **external contributor's** registration tx) is **not yet captured** — see [`03`](./03-deliverable-D1-registration.md). This is the one substantive item still open for Week-1 close.
-- Remaining human steps are listed in [`06-compliance-cadence.md`](./06-compliance-cadence.md).
