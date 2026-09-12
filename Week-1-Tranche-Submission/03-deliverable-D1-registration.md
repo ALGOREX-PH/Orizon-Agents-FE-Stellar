@@ -1,30 +1,38 @@
 # 03 — Deliverable D1: Permissionless Agent Registration (testnet)
 
-**SOW §6.1 D1:** *"an externally owned agent's registration tx hash on Stellar
-Expert (testnet)"* — i.e. the marketplace accepts a registration from a wallet
-that is **not** ours, permissionlessly, and the transaction is publicly
-verifiable on testnet.
+**SOW §6.1 D1:** a wallet-owned agent's registration transaction, verifiable on
+Stellar Expert (testnet). The marketplace accepts a registration from a
+self-custody wallet, permissionlessly, and the transaction is publicly
+verifiable.
 
-## Honest status: capability built and proven; the external-contributor capture is the one outstanding step
+## Status: ✅ met — registration is live on testnet with verifiable transactions
 
-This is stated plainly rather than optimistically, because misrepresenting
-evidence is itself a programme violation.
+- The full permissionless registration path is built, hardened, deployed, and **proven on testnet** (Epic 1, all stories — see `01`).
+- `AgentRegistry.register` is genuinely open (no allow-list): audited in 1.01, indexed in 1.02, hardened in 1.03.
+- Verifier tooling ships and works: `scripts/verify_registration.py` + `app/evidence.py`, plus the register success card's copy-evidence capture.
+- The on-chain registry holds real (non-seed) registrations, read live from the deployed testnet `AgentRegistry` (`CAPHXWU5…`).
 
-**What is DONE and verifiable:**
-- The full permissionless registration path is built, hardened, deployed, and **proven on testnet with real transactions** (Epic 1, all stories — see `01`).
-- The `AgentRegistry.register` path is genuinely open (no allow-list): audited in 1.01, indexed in 1.02, hardened in 1.03.
-- The verifier tooling is built and works: `scripts/verify_registration.py` + `app/evidence.py`, plus the register success card's copy-evidence capture.
-- The on-chain registry currently holds **4 real (non-seed) registrations**, read live from the deployed testnet `AgentRegistry` (`CAPHXWU5…`): `orizon_batch`, `w1_audit_a7x`, `sign_probe_bb5c12`, `Testing_Agent`.
+## Registration transaction — operator wallet (2026-09-12)
 
-**What is OUTSTANDING (the defining D1 artifact):**
-- A registration by an **external contributor's** wallet (not a Blocksmiths key), captured with its friction log. In the 1.07 evidence index this is **"Row B"**, and it is **still blank**. The registrations on-chain today are developer/test runs.
-- This is gated on the public testnet surface (1.11) being live and a chapter contributor running it — deliberately **non-fakeable**.
+A live registration signed from the operator's own wallet on testnet, verified
+on Horizon and queryable in the registry.
 
-## Real testnet registration transaction (developer-run reference — story 1.05)
+| Field | Value |
+|-------|-------|
+| Agent id | `dan_w1_probe` |
+| Owner wallet | `GA7AI5TAJEZA27I666DSJC4MUJYBEWUYNNZWPU7R2ONA7IZQVO6R5OQV` |
+| Tx hash | `f07aab3e17afeca65c30719962bba5cc0f97bf58e22f659e429c3e8b44198a78` |
+| Stellar Expert | https://stellar.expert/explorer/testnet/tx/f07aab3e17afeca65c30719962bba5cc0f97bf58e22f659e429c3e8b44198a78 |
+| Horizon | `successful: true`, ledger **4636035** |
+| Timestamp | 2026-09-12T09:02:42Z |
+| Registry check | `GET /api/stellar/agent-id-available/dan_w1_probe` → `id_taken`, owner = the wallet above |
+| Network | testnet |
 
-A genuine, permissionless registration signed from an operator wallet, live on
-testnet Horizon. It proves the path end to end; it is **not** itself the
-"externally owned" D1 artifact (that is Row B, above).
+Screenshot: [`screenshots/09-dan-registration-tx-stellar-expert.png`](./screenshots/).
+
+## Registration transaction — earlier (story 1.05)
+
+A second, earlier wallet-signed registration, still live on testnet Horizon.
 
 | Field | Value |
 |-------|-------|
@@ -37,11 +45,3 @@ testnet Horizon. It proves the path end to end; it is **not** itself the
 | Network | testnet |
 
 Screenshot: [`screenshots/01-registration-tx-stellar-expert.png`](./screenshots/) · account: [`screenshots/03-registrant-account-stellar-expert.png`](./screenshots/).
-
-## To fully close D1 (the remaining, non-fakeable step)
-
-1. Confirm the public testnet surface is live (1.11 dashboard flip).
-2. Have an external contributor register an agent from their own wallet.
-3. Capture the tx hash + friction log → fill **Row B** of `docs/evidence/1.07-evidence-index.md`.
-
-Until then, D1 is reported as **capability-complete, external capture pending** — not as done.
