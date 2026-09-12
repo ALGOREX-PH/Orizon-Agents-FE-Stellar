@@ -52,4 +52,4 @@ entrypoint (contract redeploy) and an escrow-hold redesign.
 asset-agnostic and wraps USDC on mainnet — the demonstration proves the
 money-moving mechanism, not a USDC-specific one.
 
-Screenshot: [`screenshots/02-refund-tx-stellar-expert.png`](./screenshots/). Full record: `docs/evidence/4.01-refund-testnet.md` (backend repo, BE PR #40).
+Screenshot: [`screenshots/02-refund-tx-stellar-expert.png`](./screenshots/). Full record: `docs/evidence/4.01-refund-testnet.md` (backend repo, on `main`).
