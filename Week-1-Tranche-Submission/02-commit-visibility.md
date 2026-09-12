@@ -34,7 +34,6 @@ author must be the member" rule.
 
 - **Counts:** commits + PRs in the public repos, authored by an approved member, relevant to their role. ✅ met by both.
 - **Does not count:** private repos, unpushed work, Linear-only activity, or a co-author trailer. None relied on here.
-- **Zarrah Exekiel Valles** is in the Linear workspace but **not** named in the approved SOW; no commit of hers is submitted as approved-team evidence. The contributor question is raised at the check-in (7.03), not assumed.
 
 ## Two clean-ups still open (do not block the rule)
 
