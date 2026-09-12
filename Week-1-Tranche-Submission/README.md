@@ -29,6 +29,7 @@ Linear ticket. Screenshots of the key artifacts are in [`screenshots/`](./screen
 | [`04-spikes-and-refund.md`](./04-spikes-and-refund.md) | The two Week-1 decision spikes (1.06, 4.01) + the live refund tx |
 | [`05-pull-requests.md`](./05-pull-requests.md) | Every PR across the four public repos this week |
 | [`06-compliance-cadence.md`](./06-compliance-cadence.md) | Weekly cadence: X post (7.02), check-in (7.03), commit visibility (7.04) |
+| [`Proof-of-Deliverables.pdf`](./Proof-of-Deliverables.pdf) | **Proof of deliverables** — one PDF: the testnet marketplace (with the registered agent), the D1 registration + 4.01 refund txs on Stellar Expert, and the register / reputation / orchestrator screens, each captioned with the deliverable it proves |
 | [`screenshots/`](./screenshots/) | Captured evidence images + manifest |
 
 ## The four public repositories
