@@ -23,3 +23,17 @@
   ("all 6 checks passed"), FE deployment record, and live ref parity
   (FE `5e5069a`/`45d2e95`, BE `27e96ff`/`0c64765` — no delta).
   Procedure: see the *Production Promotion Runbook* project document in Linear.
+
+## Testnet surface live (flip runbook executed, 2026-09-12)
+
+- orizons.xyz flipped to **testnet** per the BE *testnet flip runbook*
+  (`docs/testnet-flip-runbook.md`, supersedes story 1.11 — orizons.xyz *is* the
+  testnet surface). BE first (Render env override; fresh friendbot-funded
+  testnet `STELLAR_SIGNING_KEY`, mainnet key stashed for flip-back), then FE
+  (Vercel Production `NEXT_PUBLIC_*` mainnet pins removed, cache-less redeploy).
+- Verified 2026-09-12: `/api/stellar/network` → `testnet` with the testnet
+  contract ids; FE build preconnects `horizon-testnet` / `soroban-testnet`;
+  deployed smoke suite **6/6 PASS** with `SMOKE_EXPECT_NETWORK=testnet`;
+  `/app/register` serves 200. `smoke.yml` now asserts `testnet` (this commit).
+- 1.07 precondition **P1 satisfied** — the D1 external-contributor run is
+  unblocked. Row B of the evidence index stays blank until that run happens.

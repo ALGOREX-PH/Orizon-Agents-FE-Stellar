@@ -28,5 +28,5 @@ jobs:
       - name: Smoke test deployed origin
         env:
           SMOKE_ORIGIN: ${{ github.event.inputs.origin || 'https://orizons.xyz' }}
-          SMOKE_EXPECT_NETWORK: mainnet
+          SMOKE_EXPECT_NETWORK: testnet
         run: node scripts/smoke-deploy.mjs
