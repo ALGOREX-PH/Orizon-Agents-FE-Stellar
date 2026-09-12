@@ -21,9 +21,3 @@ are **Done** for Week 1 in Linear.
 > submits this package, Week 1 closes. The two items that block it are her QA
 > sign-off and, honestly, the outstanding D1 external-contributor capture
 > (see [`03`](./03-deliverable-D1-registration.md)).
-
-## The non-approved-contributor question (raised, not assumed)
-
-Zarrah Exekiel Valles is in the Linear workspace but not in the approved SOW §1.
-Per 7.04's rule, no commit of hers is submitted as approved-team evidence, and
-the participation question is to be raised at a check-in — not resolved silently.
