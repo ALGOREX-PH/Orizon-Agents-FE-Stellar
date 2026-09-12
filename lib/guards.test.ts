@@ -308,6 +308,49 @@ describe("isDecomposeResponse", () => {
     const objectish = { ...valid.steps[0], rationale: { text: "codes" } };
     expect(isDecomposeResponse({ ...valid, steps: [objectish] })).toBe(false);
   });
+
+  // story 3.02 — floor notices and the inline step marks are additive:
+  // absent is fine, present values are type-checked.
+  const notice = {
+    kind: "substituted",
+    agent_id: "agt_02",
+    agent_name: "design.figma",
+    replacement_id: "agt_09",
+    replacement_name: "research.pro",
+    reason: "below routing floor (4200 < 5500 bps)",
+  };
+
+  it("accepts floor notices and the step floor fields when well-formed", () => {
+    const step = {
+      ...valid.steps[0],
+      substituted_for: "agt_02",
+      degraded: true,
+    };
+    expect(
+      isDecomposeResponse({ ...valid, steps: [step], notices: [notice] }),
+    ).toBe(true);
+    expect(isDecomposeResponse({ ...valid, notices: [] })).toBe(true);
+  });
+
+  it("rejects a notice with an unlisted kind (it indexes the tone map)", () => {
+    const unlisted = { ...notice, kind: "reshuffled" };
+    expect(isDecomposeResponse({ ...valid, notices: [unlisted] })).toBe(false);
+  });
+
+  it("rejects a notice missing its reason", () => {
+    const { reason: _drop, ...missing } = notice;
+    expect(isDecomposeResponse({ ...valid, notices: [missing] })).toBe(false);
+  });
+
+  it("rejects a truthy non-boolean degraded (would badge a healthy step)", () => {
+    const step = { ...valid.steps[0], degraded: "false" };
+    expect(isDecomposeResponse({ ...valid, steps: [step] })).toBe(false);
+  });
+
+  it("rejects a non-string substituted_for", () => {
+    const step = { ...valid.steps[0], substituted_for: 7 };
+    expect(isDecomposeResponse({ ...valid, steps: [step] })).toBe(false);
+  });
 });
 
 describe("isReputationInfo", () => {

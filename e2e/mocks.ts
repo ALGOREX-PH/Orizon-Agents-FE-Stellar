@@ -55,6 +55,8 @@ export const mockPlan = {
       rationale: "produce the interface layout",
       est_price_usdc: 0.048,
       est_eta_seconds: 2.4,
+      // story 3.02 — this step replaced a sub-floor designated agent.
+      substituted_for: "vision.ocr",
     },
     {
       agent_id: "code.next",
@@ -62,10 +64,29 @@ export const mockPlan = {
       rationale: "implement and wire up the app",
       est_price_usdc: 0.066,
       est_eta_seconds: 3.1,
+      // story 3.02 — re-admitted below the floor by the starvation backstop.
+      degraded: true,
     },
   ],
   total_usdc: 0.123,
   total_eta: 6.7,
+  // story 3.02 — the floor actions behind the step marks above.
+  notices: [
+    {
+      kind: "substituted",
+      agent_id: "vision.ocr",
+      agent_name: "vision.ocr",
+      replacement_id: "design.figma",
+      replacement_name: "design.figma",
+      reason: "below routing floor (4200 < 5500 bps)",
+    },
+    {
+      kind: "degraded",
+      agent_id: "code.next",
+      agent_name: "code.next",
+      reason: "re-admitted by starvation backstop (4800 < 5500 bps)",
+    },
+  ],
 };
 
 function json(route: Route, body: unknown) {
